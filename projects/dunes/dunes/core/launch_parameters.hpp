@@ -53,6 +53,14 @@ struct Projection
 	Buffer<float> velocities[2];
 };
 
+struct Vegetation
+{
+	int type{ 0 };
+	float3 pos{}; // pos where root and stem start
+	float2 height{}; // .x height starting at pos upwards; .y height starting at pos downwards (roots)
+	float radius{ 0.f };
+};
+
 struct LaunchParameters
 {
 	unsigned int blockSize1D;

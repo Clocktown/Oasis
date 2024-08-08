@@ -86,6 +86,10 @@ CU_INLINE CU_HOST_DEVICE float2 abs(const float2& v) {
 	return float2{ fabs(v.x), fabs(v.y) };
 }
 
+CU_INLINE CU_HOST_DEVICE float3 abs(const float3& v) {
+	return float3{ fabs(v.x), fabs(v.y), fabs(v.z) };
+}
+
 CU_INLINE CU_HOST_DEVICE float2 max(const float2& a, const float2& b) {
 	return float2{ fmaxf(a.x, b.x), fmaxf(a.y, b.y) };
 }

@@ -187,6 +187,7 @@ namespace dunes
 				addSandForCoverage(m_launchParameters, m_simulationParameters.gridSize, true, m_coverageRadius, -m_coverageSubtractAmount);
 			}
 
+			vegetation(m_launchParameters);
 			m_watches[0].start();
 			m_watches[1].start();
 			venturi(m_launchParameters);
