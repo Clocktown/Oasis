@@ -8,6 +8,8 @@
 #include <cufft.h>
 #include <vector>
 
+#include <random>
+
 namespace dunes
 {
 	// Constructor
@@ -86,6 +88,7 @@ namespace dunes
 	// Functionality
 	void Simulator::reinitialize(const glm::ivec2& t_gridSize, const float t_gridScale)
 	{
+		std::cout << "reinitialize called" << std::endl;
 		m_time = 0.f;
 		m_timeStep = 0;
 		std::fill(m_watchTimings.begin(), m_watchTimings.end(), 0.f);
@@ -99,6 +102,14 @@ namespace dunes
 		m_simulationParameters.cellCount = t_gridSize.x * t_gridSize.y;
 		m_simulationParameters.gridScale = t_gridScale;
 		m_simulationParameters.rGridScale = 1.0f / t_gridScale;
+
+		const float uniformGridScale = 40.f;
+		const glm::vec2 gridDim = glm::vec2(t_gridSize) * t_gridScale;
+		const glm::ivec2 uniformGridSize = glm::ivec2(glm::ceil(gridDim / uniformGridScale)); // 20.f max radius
+		m_simulationParameters.uniformGridSize = { uniformGridSize.x, uniformGridSize.y };
+		m_simulationParameters.uniformGridScale = { uniformGridScale };
+		m_simulationParameters.rUniformGridScale = { 1.f / uniformGridScale };
+		m_simulationParameters.uniformGridCount = { uniformGridSize.x * uniformGridSize.y };
 
 		if (m_launchParameters.fftPlan != 0)
 		{
@@ -127,6 +138,8 @@ namespace dunes
 
 		initializeTerrain(m_launchParameters, m_initializationParameters);
 		initializeWindWarping(m_launchParameters, m_simulationParameters);
+		initializeVegetation(m_launchParameters);
+		vegetation(m_launchParameters);
 		venturi(m_launchParameters);
 		windWarping(m_launchParameters);
 		pressureProjection(m_launchParameters, m_simulationParameters);
@@ -187,6 +200,7 @@ namespace dunes
 				addSandForCoverage(m_launchParameters, m_simulationParameters.gridSize, true, m_coverageRadius, -m_coverageSubtractAmount);
 			}
 
+			getVegetationCount(m_launchParameters);
 			vegetation(m_launchParameters);
 			m_watches[0].start();
 			m_watches[1].start();
@@ -259,6 +273,7 @@ namespace dunes
 	void Simulator::setupLaunchParameters()
 	{
 		m_launchParameters.gridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.cellCount) / static_cast<float>(m_launchParameters.blockSize1D)));
+		m_launchParameters.uniformGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.uniformGridCount) / static_cast<float>(m_launchParameters.blockSize1D)));
 		m_launchParameters.gridSize2D.x = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.gridSize.x) / static_cast<float>(m_launchParameters.blockSize2D.x)));
 		m_launchParameters.gridSize2D.y = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.gridSize.y) / static_cast<float>(m_launchParameters.blockSize2D.y)));
 	}
@@ -291,6 +306,36 @@ namespace dunes
 
 		m_tmpBuffer.reinitialize(4 * m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
+
+		// todo: max vegetation count
+		const int count = 5000;
+		m_launchParameters.numVegetation = count;
+		/*m_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(m_launchParameters.blockSize1D)));
+
+		m_launchParameters.numVegetation = count;
+		m_vegBuffer.reinitialize(count, sizeof(Vegetation));
+		m_launchParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
+		m_vegetationCount.reinitialize(1, sizeof(int));
+		m_vegetationCount.upload(&count, 1);
+		m_launchParameters.vegetationCount = m_vegetationCount.getData<int>();
+
+		std::random_device rd;
+		std::mt19937 gen(rd());
+
+		std::vector<uint4> seeds(count);
+		for (uint4& s : seeds) {
+			s.x = gen();
+			s.y = gen();
+			s.z = gen();
+			s.w = gen();
+		}
+		m_seedBuffer.reinitialize(seeds);
+		m_launchParameters.seedBuffer = m_seedBuffer.getData<uint4>();
+
+		m_uniformGrid.reinitialize(m_simulationParameters.uniformGridCount, sizeof(uint2));
+		m_launchParameters.uniformGrid = m_uniformGrid.getData<uint2>();
+		m_keys.reinitialize(count, sizeof(unsigned int));
+		m_launchParameters.keyBuffer = m_keys.getData<unsigned int>();*/
 	}
 
 	void Simulator::setUseBilinear(const bool t_useBilinear) {

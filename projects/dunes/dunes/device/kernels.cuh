@@ -9,7 +9,9 @@ namespace dunes
 void initializeTerrain(const LaunchParameters& t_launchParameters, const InitializationParameters& t_initializationParameters);
 void addSandForCoverage(const LaunchParameters& t_launchParameters, int2 res, bool uniform, int radius, float amount);
 void initializeWindWarping(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
+void initializeVegetation(const LaunchParameters& t_launchParameters);
 
+void getVegetationCount(LaunchParameters& t_launchParameters);
 void vegetation(const LaunchParameters& t_launchParameters);
 void venturi(const LaunchParameters& t_launchParameters);
 void windWarping(const LaunchParameters& t_launchParameters);

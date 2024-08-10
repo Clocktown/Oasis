@@ -32,6 +32,7 @@
     <ClInclude Include="dunes\device\grid.cuh" />
     <ClInclude Include="dunes\device\kernels.cuh" />
     <ClInclude Include="dunes\device\multigrid.cuh" />
+    <ClInclude Include="dunes\device\random.cuh" />
     <ClInclude Include="dunes\dunes.hpp" />
     <ClInclude Include="dunes\util\io.hpp" />
   </ItemGroup>

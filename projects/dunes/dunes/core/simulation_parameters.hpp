@@ -45,6 +45,10 @@ struct MultigridLevel
 struct SimulationParameters
 {
 	int2 gridSize{ 2048, 2048 };
+	int2 uniformGridSize{ 204, 204 };
+	float uniformGridScale{ 2048.f / 204.f };
+	float rUniformGridScale{ 1.f / (2048.f / 204.f) };
+	int uniformGridCount{ uniformGridSize.x * uniformGridSize.y };
 	float gridScale{ 1.0f };
 	float rGridScale{ 1.0f / gridScale };
 	int cellCount{ gridSize.x * gridSize.y };

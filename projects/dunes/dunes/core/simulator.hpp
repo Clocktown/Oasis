@@ -177,6 +177,11 @@ namespace dunes
 		sthe::cu::Array2D m_resistanceArray;
 		sthe::cu::Buffer m_slabBuffer;
 		sthe::cu::Buffer m_tmpBuffer;
+		sthe::cu::Buffer m_vegBuffer;
+		sthe::cu::Buffer m_seedBuffer;
+		sthe::cu::Buffer m_vegetationCount;
+		sthe::cu::Buffer m_uniformGrid;
+		sthe::cu::Buffer m_keys;
 		std::array<sthe::cu::Buffer, 4> m_windWarpingBuffers;
 		std::vector<sthe::cu::Buffer> m_multigrid;
 		std::unique_ptr<sthe::cu::Buffer> m_coverageMap;

@@ -68,6 +68,9 @@ struct LaunchParameters
 	unsigned int gridSize1D;
 	dim3 gridSize2D;
 
+	unsigned int uniformGridSize1D;
+	unsigned int vegetationGridSize1D;
+
 	unsigned int optimalBlockSize1D;
 	dim3 optimalBlockSize2D;
 	unsigned int optimalGridSize1D;
@@ -93,6 +96,13 @@ struct LaunchParameters
 	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = sticky
 	Buffer<float> slabBuffer;
 	Buffer<float> tmpBuffer; // 4 * gridSize.x * gridSize.y
+	Buffer<Vegetation> vegBuffer;
+	Buffer<uint4> seedBuffer;
+	Buffer<int> vegetationCount;
+	int numVegetation{ 100 };
+	Buffer<uint2> uniformGrid;
+	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
+	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
 	WindWarping windWarping;
 	std::vector<MultigridLevel> multigrid;
 	Projection projection;

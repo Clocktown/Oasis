@@ -4,13 +4,19 @@
 #include <dunes/core/simulation_parameters.hpp>
 #include <dunes/core/launch_parameters.hpp>
 #include <sthe/device/vector_extension.cuh>
+#include <glm/glm.hpp>
+#include <thrust/sort.h>
+#include <thrust/execution_policy.h>
+#include <sthe/config/debug.hpp>
+
+#include "random.cuh"
 
 namespace dunes {
 
 	__forceinline__ __device__ float getVegetationDensity(const Vegetation& veg, const float3& pos) {
-		const float r2 = veg.radius * veg.radius;
-		const float stem2 = veg.height.x * veg.height.x;
-		const float root2 = veg.height.y * veg.height.y;
+		const float r2 = 0.25 * veg.radius * veg.radius;
+		const float stem2 = 0.25 * veg.height.x * veg.height.x;
+		const float root2 = 0.25 * veg.height.y * veg.height.y;
 		const float3 covarStem{ 1.f / r2, 1.f / r2, 1.f / stem2 };
 		const float3 covarRoot{ covarStem.x, covarStem.y, 1.f / root2 };
 		const float3 covar = pos.z >= veg.pos.z ? covarStem : covarRoot;
@@ -22,12 +28,12 @@ namespace dunes {
 		d.y = fminf(d.y, fabs(d.y - dims.y));
 
 		const float scale = 1.f; // peak vegetation density
-		// gaussian distribution faded toward 0 at 2 * veg.radius
-		return  fmaxf(scale * expf(-0.5f * dot(d, covar * d)) - 0.5 * (length(float2{pos.x - veg.pos.x, pos.y - veg.pos.y}) / veg.radius) * expf(-2.f), 0.f);
+		// gaussian distribution faded toward 0 at veg.radius
+		return  fmaxf(scale * expf(-0.5f * dot(d, covar * d)) -  (length(float2{pos.x - veg.pos.x, pos.y - veg.pos.y}) / veg.radius) * expf(-2.f), 0.f);
 
 	}
 
-	__global__ void rasterizeVegetation(Array2D<float2> t_terrainArray, Array2D<float4> t_resistanceArray /*, vegetationBuffer*/)
+	__global__ void rasterizeVegetation(const Array2D<float2> t_terrainArray, Array2D<float4> t_resistanceArray, const Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -36,35 +42,132 @@ namespace dunes {
 			return;
 		}
 
-		const int2 vegCell{ 2048, 2048 };
-		float2 terrain = t_terrainArray.read(vegCell);
-		const float2 vegPos{ make_float2(vegCell) * c_parameters.gridScale };
-
-		const Vegetation veg{
-			0,
-			float3{vegPos.x, vegPos.y, 0.f},
-			float2{10.f, 10.f},
-			float{512.f}
-		};
-
-		const Vegetation veg2{
-			0,
-			float3{vegPos.x * 0.5f, vegPos.y * 0.5f, 0.f},
-			float2{20.f, 10.f},
-			float{20.f}
-		};
+		float4 resistance = t_resistanceArray.read(cell);
+		if (resistance.y < 0.f) {
+			return;
+		}
+		resistance.y = 0.f;
 
 
-		const float2 position{ make_float2(cell) * c_parameters.gridScale };
-		terrain = t_terrainArray.read(cell);
+		const float2 position{ (make_float2(cell) + 0.5f) * c_parameters.gridScale };
+		const float2 gridPosition{ position * c_parameters.rUniformGridScale };
+		const int xStart = int(gridPosition.x - 0.5f);
+		const int xEnd = int(gridPosition.x + 0.5f);
+		const int yStart = int(gridPosition.y - 0.5f);
+		const int yEnd = int(gridPosition.y + 0.5f);
+		const float2 terrain = t_terrainArray.read(cell);
 		const float3 pos{ position.x, position.y, terrain.x + terrain.y };
 
-		float4 resistance = t_resistanceArray.read(cell);
-		resistance.y = fminf(getVegetationDensity(veg, pos) + getVegetationDensity(veg2, pos), 1.f);
+		for (int i = xStart; i <= xEnd; ++i) {
+			for (int j = yStart; j <= yEnd; ++j) {
+				const uint2 indices = uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
+				for (unsigned int k = indices.x; k < indices.y && resistance.y < 1.f; ++k) {
+					resistance.y += getVegetationDensity(vegBuffer[k], pos);
+				}
+			}
+		}
+
+		resistance.y = fminf(resistance.y, 1.f);
 		t_resistanceArray.write(cell, resistance);
 	}
 
+
+	// temporary random fill
+	__global__ void initVegetation(Buffer<Vegetation> vegBuffer, Buffer<uint4> seeds, int vegCount, Array2D<float2> t_terrainArray) {
+		const int idx = getGlobalIndex1D();
+		if (idx >= vegCount) {
+			return;
+		}
+
+		uint4 seed = seeds[idx];
+		Vegetation veg;
+		veg.type = 0;
+		random::pcg(seed);
+		seeds[idx] = seed;
+		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
+		const float2 terrain = t_terrainArray.read(vegCell);
+		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y };
+		const float height = 0.5f + (seed.z % 100000u) * 0.0003f;
+		veg.height = { 0.6666f * height, 0.3333f * height };
+		veg.radius = 1.f + (seed.w % 100000u) * 0.00019f;
+		vegBuffer[idx] = veg;
+	}
+
+	__global__ void initUniformGrid(Buffer<uint2> uniformGrid) {
+		const int idx = getGlobalIndex1D();
+		if (idx >= c_parameters.uniformGridCount) {
+			return;
+		}
+
+		uniformGrid[idx] = { 0,0 };
+	}
+
+	__global__ void fillKeys(const Buffer<Vegetation> vegBuffer, Buffer<unsigned int> keys, int count) {
+		const int idx = getGlobalIndex1D();
+		if (idx >= count) {
+			return;
+		}
+
+		const auto pos = vegBuffer[idx].pos;
+		const int2 uniformCell = make_int2(float2{ pos.x * c_parameters.rUniformGridScale, pos.y * c_parameters.rUniformGridScale });
+		const int uniformIdx = getCellIndex(getWrappedCell(uniformCell, c_parameters.uniformGridSize), c_parameters.uniformGridSize);
+		keys[idx] = uniformIdx;
+	}
+
+	__global__ void findGridStart(const Buffer<unsigned int> keys, Buffer<uint2> uniformGrid, int count) {
+		const int idx = getGlobalIndex1D();
+		if (idx >= count) {
+			return;
+		}
+
+		const bool isZero = idx == 0;
+		const unsigned int uniformIdxA = keys[idx];
+		const unsigned int uniformIdxB = isZero ? 0 : keys[idx - 1];
+
+		if (isZero || uniformIdxB != uniformIdxA) {
+			uniformGrid[uniformIdxA].x = idx;
+		}
+	}
+
+	__global__ void findGridEnd(const Buffer<unsigned int> keys, Buffer<uint2> uniformGrid, int count) {
+		const int idx = getGlobalIndex1D();
+		if (idx >= count) {
+			return;
+		}
+
+		const bool isLast = idx == (count - 1);
+		const unsigned int uniformIdxA = keys[idx];
+		const unsigned int uniformIdxB = isLast ? 0 : keys[idx + 1];
+
+		if (isLast || uniformIdxB != uniformIdxA) {
+			uniformGrid[uniformIdxA].y = idx + 1;
+		}
+	}
+
+	void getVegetationCount(LaunchParameters& t_launchParameters) {
+		//unsigned int count = 0;
+		//cudaMemcpy(&count, t_launchParameters.vegetationCount, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+		//t_launchParameters.numVegetation = count;
+		//t_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(t_launchParameters.blockSize1D)));
+	}
+
+	void initializeVegetation(const LaunchParameters& t_launchParameters) {
+		int count = t_launchParameters.numVegetation;
+		//initVegetation << < t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.seedBuffer, count, t_launchParameters.terrainArray);
+	}
+
 	void vegetation(const LaunchParameters& t_launchParameters) {
-		rasterizeVegetation << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray);
+		int count = t_launchParameters.numVegetation;
+		//initUniformGrid << <t_launchParameters.uniformGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.uniformGrid);
+		//fillKeys << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count);
+		std::cout << count << std::endl;
+		CU_CHECK_ERROR(cudaGetLastError());
+		thrust::sort(thrust::device, t_launchParameters.slabBuffer, t_launchParameters.slabBuffer + 5000);
+		//thrust::stable_sort_by_key(thrust::device, t_launchParameters.keyBuffer, t_launchParameters.keyBuffer + count, (int*)t_launchParameters.vegBuffer);
+		//thrust::sort_by_key();
+		//findGridStart << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
+		//findGridEnd << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
+
+		//rasterizeVegetation << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid);
 	}
 }

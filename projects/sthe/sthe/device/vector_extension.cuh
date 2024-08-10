@@ -819,6 +819,30 @@ CU_INLINE CU_HOST_DEVICE uint2 make_uint2(const uint4& a)
 	return uint2{ a.x, a.y };
 }
 
+CU_INLINE CU_HOST_DEVICE uint2 operator>>(const uint2& a, unsigned int v) {
+	return { a.x >> v, a.y >> v };
+}
+
+CU_INLINE CU_HOST_DEVICE uint3 operator>>(const uint3& a, unsigned int v) {
+	return { a.x >> v, a.y >> v, a.z >> v };
+}
+
+CU_INLINE CU_HOST_DEVICE uint4 operator>>(const uint4& a, unsigned int v) {
+	return { a.x >> v, a.y >> v, a.z >> v, a.w >> v };
+}
+
+CU_INLINE CU_HOST_DEVICE uint2 operator^(const uint2& a, const uint2 & b) {
+	return { a.x ^ b.x, a.y ^ b.y };
+}
+
+CU_INLINE CU_HOST_DEVICE uint3 operator^(const uint3& a, const uint3 & b) {
+	return { a.x ^ b.x, a.y ^ b.y, a.z ^ b.z };
+}
+
+CU_INLINE CU_HOST_DEVICE uint4 operator^(const uint4& a, const uint4 & b) {
+	return { a.x ^ b.x, a.y ^ b.y, a.z ^ b.z, a.w ^ b.w };
+}
+
 CU_INLINE CU_HOST_DEVICE bool operator==(const uint2& a, const uint2& b)
 {
 	return a.x == b.x && a.y == b.y;
