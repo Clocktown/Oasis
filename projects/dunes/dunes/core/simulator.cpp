@@ -310,7 +310,7 @@ namespace dunes
 		// todo: max vegetation count
 		const int count = 5000;
 		m_launchParameters.numVegetation = count;
-		/*m_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(m_launchParameters.blockSize1D)));
+		m_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(m_launchParameters.blockSize1D)));
 
 		m_launchParameters.numVegetation = count;
 		m_vegBuffer.reinitialize(count, sizeof(Vegetation));
@@ -335,7 +335,7 @@ namespace dunes
 		m_uniformGrid.reinitialize(m_simulationParameters.uniformGridCount, sizeof(uint2));
 		m_launchParameters.uniformGrid = m_uniformGrid.getData<uint2>();
 		m_keys.reinitialize(count, sizeof(unsigned int));
-		m_launchParameters.keyBuffer = m_keys.getData<unsigned int>();*/
+		m_launchParameters.keyBuffer = m_keys.getData<unsigned int>();
 	}
 
 	void Simulator::setUseBilinear(const bool t_useBilinear) {
