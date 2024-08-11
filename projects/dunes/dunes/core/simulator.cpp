@@ -88,7 +88,6 @@ namespace dunes
 	// Functionality
 	void Simulator::reinitialize(const glm::ivec2& t_gridSize, const float t_gridScale)
 	{
-		std::cout << "reinitialize called" << std::endl;
 		m_time = 0.f;
 		m_timeStep = 0;
 		std::fill(m_watchTimings.begin(), m_watchTimings.end(), 0.f);
@@ -308,12 +307,13 @@ namespace dunes
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
 		// todo: max vegetation count
+		const int maxCount = 100000;
 		const int count = 5000;
 		m_launchParameters.numVegetation = count;
+		m_launchParameters.maxVegetation = maxCount;
 		m_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(m_launchParameters.blockSize1D)));
 
-		m_launchParameters.numVegetation = count;
-		m_vegBuffer.reinitialize(count, sizeof(Vegetation));
+		m_vegBuffer.reinitialize(maxCount, sizeof(Vegetation));
 		m_launchParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
 		m_vegetationCount.reinitialize(1, sizeof(int));
 		m_vegetationCount.upload(&count, 1);
@@ -322,7 +322,7 @@ namespace dunes
 		std::random_device rd;
 		std::mt19937 gen(rd());
 
-		std::vector<uint4> seeds(count);
+		std::vector<uint4> seeds(max(maxCount, m_simulationParameters.cellCount));
 		for (uint4& s : seeds) {
 			s.x = gen();
 			s.y = gen();
@@ -334,7 +334,7 @@ namespace dunes
 
 		m_uniformGrid.reinitialize(m_simulationParameters.uniformGridCount, sizeof(uint2));
 		m_launchParameters.uniformGrid = m_uniformGrid.getData<uint2>();
-		m_keys.reinitialize(count, sizeof(unsigned int));
+		m_keys.reinitialize(maxCount, sizeof(unsigned int));
 		m_launchParameters.keyBuffer = m_keys.getData<unsigned int>();
 	}
 

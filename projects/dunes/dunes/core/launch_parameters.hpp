@@ -100,6 +100,7 @@ struct LaunchParameters
 	Buffer<uint4> seedBuffer;
 	Buffer<int> vegetationCount;
 	int numVegetation{ 100 };
+	int maxVegetation{ 100000 };
 	Buffer<uint2> uniformGrid;
 	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
 	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
