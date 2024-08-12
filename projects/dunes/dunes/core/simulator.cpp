@@ -631,11 +631,6 @@ namespace dunes
 		m_simulationParameters.reptationUseWindShadow = t_reptationUseWindShadow;
 	}
 
-	void Simulator::setAvalancheMode(const AvalancheMode t_avalancheMode)
-	{
-		m_launchParameters.avalancheMode = t_avalancheMode;
-	}
-
 	void Simulator::setBedrockAvalancheMode(const BedrockAvalancheMode t_bedrockAvalancheMode)
 	{
 		m_launchParameters.bedrockAvalancheMode = t_bedrockAvalancheMode;
@@ -650,24 +645,9 @@ namespace dunes
 		m_launchParameters.projection.jacobiIterations = t_iters;
 	}
 
-	void Simulator::setAvalancheFinalSoftIterations(const int t_avalancheFinalSoftIterations)
-	{
-		m_launchParameters.avalancheFinalSoftIterations = t_avalancheFinalSoftIterations;
-	}
-
-	void Simulator::setAvalancheSoftIterationModulus(const int t_avalancheSoftIterationModulus)
-	{
-		m_launchParameters.avalancheSoftIterationModulus = t_avalancheSoftIterationModulus;
-	}
-
 	void Simulator::setBedrockAvalancheIterations(const int t_bedrockAvalancheIterations)
 	{
 		m_launchParameters.bedrockAvalancheIterations = t_bedrockAvalancheIterations;
-	}
-
-	void Simulator::setAvalancheStrength(const float t_avalancheStrength)
-	{
-		m_simulationParameters.avalancheStrength = t_avalancheStrength;
 	}
 
 	void Simulator::setAvalancheAngle(const float t_avalancheAngle)

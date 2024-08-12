@@ -74,13 +74,9 @@ namespace dunes
 		m_simulator->setReptationSmoothingStrength(m_reptationSmoothingStrength);
 		m_simulator->setReptationUseWindShadow(float(m_reptationUseWindShadow));
 
-		m_simulator->setAvalancheMode(static_cast<AvalancheMode>(m_avalancheMode));
 		m_simulator->setAvalancheIterations(m_avalancheIterations);
 		m_simulator->setPressureProjectionIterations(m_pressureProjectionIterations);
 		m_simulator->setProjectionMode(static_cast<ProjectionMode>(m_projectionMode));
-		m_simulator->setAvalancheFinalSoftIterations(m_avalancheFinalSoftIterations);
-		m_simulator->setAvalancheSoftIterationModulus(m_avalancheSoftIterationModulus);
-		m_simulator->setAvalancheStrength(m_avalancheStrength);
 		m_simulator->setAvalancheAngle(m_avalancheAngle);
 		m_simulator->setVegetationAngle(m_vegetationAngle);
 		m_simulator->setMultigridLevelCount(m_multigridLevelCount);
@@ -215,9 +211,12 @@ namespace dunes
 		{
 			bool dirty = false;
 			dirty |= ImGui::ColorEdit4("Sand Color", glm::value_ptr(m_renderParameters.sandColor));
-			dirty |= ImGui::ColorEdit4("Bedrock Color", glm::value_ptr(m_renderParameters.bedrockColor));
-			dirty |= ImGui::ColorEdit4("Wind Shadow Color", glm::value_ptr(m_renderParameters.windShadowColor));
+			dirty |= ImGui::ColorEdit4("Soil Color", glm::value_ptr(m_renderParameters.soilColor));
+			dirty |= ImGui::ColorEdit4("Humus Color", glm::value_ptr(m_renderParameters.humusColor));
 			dirty |= ImGui::ColorEdit4("Vegetation Color", glm::value_ptr(m_renderParameters.vegetationColor));
+			dirty |= ImGui::ColorEdit4("Bedrock Color", glm::value_ptr(m_renderParameters.bedrockColor));
+			dirty |= ImGui::ColorEdit4("Water Color", glm::value_ptr(m_renderParameters.waterColor));
+			dirty |= ImGui::ColorEdit4("Wind Shadow Color", glm::value_ptr(m_renderParameters.windShadowColor));
 
 			if (dirty) {
 				m_simulator->setRenderParameters(m_renderParameters);
@@ -389,7 +388,6 @@ namespace dunes
 		if (json.contains("reptationUseWindShadow"))
 			m_reptationUseWindShadow = json["reptationUseWindShadow"];
 
-		m_avalancheMode = getIndexFromNamedArray(avalancheModes, IM_ARRAYSIZE(avalancheModes), json["avalancheMode"], 1); //
 		m_bedrockAvalancheMode = getIndexFromNamedArray(bedrockAvalancheModes, IM_ARRAYSIZE(bedrockAvalancheModes), json["bedrockAvalancheMode"], 0); //
 		m_avalancheIterations = json["avalancheIterations"]; //
 		if (json.contains("pressureProjectionIterations")) {
@@ -399,9 +397,6 @@ namespace dunes
 			m_projectionMode = json["projectionMode"];
 		}
 		m_bedrockAvalancheIterations = json["bedrockAvalancheIterations"]; //
-		m_avalancheSoftIterationModulus = json["avalancheSoftIterationModulus"]; //
-		m_avalancheFinalSoftIterations = json["avalancheFinalSoftIterations"]; //
-		m_avalancheStrength = json["avalancheStrength"]; //
 		m_avalancheAngle = json["avalancheAngle"]; //
 		m_bedrockAngle = json["bedrockAngle"]; //
 		m_vegetationAngle = json["vegetationAngle"]; //
@@ -517,15 +512,11 @@ namespace dunes
 		json["reptationSmoothingStrength"] = m_reptationSmoothingStrength;
 		json["reptationUseWindShadow"] = m_reptationUseWindShadow;
 
-		json["avalancheMode"] = avalancheModes[m_avalancheMode];
 		json["bedrockAvalancheMode"] = bedrockAvalancheModes[m_bedrockAvalancheMode];
 		json["avalancheIterations"] = m_avalancheIterations;
 		json["pressureProjectionIterations"] = m_pressureProjectionIterations;
 		json["bedrockAvalancheIterations"] = m_bedrockAvalancheIterations;
 		json["projectionMode"] = m_projectionMode;
-		json["avalancheSoftIterationModulus"] = m_avalancheSoftIterationModulus;
-		json["avalancheFinalSoftIterations"] = m_avalancheFinalSoftIterations;
-		json["avalancheStrength"] = m_avalancheStrength;
 		json["avalancheAngle"] = m_avalancheAngle;
 		json["bedrockAngle"] = m_bedrockAngle;
 		json["vegetationAngle"] = m_vegetationAngle;
@@ -980,29 +971,9 @@ namespace dunes
 
 			if (ImGui::TreeNode("Avalanching"))
 			{
-				if (ImGui::Combo("Mode", &m_avalancheMode, avalancheModes, IM_ARRAYSIZE(avalancheModes)))
-				{
-					m_simulator->setAvalancheMode(static_cast<AvalancheMode>(m_avalancheMode));
-				}
-
 				if (ImGui::DragInt("Iterations", &m_avalancheIterations))
 				{
 					m_simulator->setAvalancheIterations(m_avalancheIterations);
-				}
-
-				if (ImGui::DragInt("Soft Iterations", &m_avalancheFinalSoftIterations))
-				{
-					m_simulator->setAvalancheFinalSoftIterations(m_avalancheFinalSoftIterations);
-				}
-
-				if (ImGui::DragInt("Soft Iteration Modulus", &m_avalancheSoftIterationModulus))
-				{
-					m_simulator->setAvalancheSoftIterationModulus(m_avalancheSoftIterationModulus);
-				}
-
-				if (ImGui::DragFloat("Soft Iteration Strength", &m_avalancheStrength, 0.001f, 0.f, 1.f))
-				{
-					m_simulator->setAvalancheStrength(m_avalancheStrength);
 				}
 
 				if (ImGui::DragFloat("Sand Angle", &m_avalancheAngle))

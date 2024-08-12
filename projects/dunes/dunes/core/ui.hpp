@@ -29,7 +29,6 @@ namespace dunes
 		static inline const char* saltationModes[2]{ "Backward", "Forward" };
 		static inline const char* windWarpingModes[2]{ "None", "Standard" };
 		static inline const char* windShadowModes[2]{ "Linear", "Curved" };
-		static inline const char* avalancheModes[7]{ "Atomic Buffered", "Atomic In-Place", "Shared In-Place", "Mixed In-Place", "Multigrid", "Taylor", "Jacobi"};
 		static inline const char* bedrockAvalancheModes[2]{ "To Sand", "To Bedrock" };
 		static inline const char* timeModes[2]{ "Delta Time", "Fixed Delta Time" };
 		static inline const char* initializationTargets[NumNoiseGenerationTargets]{ "Bedrock", "Sand", "Vegetation", "Abrasion Resistance" };
@@ -112,15 +111,11 @@ namespace dunes
 		float m_reptationSmoothingStrength{ 0.0f };
 		bool m_reptationUseWindShadow{ false };
 
-		int m_avalancheMode{ static_cast<int>(AvalancheMode::AtomicInPlace) };
 		int m_bedrockAvalancheMode{ static_cast<int>(BedrockAvalancheMode::ToSand) };
 		int m_avalancheIterations{ 50 };
 		int m_pressureProjectionIterations{ 50 };
 		int m_projectionMode{ static_cast<int>(ProjectionMode::FFT) };
 		int m_bedrockAvalancheIterations{ 1 };
-		int m_avalancheSoftIterationModulus{ 10 };
-		int m_avalancheFinalSoftIterations{ 5 };
-		float m_avalancheStrength{ 1.f };
 		float m_avalancheAngle{ 33.0f };
 		float m_bedrockAngle{ 68.0f };
 		float m_vegetationAngle{ 45.0f };
