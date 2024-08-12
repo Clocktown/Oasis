@@ -9,7 +9,7 @@ namespace dunes
 {
 
 	template<WindShadowMode Mode, bool TUseBilinear>
-	__global__ void windShadowKernel(const Array2D<float2> t_terrainArray, const Array2D<float2> t_windArray, Array2D<float4> t_resistanceArray)
+	__global__ void windShadowKernel(const Array2D<float4> t_terrainArray, const Array2D<float2> t_windArray, Array2D<float4> t_resistanceArray)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -18,7 +18,7 @@ namespace dunes
 			return;
 		}
 
-		const float2 terrain{ t_terrainArray.read(cell) };
+		const float4 terrain{ t_terrainArray.read(cell) };
 		float4 resistance{ t_resistanceArray.read(cell) };
 		float2 windVelocity;
 		float windSpeed;
@@ -47,7 +47,7 @@ namespace dunes
 
 			nextPosition -= windDirection;
 
-			const float2 nextTerrain{ sampleLinearOrNearest<TUseBilinear>(t_terrainArray, nextPosition) };
+			const float4 nextTerrain{ sampleLinearOrNearest<TUseBilinear>(t_terrainArray, nextPosition) };
 			const float nextHeight{ nextTerrain.x + nextTerrain.y };
 			const float heightDifference{ nextHeight - height };
 			const float angle{ heightDifference / distance };

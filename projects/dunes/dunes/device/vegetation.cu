@@ -33,7 +33,7 @@ namespace dunes {
 
 	}
 
-	__global__ void rasterizeVegetation(const Array2D<float2> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid, Buffer<int> vegCount, int maxVegCount, Buffer<uint4> seeds)
+	__global__ void rasterizeVegetation(const Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid, Buffer<int> vegCount, int maxVegCount, Buffer<uint4> seeds)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -55,7 +55,7 @@ namespace dunes {
 		const int xEnd = int(gridPosition.x + 0.5f);
 		const int yStart = int(gridPosition.y - 0.5f);
 		const int yEnd = int(gridPosition.y + 0.5f);
-		const float2 terrain = t_terrainArray.read(cell);
+		const float4 terrain = t_terrainArray.read(cell);
 		const float3 pos{ position.x, position.y, terrain.x + terrain.y };
 
 		for (int i = xStart; i <= xEnd; ++i) {
@@ -92,7 +92,7 @@ namespace dunes {
 		t_resistanceArray.write(cell, resistance);
 	}
 
-	__global__ void growVegetation(Buffer<Vegetation> vegBuffer, int vegCount, const Array2D<float2> t_terrainArray, const Buffer<uint2> uniformGrid)
+	__global__ void growVegetation(Buffer<Vegetation> vegBuffer, int vegCount, const Array2D<float4> t_terrainArray, const Buffer<uint2> uniformGrid)
 	{
 		const int idx = getGlobalIndex1D();
 		if (idx >= vegCount) {
@@ -129,7 +129,7 @@ namespace dunes {
 
 
 	// temporary random fill
-	__global__ void initVegetation(Buffer<Vegetation> vegBuffer, Buffer<uint4> seeds, int vegCount, Array2D<float2> t_terrainArray) {
+	__global__ void initVegetation(Buffer<Vegetation> vegBuffer, Buffer<uint4> seeds, int vegCount, Array2D<float4> t_terrainArray) {
 		const int idx = getGlobalIndex1D();
 		if (idx >= vegCount) {
 			return;
@@ -141,7 +141,7 @@ namespace dunes {
 		random::pcg(seed);
 		seeds[idx] = seed;
 		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
-		const float2 terrain = t_terrainArray.read(vegCell);
+		const float4 terrain = t_terrainArray.read(vegCell);
 		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y };
 		const float height = 0.5f + (seed.z % 100000u) * 0.0003f;
 		veg.height = { 0.6666f * height, 0.3333f * height };

@@ -99,4 +99,14 @@ namespace dunes
 		}
 	}
 
+	template<bool TUseBilinear>
+	__forceinline__ __device__  float4 sampleLinearOrNearest(const Array2D<float4>& arr, const float2& pos) {
+		if constexpr (TUseBilinear) {
+			return arr.sample(pos);
+		}
+		else {
+			return arr.read(getWrappedCell(getNearestCell(pos - 0.5f)));
+		}
+	}
+
 }

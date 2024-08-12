@@ -10,7 +10,7 @@
 namespace dunes
 {
 
-__global__ void coverageKernel(Array2D<float2> t_terrainArray, unsigned int* coverageMap, float threshold)
+__global__ void coverageKernel(Array2D<float4> t_terrainArray, unsigned int* coverageMap, float threshold)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -19,7 +19,7 @@ __global__ void coverageKernel(Array2D<float2> t_terrainArray, unsigned int* cov
 		return;
 	}
 
-	const float2 terrain{ t_terrainArray.read(cell) };
+	const float4 terrain{ t_terrainArray.read(cell) };
 
 	coverageMap[getCellIndex(cell)] = terrain.y > threshold ? 1 : 0;
 }

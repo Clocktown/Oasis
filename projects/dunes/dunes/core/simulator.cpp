@@ -278,7 +278,7 @@ namespace dunes
 		m_terrain->setGridSize(glm::ivec2{ m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y });
 		m_terrain->setGridScale(m_simulationParameters.gridScale);
 
-		m_terrainMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
+		m_terrainMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 		m_windMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
 		m_resistanceMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 	}
@@ -295,7 +295,7 @@ namespace dunes
 		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.slabBuffer = m_slabBuffer.getData<float>();
 
-		m_tmpBuffer.reinitialize(4 * m_simulationParameters.cellCount, sizeof(float));
+		m_tmpBuffer.reinitialize(5 * m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
 		// todo: max vegetation count

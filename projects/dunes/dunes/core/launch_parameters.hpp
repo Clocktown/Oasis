@@ -80,7 +80,7 @@ struct LaunchParameters
 	int bedrockAvalancheIterations{ 2 };
 	TimeMode timeMode{ TimeMode::DeltaTime };
 
-	Array2D<float2> terrainArray;
+	Array2D<float4> terrainArray;
 	Array2D<float2> windArray;
 	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = sticky
 	Buffer<float> slabBuffer;

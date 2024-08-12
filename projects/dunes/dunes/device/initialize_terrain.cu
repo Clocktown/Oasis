@@ -77,7 +77,7 @@ namespace dunes
 		);
 	}
 
-	__global__ void initializeTerrainKernel(Array2D<float2> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, InitializationParameters t_initializationParameters)
+	__global__ void initializeTerrainKernel(Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, InitializationParameters t_initializationParameters)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -88,7 +88,7 @@ namespace dunes
 
 		const float2 uv = (make_float2(cell) + 0.5f) / make_float2(c_parameters.gridSize);
 
-		const float2 curr_terrain = t_terrainArray.read(cell);
+		const float4 curr_terrain = t_terrainArray.read(cell);
 		const float4 curr_resistance = t_resistanceArray.read(cell);
 
 		const int indices[4]{
@@ -155,7 +155,7 @@ namespace dunes
 		}*/
 
 		// Regular initialization
-		const float2 terrain{ values[0], fmaxf(values[1], 0.f) };
+		const float4 terrain{ values[0], fmaxf(values[1], 0.f) };
 		t_terrainArray.write(cell, terrain);
 
 		const float4 resistance{ 0.0f, values[2], clamp(values[3], 0.f, 1.f), 0.0f };
@@ -164,7 +164,7 @@ namespace dunes
 		t_slabBuffer[getCellIndex(cell)] = 0.0f;
 	}
 
-	__global__ void addSandForCoverageKernel(Array2D<float2> t_terrainArray, float amount)
+	__global__ void addSandForCoverageKernel(Array2D<float4> t_terrainArray, float amount)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -173,7 +173,7 @@ namespace dunes
 			return;
 		}
 
-		float2 curr_terrain = t_terrainArray.read(cell);
+		float4 curr_terrain = t_terrainArray.read(cell);
 
 		curr_terrain.y += frand(make_float2(cell)) * 2.f * amount;
 		curr_terrain.y = fmaxf(curr_terrain.y, 0.f);
@@ -181,7 +181,7 @@ namespace dunes
 		t_terrainArray.write(cell, curr_terrain);
 	}
 
-	__global__ void addSandCircleForCoverageKernel(Array2D<float2> t_terrainArray, int2 pos, int radius, float amount)
+	__global__ void addSandCircleForCoverageKernel(Array2D<float4> t_terrainArray, int2 pos, int radius, float amount)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -190,7 +190,7 @@ namespace dunes
 			return;
 		}
 
-		float2 curr_terrain = t_terrainArray.read(cell);
+		float4 curr_terrain = t_terrainArray.read(cell);
 
 		const float2 cellf{ make_float2(cell) };
 		const float2 posf{ make_float2(pos) };

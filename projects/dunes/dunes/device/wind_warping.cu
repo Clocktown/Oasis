@@ -1,4 +1,3 @@
-#include "multigrid.cuh"
 #include "constants.cuh"
 #include "grid.cuh"
 #include <dunes/core/simulation_parameters.hpp>
@@ -55,7 +54,7 @@ __global__ void initializeWindWarpingKernel(WindWarping t_windWarping)
 	}
 }
 
-__global__ void setupWindWarpingKernel(Array2D<float2> t_terrainArray, Buffer<cuComplex> t_heightBuffer)
+__global__ void setupWindWarpingKernel(Array2D<float4> t_terrainArray, Buffer<cuComplex> t_heightBuffer)
 {
 	const int2 index{ getGlobalIndex2D() };
 	const int2 stride{ getGridStride2D() };
@@ -68,7 +67,7 @@ __global__ void setupWindWarpingKernel(Array2D<float2> t_terrainArray, Buffer<cu
 		for (cell.y = index.y; cell.y < c_parameters.gridSize.y; cell.y += stride.y)
 		{
 			const int cellIndex{ getCellIndex(cell) };
-			const float2 terrain{ t_terrainArray.read(cell) };
+			const float4 terrain{ t_terrainArray.read(cell) };
 			const float height{ terrain.x + terrain.y };
 
 			t_heightBuffer[cellIndex] = cuComplex{ height, 0.0f };
@@ -104,7 +103,7 @@ __global__ void smoothTerrainsKernel(Buffer<cuComplex> t_heightBuffer, WindWarpi
 	}
 }
 
-__global__ void readBackSmoothTerrainKernel(Array2D<float2> t_terrainArray, WindWarping t_windWarping) {
+__global__ void readBackSmoothTerrainKernel(Array2D<float4> t_terrainArray, WindWarping t_windWarping) {
 	const int2 index{ getGlobalIndex2D() };
 	const int2 stride{ getGridStride2D() };
 
@@ -116,12 +115,12 @@ __global__ void readBackSmoothTerrainKernel(Array2D<float2> t_terrainArray, Wind
 		{
 			const int cellIndex{ getCellIndex(cell) };
 			
-			t_terrainArray.write(cell, float2{ t_windWarping.smoothedHeights[0][cellIndex].x, 0.f });
+			t_terrainArray.write(cell, float4{ t_windWarping.smoothedHeights[0][cellIndex].x, 0.f, 0.f, 0.f });
 		}
 	}
 }
 
-__global__ void readGaussKernel(Array2D<float2> t_terrainArray, WindWarping t_windWarping) {
+__global__ void readGaussKernel(Array2D<float4> t_terrainArray, WindWarping t_windWarping) {
 	const int2 index{ getGlobalIndex2D() };
 	const int2 stride{ getGridStride2D() };
 
@@ -133,7 +132,7 @@ __global__ void readGaussKernel(Array2D<float2> t_terrainArray, WindWarping t_wi
 		{
 			const int cellIndex{ getCellIndex(cell) };
 			
-			t_terrainArray.write(cell, 25000.f * float2{ t_windWarping.gaussKernels[0][cellIndex].x, 0.f });
+			t_terrainArray.write(cell, 25000.f * float4{ t_windWarping.gaussKernels[0][cellIndex].x, 0.f, 0.f, 0.f });
 		}
 	}
 }

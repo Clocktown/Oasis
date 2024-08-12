@@ -12,7 +12,7 @@
 namespace dunes
 {
 
-	__global__ void setupContinuousSaltationKernel(Array2D<float2> t_terrainArray, const Array2D<float2> t_windArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
+	__global__ void setupContinuousSaltationKernel(Array2D<float4> t_terrainArray, const Array2D<float2> t_windArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 index{ getGlobalIndex2D() };
 		const int2 stride{ getGridStride2D() };
@@ -23,7 +23,7 @@ namespace dunes
 		{
 			for (cell.y = index.y; cell.y < c_parameters.gridSize.y; cell.y += stride.y)
 			{
-				float2 terrain{ t_terrainArray.read(cell) };
+				float4 terrain{ t_terrainArray.read(cell) };
 
 				const float2 windVelocity{ t_windArray.read(cell) };
 				const float windSpeed{ length(windVelocity) };
@@ -141,7 +141,7 @@ namespace dunes
 		t_advectedSlabBuffer[cellIndex] = slab;
 	}
 
-	__global__ void finishContinuousSaltationKernel(Array2D<float2> t_terrainArray, const Array2D<float2> t_windArray, const Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
+	__global__ void finishContinuousSaltationKernel(Array2D<float4> t_terrainArray, const Array2D<float2> t_windArray, const Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 index{ getGlobalIndex2D() };
 		const int2 stride{ getGridStride2D() };
@@ -154,7 +154,7 @@ namespace dunes
 			{
 				const int cellIndex{ getCellIndex(cell) };
 
-				float2 terrain{ t_terrainArray.read(cell) };
+				float4 terrain{ t_terrainArray.read(cell) };
 				const float slab{ t_advectedSlabBuffer[cellIndex] };
 
 				const float windSpeed{ length(t_windArray.read(cell)) };

@@ -60,7 +60,7 @@ __global__ void noReptationKernel(const Array2D<float4> t_resistanceArray, Buffe
 	t_reptationBuffer[cellIndex] = lerp(c_parameters.avalancheAngle, c_parameters.vegetationAngle, fmaxf(vegetation, 0.f));
 }
 
-__global__ void continuousReptationKernel(const Array2D<float2> t_terrainArray, Buffer<float> t_slabBuffer, Buffer<float> t_reptationBuffer, const Array2D<float2> t_windArray)
+__global__ void continuousReptationKernel(const Array2D<float4> t_terrainArray, Buffer<float> t_slabBuffer, Buffer<float> t_reptationBuffer, const Array2D<float2> t_windArray)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -70,7 +70,7 @@ __global__ void continuousReptationKernel(const Array2D<float2> t_terrainArray, 
 	}
 
 	const int cellIndex{ getCellIndex(cell) };
-	const float2 terrain{ t_terrainArray.read(cell) };
+	const float4 terrain{ t_terrainArray.read(cell) };
 	const float height{ terrain.x + terrain.y };
 
 	const float slab{ t_slabBuffer[cellIndex] };
@@ -84,7 +84,7 @@ __global__ void continuousReptationKernel(const Array2D<float2> t_terrainArray, 
 		const float nextSlab{ t_slabBuffer[getCellIndex(nextCell)] };
 		const float nextWind{ length(t_windArray.read(cell)) };
 
-		const float2 nextTerrain{ t_terrainArray.read(nextCell) };
+		const float4 nextTerrain{ t_terrainArray.read(nextCell) };
 		const float nextHeight{ nextTerrain.x + nextTerrain.y };
 
 		const float heightDifference{ (nextHeight - height) * c_parameters.rGridScale * c_rDistances[i]};
@@ -98,7 +98,7 @@ __global__ void continuousReptationKernel(const Array2D<float2> t_terrainArray, 
 	t_reptationBuffer[cellIndex] = change * 0.125;
 }
 
-__global__ void continuousBilinearReptationKernel(const Array2D<float2> t_terrainArray, const Buffer<float> t_slabBuffer, Buffer<float> t_reptationBuffer, const Array2D<float2> t_windArray)
+__global__ void continuousBilinearReptationKernel(const Array2D<float4> t_terrainArray, const Buffer<float> t_slabBuffer, Buffer<float> t_reptationBuffer, const Array2D<float2> t_windArray)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -108,7 +108,7 @@ __global__ void continuousBilinearReptationKernel(const Array2D<float2> t_terrai
 	}
 
 	const int cellIndex{ getCellIndex(cell) };
-	const float2 terrain{ t_terrainArray.read(cell) };
+	const float4 terrain{ t_terrainArray.read(cell) };
 	const float height{ terrain.x + terrain.y };
 
 	float slab{ t_slabBuffer[cellIndex] };
@@ -124,7 +124,7 @@ __global__ void continuousBilinearReptationKernel(const Array2D<float2> t_terrai
 		const int2 nextCell{ getWrappedCell(cell + c_offsets[i]) };
 		const float nextSlab{ t_slabBuffer[getCellIndex(nextCell)] };
 
-		const float2 nextTerrain{ t_terrainArray.read(nextCell) };
+		const float4 nextTerrain{ t_terrainArray.read(nextCell) };
 		const float nextHeight{ nextTerrain.x + nextTerrain.y };
 
 		// Want the negative gradient
@@ -160,7 +160,7 @@ __global__ void continuousBilinearReptationKernel(const Array2D<float2> t_terrai
 	}
 }
 
-__global__ void finishContinuousReptationKernel(Array2D<float2> t_terrainArray, Buffer<float> t_reptationBuffer)
+__global__ void finishContinuousReptationKernel(Array2D<float4> t_terrainArray, Buffer<float> t_reptationBuffer)
 {
 	const int2 index{ getGlobalIndex2D() };
 	const int2 stride{ getGridStride2D() };
@@ -173,7 +173,7 @@ __global__ void finishContinuousReptationKernel(Array2D<float2> t_terrainArray, 
 		{
 			const int cellIndex{ getCellIndex(cell) };
 
-			float2 terrain{ t_terrainArray.read(cell) };
+			float4 terrain{ t_terrainArray.read(cell) };
 			terrain.y += t_reptationBuffer[getCellIndex(cell)];
 
 			t_terrainArray.write(cell, terrain);
@@ -181,7 +181,7 @@ __global__ void finishContinuousReptationKernel(Array2D<float2> t_terrainArray, 
 	}
 }
 
-__global__ void finishContinuousBilinearReptationKernel(Array2D<float2> t_terrainArray, Buffer<float> t_reptationBuffer)
+__global__ void finishContinuousBilinearReptationKernel(Array2D<float4> t_terrainArray, Buffer<float> t_reptationBuffer)
 {
 	const int2 index{ getGlobalIndex2D() };
 	const int2 stride{ getGridStride2D() };
@@ -194,7 +194,7 @@ __global__ void finishContinuousBilinearReptationKernel(Array2D<float2> t_terrai
 		{
 			const int cellIndex{ getCellIndex(cell) };
 
-			float2 terrain{ t_terrainArray.read(cell) };
+			float4 terrain{ t_terrainArray.read(cell) };
 			terrain.y += t_reptationBuffer[cellIndex];
 
 			t_terrainArray.write(cell, terrain);
@@ -204,7 +204,7 @@ __global__ void finishContinuousBilinearReptationKernel(Array2D<float2> t_terrai
 
 void continuousReptation(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters)
 {
-	Buffer<float> reptationBuffer{ t_launchParameters.tmpBuffer + 2 * t_simulationParameters.cellCount };
+	Buffer<float> reptationBuffer{ t_launchParameters.tmpBuffer + 4 * t_simulationParameters.cellCount };
 	if (t_simulationParameters.reptationSmoothingStrength > 0.f) {
 		continuousReptationKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.tmpBuffer, reptationBuffer, t_launchParameters.windArray);
 		finishContinuousReptationKernel << <t_launchParameters.optimalGridSize2D, t_launchParameters.optimalBlockSize2D >> > (t_launchParameters.terrainArray, reptationBuffer);

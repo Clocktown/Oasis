@@ -8,7 +8,7 @@
 namespace dunes
 {
 
-__global__ void setupAtomicInPlaceAvalanchingKernel(Array2D<float2> t_terrainArray, Buffer<float2> t_terrainBuffer)
+__global__ void setupAtomicInPlaceAvalanchingKernel(Array2D<float4> t_terrainArray, Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -22,7 +22,7 @@ __global__ void setupAtomicInPlaceAvalanchingKernel(Array2D<float2> t_terrainArr
 	t_terrainBuffer[cellIndex] = t_terrainArray.read(cell);
 }
 
-__global__ void atomicInPlaceAvalanchingKernel(Buffer<float2> t_terrainBuffer, const Buffer<float> t_reptationBuffer)
+__global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, const Buffer<float> t_reptationBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -35,7 +35,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float2> t_terrainBuffer, c
 
 	const float avalancheAngle{ t_reptationBuffer[cellIndex] };
 
-	const float2 terrain{ t_terrainBuffer[cellIndex] };
+	const float4 terrain{ t_terrainBuffer[cellIndex] };
 	const float height{ terrain.x + terrain.y };
 	int nextCellIndices[8];
 	float avalanches[8];
@@ -45,7 +45,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float2> t_terrainBuffer, c
 	for (int i{ 0 }; i < 8; ++i)
 	{
 		nextCellIndices[i] = getCellIndex(getWrappedCell(cell + c_offsets[i]));
-		const float2 nextTerrain{ t_terrainBuffer[nextCellIndices[i]] };
+		const float4 nextTerrain{ t_terrainBuffer[nextCellIndices[i]] };
 		const float nextHeight{ nextTerrain.x + nextTerrain.y };
 
 		const float heightDifference{ height - nextHeight };
@@ -74,7 +74,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float2> t_terrainBuffer, c
 	}
 }
 
-__global__ void finishAtomicInPlaceAvalanchingKernel(Array2D<float2> t_terrainArray, Buffer<float2> t_terrainBuffer)
+__global__ void finishAtomicInPlaceAvalanchingKernel(Array2D<float4> t_terrainArray, Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -90,8 +90,8 @@ __global__ void finishAtomicInPlaceAvalanchingKernel(Array2D<float2> t_terrainAr
 
 void avalanching(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters)
 {
-	Buffer<float2> terrainBuffer{ reinterpret_cast<Buffer<float2>>(t_launchParameters.tmpBuffer) };
-	Buffer<float> reptationBuffer{ t_launchParameters.tmpBuffer + 2 * t_simulationParameters.cellCount };
+	Buffer<float4> terrainBuffer{ reinterpret_cast<Buffer<float4>>(t_launchParameters.tmpBuffer) };
+	Buffer<float> reptationBuffer{ t_launchParameters.tmpBuffer + 4 * t_simulationParameters.cellCount };
 
 	setupAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, terrainBuffer);
 
