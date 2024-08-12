@@ -31,7 +31,7 @@ namespace dunes
 			windDirection = windVelocity / (windSpeed + 1e-06f);
 		}
 
-		const float height{ terrain.x + terrain.y };
+		const float height{ terrain.x + terrain.y + terrain.z + terrain.w };
 		float2 nextPosition{ make_float2(cell) + 0.5f };
 		//nextPosition -= windDirection;
 		float maxAngle{ 0.0f };
@@ -48,7 +48,7 @@ namespace dunes
 			nextPosition -= windDirection;
 
 			const float4 nextTerrain{ sampleLinearOrNearest<TUseBilinear>(t_terrainArray, nextPosition) };
-			const float nextHeight{ nextTerrain.x + nextTerrain.y };
+			const float nextHeight{ nextTerrain.x + nextTerrain.y + nextTerrain.z + nextTerrain.w };
 			const float heightDifference{ nextHeight - height };
 			const float angle{ heightDifference / distance };
 

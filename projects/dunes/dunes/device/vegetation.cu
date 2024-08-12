@@ -56,7 +56,7 @@ namespace dunes {
 		const int yStart = int(gridPosition.y - 0.5f);
 		const int yEnd = int(gridPosition.y + 0.5f);
 		const float4 terrain = t_terrainArray.read(cell);
-		const float3 pos{ position.x, position.y, terrain.x + terrain.y };
+		const float3 pos{ position.x, position.y, terrain.x + terrain.y + terrain.z };
 
 		for (int i = xStart; i <= xEnd; ++i) {
 			for (int j = yStart; j <= yEnd; ++j) {
@@ -142,7 +142,7 @@ namespace dunes {
 		seeds[idx] = seed;
 		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
 		const float4 terrain = t_terrainArray.read(vegCell);
-		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y };
+		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };
 		const float height = 0.5f + (seed.z % 100000u) * 0.0003f;
 		veg.height = { 0.6666f * height, 0.3333f * height };
 		veg.radius = 1.f + (seed.w % 100000u) * 0.00019f;

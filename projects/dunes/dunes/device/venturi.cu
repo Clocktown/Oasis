@@ -21,7 +21,7 @@ __global__ void venturiKernel(Array2D<float4> t_terrainArray, Array2D<float2> t_
 		{
 
 			const float4 terrain{ t_terrainArray.read(cell) };
-			const float height{ terrain.x + terrain.y };
+			const float height{ terrain.x + terrain.y + terrain.z + terrain.w };
 
 			const float venturiScale{ fmaxf(1.0f + c_parameters.venturiStrength * height, 0.5f) };
 			const float2 windVelocity{ venturiScale * c_parameters.windSpeed * c_parameters.windDirection };

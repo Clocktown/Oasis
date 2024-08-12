@@ -199,10 +199,6 @@ void main()
 		{
 			fragmentColor.rgb += illuminatedColor;
 		}
-		if (resistances.x > 0.0f && renderParameters.windShadowColor.a > 0.5f)
-		{
-		    fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * renderParameters.windShadowColor.rgb, 0.5f * resistances.x);
-		} 
 		if(renderParameters.waterColor.a > 0.5f) {
 			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * renderParameters.waterColor.rgb, min(0.1f * terrain.w, 1));
 			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * renderParameters.waterColor.rgb, clamp(0.1f * terrain.w - 1.f, 0, 1));
@@ -220,6 +216,10 @@ void main()
 
 			fragmentColor.rgb = mix(fragmentColor.rgb, backgroundColor, rTheta) + cosPsiN * specularColor;
 		}
+		if (resistances.x > 0.0f && renderParameters.windShadowColor.a > 0.5f)
+		{
+		    fragmentColor.rgb = mix(fragmentColor.rgb, fragmentColor.rgb * renderParameters.windShadowColor.rgb, 0.5f * resistances.x);
+		} 
 	}
 
 	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);

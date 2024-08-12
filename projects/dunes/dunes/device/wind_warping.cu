@@ -68,7 +68,7 @@ __global__ void setupWindWarpingKernel(Array2D<float4> t_terrainArray, Buffer<cu
 		{
 			const int cellIndex{ getCellIndex(cell) };
 			const float4 terrain{ t_terrainArray.read(cell) };
-			const float height{ terrain.x + terrain.y };
+			const float height{ terrain.x + terrain.y + terrain.z + terrain.w };
 
 			t_heightBuffer[cellIndex] = cuComplex{ height, 0.0f };
 		}
