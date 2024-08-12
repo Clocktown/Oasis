@@ -104,6 +104,7 @@ namespace dunes
 		float m_maxWindShadowAngle{ 15.0f };
 
 		float m_abrasionStrength{ 0.0f };
+		float m_soilAbrasionStrength{ 0.0f };
 		float m_abrasionThreshold{ 0.025f };
 		int m_saltationMode{ static_cast<int>(SaltationMode::Forward) };
 		float m_saltationStrength{ 1.f };

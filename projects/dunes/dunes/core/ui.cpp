@@ -380,6 +380,9 @@ namespace dunes
 		m_maxWindShadowAngle = json["maxWindShadowAngle"]; //
 
 		m_abrasionStrength = json["abrasionStrength"]; //
+		if (json.contains("soilAbrasionStrength")) {
+			m_soilAbrasionStrength = json["soilAbrasionStrength"];
+		}
 		m_abrasionThreshold = json["abrasionThreshold"]; //
 		m_saltationMode = getIndexFromNamedArray(saltationModes, IM_ARRAYSIZE(saltationModes), json["saltationMode"], 1); //
 		m_saltationStrength = json["saltationStrength"]; //
@@ -511,6 +514,7 @@ namespace dunes
 		json["maxWindShadowAngle"] = m_maxWindShadowAngle;
 
 		json["abrasionStrength"] = m_abrasionStrength;
+		json["soilAbrasionStrength"] = m_soilAbrasionStrength;
 		json["abrasionThreshold"] = m_abrasionThreshold;
 		json["saltationMode"] = saltationModes[m_saltationMode];
 		json["saltationStrength"] = m_saltationStrength;
@@ -964,9 +968,14 @@ namespace dunes
 
 			if (ImGui::TreeNode("Abrasion"))
 			{
-				if (ImGui::DragFloat("Strength", &m_abrasionStrength, 0.05f))
+				if (ImGui::DragFloat("Bedrock Strength", &m_abrasionStrength, 0.05f))
 				{
 					m_simulator->setAbrasionStrength(m_abrasionStrength);
+				}
+
+				if (ImGui::DragFloat("Soil Strength", &m_soilAbrasionStrength, 0.05f))
+				{
+					m_simulator->setSoilAbrasionStrength(m_soilAbrasionStrength);
 				}
 
 				if (ImGui::DragFloat("Threshold", &m_abrasionThreshold, 0.05f))

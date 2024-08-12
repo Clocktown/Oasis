@@ -53,6 +53,7 @@ namespace dunes
 		void setMinWindShadowAngle(const float t_minWindShadowAngle);
 		void setMaxWindShadowAngle(const float t_maxWindShadowAngle);
 		void setAbrasionStrength(const float t_abrasionStrength);
+		void setSoilAbrasionStrength(const float t_abrasionStrength);
 		void setAbrasionThreshold(const float t_abrasionThreshold);
 		void setSaltationMode(const SaltationMode t_saltationMode);
 		void setSaltationStrength(const float t_saltationStrength);

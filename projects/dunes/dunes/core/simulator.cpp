@@ -573,6 +573,11 @@ namespace dunes
 		m_simulationParameters.abrasionStrength = t_abrasionStrength;
 	}
 
+	void Simulator::setSoilAbrasionStrength(const float t_abrasionStrength)
+	{
+		m_simulationParameters.soilAbrasionStrength = t_abrasionStrength;
+	}
+
 	void Simulator::setAbrasionThreshold(const float t_abrasionThreshold)
 	{
 		m_simulationParameters.abrasionThreshold = t_abrasionThreshold;
