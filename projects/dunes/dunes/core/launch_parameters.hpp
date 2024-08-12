@@ -78,6 +78,7 @@ struct LaunchParameters
 	bool useBilinear{ true };
 	int avalancheIterations{ 50 };
 	int bedrockAvalancheIterations{ 2 };
+	int soilAvalancheIterations{ 2 };
 	TimeMode timeMode{ TimeMode::DeltaTime };
 
 	Array2D<float4> terrainArray;
@@ -112,20 +113,22 @@ struct NoiseGenerationParameters
 	bool uniform_random = false;
 };
 
-constexpr int NumNoiseGenerationTargets = 4;
+constexpr int NumNoiseGenerationTargets = 6;
 
 enum class NoiseGenerationTarget : unsigned char
 {
-	Bedrock, Sand, Vegetation, AbrasionResistance
+	Bedrock, Sand, Vegetation, AbrasionResistance, Soil, Water
 };
 
 struct InitializationParameters
 {
 	NoiseGenerationParameters noiseGenerationParameters[NumNoiseGenerationTargets]{
 		{},
-		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 10.f, 0, true, true, false},
+		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 1.f, 0, true, true, false},
 		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 1.f, 0.f, 0, true, true, false},
-		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 1.f, 0.f, 0, true, true, false}
+		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 1.f, 0.f, 0, true, true, false},
+		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 10.f, 0, true, true, false},
+		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 5.f, 0, true, true, false}
 	};
 };
 

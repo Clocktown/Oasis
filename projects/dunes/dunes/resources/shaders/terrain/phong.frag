@@ -173,10 +173,11 @@ void main()
 		const vec3 lightColor = attenuation * t_environment.lights[i].intensity * t_environment.lights[i].color;
 
 
-		const vec2 terrain = texture(t_heightMap, fragment.uv).xy;
+		const vec4 terrain = texture(t_heightMap, fragment.uv);
 		const vec4 resistances = texture(t_resistanceMap, fragment.uv);
 		const vec3 bedrockColor = mix(renderParameters.bedrockColor.rgb, vec3(0), 0.75 * resistances.z);
-	    vec3 diffuseColor = mix(renderParameters.sandColor.rgb, bedrockColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
+		vec3 diffuseColor = mix(renderParameters.soilColor.rgb, bedrockColor, clamp((1.f - terrain.z) / (1.f), 0.f, 1.f));
+	    diffuseColor = mix(renderParameters.sandColor.rgb, diffuseColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
 		diffuseColor = mix(diffuseColor, renderParameters.vegetationColor.rgb, max(resistances.y, 0.f));
 		//diffuseColor = mix(diffuseColor, renderParameters.objectColor.rgb, max(-resistances.y,0));
 			

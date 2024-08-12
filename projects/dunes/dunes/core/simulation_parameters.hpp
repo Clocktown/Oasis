@@ -32,16 +32,6 @@ struct WindWarping
 	Buffer<cuComplex> smoothedHeights[4];
 };
 
-struct MultigridLevel
-{
-	int2 gridSize;
-	float gridScale;
-	int cellCount;
-	Buffer<float2> terrainBuffer;
-	Buffer<float> fluxBuffer;
-	Buffer<float> avalancheBuffer;
-};
-
 struct SimulationParameters
 {
 	int2 gridSize{ 2048, 2048 };
@@ -62,11 +52,6 @@ struct SimulationParameters
 	float minWindShadowAngle{ TAN10 };
 	float maxWindShadowAngle{ TAN15 };
 
-	float stickyStrength{ 1.0f };
-	float stickyAngle{ TAN55 };
-	float2 stickyRange{ 0.4f, 2.0f };
-	float maxStickyHeight{ 30.0f };
-
 	float abrasionStrength{ 0.0f };
 	float abrasionThreshold{ 0.1f };
 	float saltationStrength{ 0.05f };
@@ -74,10 +59,11 @@ struct SimulationParameters
 	float reptationSmoothingStrength{ 0.0f };
 	float reptationUseWindShadow{ 0.f };
 
-	float avalancheStrength{ 0.5f };
 	float avalancheAngle{ TAN33 };
 	float bedrockAngle{ TAN68 };
 	float vegetationAngle{ TAN45 };
+	float soilAngle{ TAN45 };
+	float vegetationSoilAngle{ TAN68 };
 
 	float deltaTime{ 1.0f };
 	int timestep = 0;

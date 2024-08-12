@@ -35,10 +35,6 @@ __global__ void bedrockAvalancheKernel(const Array2D<float4> t_resistanceArray, 
 
 	const float4 terrain{ t_terrainBuffer[cellIndex] };
 	const float height{ terrain.x };
-	const float object = t_resistanceArray.read(cell).y < 0.f ? 0.f : 1.f;
-	if (object == 0.f) {
-		return;
-	}
 	
 	int nextCellIndices[8];
 	float avalanches[8];
@@ -52,7 +48,7 @@ __global__ void bedrockAvalancheKernel(const Array2D<float4> t_resistanceArray, 
 		const float nextHeight{ nextTerrain.x };
 
 		const float heightDifference{ height - nextHeight };
-		avalanches[i] = object * fmaxf(heightDifference - c_parameters.bedrockAngle * c_distances[i] * c_parameters.gridScale, 0.0f);
+		avalanches[i] = fmaxf(heightDifference - c_parameters.bedrockAngle * c_distances[i] * c_parameters.gridScale, 0.0f);
 		avalancheSum += avalanches[i];
 		maxAvalanche = fmaxf(maxAvalanche, avalanches[i]);
 	}
@@ -60,8 +56,7 @@ __global__ void bedrockAvalancheKernel(const Array2D<float4> t_resistanceArray, 
 	if (avalancheSum > 0.0f)
 	{
 		const float rAvalancheSum{ 1.0f / avalancheSum };
-		const float avalancheSize{ c_parameters.avalancheStrength * maxAvalanche /
-								   (1.0f + maxAvalanche * rAvalancheSum) };
+		const float avalancheSize{ maxAvalanche / (1.0f + maxAvalanche * rAvalancheSum) };
 
 
 		const float scale{ avalancheSize * rAvalancheSum };
@@ -85,6 +80,62 @@ __global__ void bedrockAvalancheKernel(const Array2D<float4> t_resistanceArray, 
 	}
 }
 
+__global__ void soilAvalancheKernel(const Array2D<float4> t_resistanceArray, Buffer<float4> t_terrainBuffer)
+{
+	const int2 cell{ getGlobalIndex2D() };
+
+	if (isOutside(cell))
+	{
+		return;
+	}
+
+	const int cellIndex{ getCellIndex(cell) };
+
+	const float4 terrain{ t_terrainBuffer[cellIndex] };
+	const float height{ terrain.x + terrain.z };
+
+	const float vegetation{ t_resistanceArray.read(cell).y };
+
+	// Store precomputed angle
+	const float soilAngle = lerp(c_parameters.soilAngle, c_parameters.vegetationSoilAngle, fmaxf(vegetation, 0.f));
+	
+	int nextCellIndices[8];
+	float avalanches[8];
+	float avalancheSum{ 0.0f };
+	float maxAvalanche{ 0.0f };
+
+	for (int i{ 0 }; i < 8; ++i)
+	{
+		nextCellIndices[i] = getCellIndex(getWrappedCell(cell + c_offsets[i]));
+		const float4 nextTerrain{ t_terrainBuffer[nextCellIndices[i]] };
+		const float nextHeight{ nextTerrain.x + nextTerrain.z };
+
+		const float heightDifference{ height - nextHeight };
+		avalanches[i] = fmaxf(heightDifference - soilAngle * c_distances[i] * c_parameters.gridScale, 0.0f);
+		avalancheSum += avalanches[i];
+		maxAvalanche = fmaxf(maxAvalanche, avalanches[i]);
+	}
+
+	if (avalancheSum > 0.0f)
+	{
+		const float rAvalancheSum{ 1.0f / avalancheSum };
+		const float avalancheSize{  fminf(maxAvalanche / (1.0f + maxAvalanche * rAvalancheSum), terrain.z) };
+
+
+		const float scale{ avalancheSize * rAvalancheSum };
+
+		for (int i{ 0 }; i < 8; ++i)
+		{
+			if (avalanches[i] > 0.0f)
+			{
+				atomicAdd(&t_terrainBuffer[nextCellIndices[i]].z, scale * avalanches[i]);
+			}
+		}
+
+		atomicAdd(&t_terrainBuffer[cellIndex].z, -avalancheSize);
+	}
+}
+
 __global__ void finishBedrockAvalancheKernel(Array2D<float4> t_terrainArray, Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
@@ -101,7 +152,7 @@ __global__ void finishBedrockAvalancheKernel(Array2D<float4> t_terrainArray, Buf
 
 void bedrockAvalanching(const LaunchParameters& t_launchParameters)
 {
-	if (t_launchParameters.bedrockAvalancheIterations <= 0)
+	if (t_launchParameters.bedrockAvalancheIterations <= 0 && t_launchParameters.soilAvalancheIterations <= 0)
 	{
 		return;
 	}
@@ -122,6 +173,11 @@ void bedrockAvalanching(const LaunchParameters& t_launchParameters)
 		{
 			bedrockAvalancheKernel<BedrockAvalancheMode::ToBedrock><<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.resistanceArray, terrainBuffer);
 		}
+	}
+
+	for (int i = 0; i < t_launchParameters.soilAvalancheIterations; ++i)
+	{
+		soilAvalancheKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.resistanceArray, terrainBuffer);
 	}
 
 	finishBedrockAvalancheKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, terrainBuffer);

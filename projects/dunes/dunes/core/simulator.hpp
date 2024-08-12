@@ -65,10 +65,14 @@ namespace dunes
 		void setPressureProjectionIterations(int t_iters);
 
 		void setBedrockAvalancheIterations(const int t_bedrockAvalancheIterations);
+		void setSoilAvalancheIterations(const int t_soilAvalancheIterations);
 
 		void setAvalancheAngle(const float t_avalancheAngle);
 		void setBedrockAngle(const float t_bedrockAngle);
 		void setVegetationAngle(const float t_vegetationAngle);
+		void setSoilAngle(const float t_Angle);
+		void setVegetationSoilAngle(const float t_Angle);
+
 		void setTimeMode(const TimeMode t_timeMode);
 		void setTimeScale(const float t_timeScale);
 		void setFixedDeltaTime(const float t_fixedDeltaTime);

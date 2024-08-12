@@ -102,19 +102,19 @@ void main()
 
 	if (t_terrain.hasHeightMap) 
 	{
-	    const vec2 terrain = texture(t_heightMap, fragment.uv).xy;
-		const float height = t_terrain.heightScale * (terrain.x + terrain.y);
+	    const vec4 terrain = texture(t_heightMap, fragment.uv).xyzw;
+		const float height = t_terrain.heightScale * (terrain.x + terrain.y + terrain.z);
 		fragment.position.y = height;
 
 		const vec2 size = vec2(2.0f * t_terrain.gridScale,0.0f);
         const ivec3 offset = ivec3(-1, 0, 1);
 
-		const vec2 terrain01 = textureOffset(t_heightMap, fragment.uv, offset.xy).xy;
-        const vec2 terrain21 = textureOffset(t_heightMap, fragment.uv, offset.zy).xy;
-        const vec2 terrain10 = textureOffset(t_heightMap, fragment.uv, offset.yx).xy;
-        const vec2 terrain12 = textureOffset(t_heightMap, fragment.uv, offset.yz).xy;
-		const vec3 edge1 = normalize(vec3(size.x, t_terrain.heightScale * ((terrain21.x + terrain21.y) - (terrain01.x + terrain01.y)), size.y));
-		const vec3 edge2 = normalize(vec3(size.y, t_terrain.heightScale * ((terrain12.x + terrain12.y) - (terrain10.x + terrain10.y)), size.x));
+		const vec3 terrain01 = textureOffset(t_heightMap, fragment.uv, offset.xy).xyz;
+        const vec3 terrain21 = textureOffset(t_heightMap, fragment.uv, offset.zy).xyz;
+        const vec3 terrain10 = textureOffset(t_heightMap, fragment.uv, offset.yx).xyz;
+        const vec3 terrain12 = textureOffset(t_heightMap, fragment.uv, offset.yz).xyz;
+		const vec3 edge1 = normalize(vec3(size.x, t_terrain.heightScale * ((terrain21.x + terrain21.y + terrain21.z) - (terrain01.x + terrain01.y + terrain01.z)), size.y));
+		const vec3 edge2 = normalize(vec3(size.y, t_terrain.heightScale * ((terrain12.x + terrain12.y + terrain12.z) - (terrain10.x + terrain10.y + terrain10.z)), size.x));
 		fragment.normal = cross(edge2, edge1);
 		//fragment.normal = vec3(0.0f, 0.0f, 0.0f);
 

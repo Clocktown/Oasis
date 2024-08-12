@@ -91,15 +91,17 @@ namespace dunes
 		const float4 curr_terrain = t_terrainArray.read(cell);
 		const float4 curr_resistance = t_resistanceArray.read(cell);
 
-		const int indices[4]{
+		const int indices[6]{
 			(int)NoiseGenerationTarget::Bedrock,
 			(int)NoiseGenerationTarget::Sand,
 			(int)NoiseGenerationTarget::Vegetation,
-			(int)NoiseGenerationTarget::AbrasionResistance
+			(int)NoiseGenerationTarget::AbrasionResistance,
+			(int)NoiseGenerationTarget::Soil,
+			(int)NoiseGenerationTarget::Water
 		};
-		float values[4] = { curr_terrain.x, curr_terrain.y, curr_resistance.y, curr_resistance.z };
+		float values[6] = { curr_terrain.x, curr_terrain.y, curr_resistance.y, curr_resistance.z, curr_terrain.z, curr_terrain.w };
 
-		for (int i = 0; i < 4; ++i) {
+		for (int i = 0; i < 6; ++i) {
 			const auto& params = t_initializationParameters.noiseGenerationParameters[indices[i]];
 			values[i] = params.enabled ?
 				(params.bias +
@@ -111,54 +113,16 @@ namespace dunes
 		}
 
 		values[2] = clamp(values[2], 0.f, 1.f);
-
-		//float2 center{ make_float2(c_parameters.gridSize) / 2.f };
-		// Wind Tunnel initialization
-		/*center.x -= 100;
-		const float2 cellf{ make_float2(cell) };
-		if (length(cellf - center) <= 150 || ((cellf.x > center.x) && (cellf.x - 400 < center.x) && (abs(cellf.y - center.y) <= 150)))
-		{
-			values[0] = 100.f;
-			values[1] = 0.f;
-			values[2] = -1.f; // negative vegetation encodes objects
-		}
-		else
-		{
-			values[0] = 0.f;
-		}
-		if (length(cellf - center) <= 152 || ((cellf.x > center.x - 1) && (cellf.x - 401 < center.x) && (abs(cellf.y - center.y) <= 152)))
-		{
-			values[2] = -1.f; // negative vegetation encodes objects
-		}*/
-
-		// Sand Column initialization
-		/*const float2 cellf{make_float2(cell)};
-		if (fabsf(cellf.x-center.x) < 100.f && fabsf(cellf.y - center.y) < 100.f)
-		{
-			values[0] = 0.f;
-			values[1] = 402.f;
-		}
-		else
-		{
-			values[0] = 0.f;
-			values[1] = 2.f;
-		}*/
-		/*float2 center{make_float2(c_parameters.gridSize.x / 2.f, c_parameters.gridSize.y / 20.f)};
-		float2 cellf{ make_float2(cell) };
-		float veg_dens = 0.f;
-		for (int i = 0; i < 10; ++i) {
-			if (length(cellf - center) <= c_parameters.gridSize.x / 40.f) {
-				values[2] = veg_dens;
-			}
-			veg_dens += 1.f / 9.f;
-			center.y += c_parameters.gridSize.y / 10.f;
-		}*/
+		values[3] = clamp(values[3], 0.f, 1.f);
+		values[1] = fmaxf(values[1], 0.f);
+		values[4] = fmaxf(values[4], 0.f);
+		values[5] = fmaxf(values[5] - (values[0] + values[1] + values[2]), 0.f);
 
 		// Regular initialization
-		const float4 terrain{ values[0], fmaxf(values[1], 0.f) };
+		const float4 terrain{ values[0], values[1], values[4], values[5]};
 		t_terrainArray.write(cell, terrain);
 
-		const float4 resistance{ 0.0f, values[2], clamp(values[3], 0.f, 1.f), 0.0f };
+		const float4 resistance{ 0.0f, values[2], values[3], 0.0f};
 		t_resistanceArray.write(cell, resistance);
 
 		t_slabBuffer[getCellIndex(cell)] = 0.0f;

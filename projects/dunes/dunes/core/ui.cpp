@@ -83,6 +83,10 @@ namespace dunes
 		m_simulator->setBedrockAvalancheIterations(m_bedrockAvalancheIterations);
 		m_simulator->setBedrockAngle(m_bedrockAngle);
 
+		m_simulator->setSoilAvalancheIterations(m_soilAvalancheIterations);
+		m_simulator->setSoilAngle(m_soilAngle);
+		m_simulator->setVegetationSoilAngle(m_vegetationSoilAngle);
+
 		m_simulator->setTimeMode(static_cast<TimeMode>(m_timeMode));
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
@@ -397,6 +401,11 @@ namespace dunes
 		m_avalancheAngle = json["avalancheAngle"]; //
 		m_bedrockAngle = json["bedrockAngle"]; //
 		m_vegetationAngle = json["vegetationAngle"]; //
+		if (json.contains("soilAvalancheIterations")) {
+			m_soilAvalancheIterations = json["soilAvalancheIterations"];
+			m_soilAngle = json["soilAngle"];
+			m_vegetationSoilAngle = json["vegetationSoilAngle"];
+		}
 
 		m_timeMode = getIndexFromNamedArray(timeModes, IM_ARRAYSIZE(timeModes), json["timeMode"], 1); //
 		m_timeScale = json["timeScale"]; //
@@ -425,6 +434,11 @@ namespace dunes
 		m_renderParameters.bedrockColor = { json["bedrockColor"][0], json["bedrockColor"][1], json["bedrockColor"][2], json["bedrockColor"][3] };
 		m_renderParameters.windShadowColor = { json["windShadowColor"][0], json["windShadowColor"][1], json["windShadowColor"][2], json["windShadowColor"][3] };
 		m_renderParameters.vegetationColor = { json["vegetationColor"][0], json["vegetationColor"][1], json["vegetationColor"][2], json["vegetationColor"][3] };
+		if (json.contains("soilColor")) {
+			m_renderParameters.soilColor = { json["soilColor"][0], json["soilColor"][1], json["soilColor"][2], json["soilColor"][3] };
+			m_renderParameters.humusColor = { json["humusColor"][0], json["humusColor"][1], json["humusColor"][2], json["humusColor"][3] };
+			m_renderParameters.waterColor = { json["waterColor"][0], json["waterColor"][1], json["waterColor"][2], json["waterColor"][3] };
+		}
 
 		initializeAll();
 
@@ -512,6 +526,9 @@ namespace dunes
 		json["avalancheAngle"] = m_avalancheAngle;
 		json["bedrockAngle"] = m_bedrockAngle;
 		json["vegetationAngle"] = m_vegetationAngle;
+		json["soilAvalancheIterations"] = m_soilAvalancheIterations;
+		json["soilAngle"] = m_soilAngle;
+		json["vegetationSoilAngle"] = m_vegetationSoilAngle;
 
 		json["timeMode"] = timeModes[m_timeMode];
 		json["timeScale"] = m_timeScale;
@@ -552,6 +569,27 @@ namespace dunes
 			m_renderParameters.vegetationColor.y,
 			m_renderParameters.vegetationColor.z,
 			m_renderParameters.vegetationColor.w
+		};
+
+		json["soilColor"] = { 
+			m_renderParameters.soilColor.x,
+			m_renderParameters.soilColor.y,
+			m_renderParameters.soilColor.z,
+			m_renderParameters.soilColor.w
+		};
+
+		json["humusColor"] = { 
+			m_renderParameters.humusColor.x,
+			m_renderParameters.humusColor.y,
+			m_renderParameters.humusColor.z,
+			m_renderParameters.humusColor.w
+		};
+
+		json["waterColor"] = { 
+			m_renderParameters.waterColor.x,
+			m_renderParameters.waterColor.y,
+			m_renderParameters.waterColor.z,
+			m_renderParameters.waterColor.w
 		};
 
 		json["exportMaps"] = m_exportMaps;
@@ -978,21 +1016,36 @@ namespace dunes
 				ImGui::TreePop();
 			}
 
-			if (ImGui::TreeNode("Bedrock Avalanching"))
+			if (ImGui::TreeNode("Soil & Bedrock Avalanching"))
 			{
 				if (ImGui::Combo("Mode", &m_bedrockAvalancheMode, bedrockAvalancheModes, IM_ARRAYSIZE(bedrockAvalancheModes)))
 				{
 					m_simulator->setBedrockAvalancheMode(static_cast<BedrockAvalancheMode>(m_bedrockAvalancheMode));
 				}
 
-				if (ImGui::DragInt("Iterations", &m_bedrockAvalancheIterations))
+				if (ImGui::DragInt("Bedrock Iterations", &m_bedrockAvalancheIterations))
 				{
 					m_simulator->setBedrockAvalancheIterations(m_bedrockAvalancheIterations);
 				}
 
-				if (ImGui::DragFloat("Angle", &m_bedrockAngle))
+				if (ImGui::DragFloat("Bedrock Angle", &m_bedrockAngle))
 				{
 					m_simulator->setBedrockAngle(m_bedrockAngle);
+				}
+
+				if (ImGui::DragInt("Soil Iterations", &m_soilAvalancheIterations))
+				{
+					m_simulator->setSoilAvalancheIterations(m_soilAvalancheIterations);
+				}
+
+				if (ImGui::DragFloat("Soil Angle", &m_soilAngle))
+				{
+					m_simulator->setSoilAngle(m_soilAngle);
+				}
+
+				if (ImGui::DragFloat("Soil Vegetation Angle", &m_vegetationSoilAngle))
+				{
+					m_simulator->setVegetationSoilAngle(m_vegetationSoilAngle);
 				}
 
 				ImGui::TreePop();

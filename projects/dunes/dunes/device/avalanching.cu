@@ -36,7 +36,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, c
 	const float avalancheAngle{ t_reptationBuffer[cellIndex] };
 
 	const float4 terrain{ t_terrainBuffer[cellIndex] };
-	const float height{ terrain.x + terrain.y };
+	const float height{ terrain.x + terrain.y + terrain.z };
 	int nextCellIndices[8];
 	float avalanches[8];
 	float avalancheSum{ 0.0f };
@@ -46,7 +46,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, c
 	{
 		nextCellIndices[i] = getCellIndex(getWrappedCell(cell + c_offsets[i]));
 		const float4 nextTerrain{ t_terrainBuffer[nextCellIndices[i]] };
-		const float nextHeight{ nextTerrain.x + nextTerrain.y };
+		const float nextHeight{ nextTerrain.x + nextTerrain.y + nextTerrain.z };
 
 		const float heightDifference{ height - nextHeight };
 		avalanches[i] = fmaxf(heightDifference - avalancheAngle * c_distances[i] * c_parameters.gridScale, 0.0f);

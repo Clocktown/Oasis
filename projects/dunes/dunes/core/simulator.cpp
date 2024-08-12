@@ -621,6 +621,11 @@ namespace dunes
 		m_launchParameters.bedrockAvalancheIterations = t_bedrockAvalancheIterations;
 	}
 
+	void Simulator::setSoilAvalancheIterations(const int t_soilAvalancheIterations)
+	{
+		m_launchParameters.soilAvalancheIterations = t_soilAvalancheIterations;
+	}
+
 	void Simulator::setAvalancheAngle(const float t_avalancheAngle)
 	{
 		m_simulationParameters.avalancheAngle = glm::tan(glm::radians(t_avalancheAngle));
@@ -634,6 +639,16 @@ namespace dunes
 	void Simulator::setVegetationAngle(const float t_vegetationAngle)
 	{
 		m_simulationParameters.vegetationAngle = glm::tan(glm::radians(t_vegetationAngle));
+	}
+
+	void Simulator::setSoilAngle(const float t_soilAngle)
+	{
+		m_simulationParameters.soilAngle = glm::tan(glm::radians(t_soilAngle));
+	}
+
+	void Simulator::setVegetationSoilAngle(const float t_vegetationSoilAngle)
+	{
+		m_simulationParameters.vegetationSoilAngle = glm::tan(glm::radians(t_vegetationSoilAngle));
 	}
 
 	void Simulator::setTimeMode(const TimeMode t_timeMode)

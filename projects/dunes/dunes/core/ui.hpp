@@ -31,7 +31,7 @@ namespace dunes
 		static inline const char* windShadowModes[2]{ "Linear", "Curved" };
 		static inline const char* bedrockAvalancheModes[2]{ "To Sand", "To Bedrock" };
 		static inline const char* timeModes[2]{ "Delta Time", "Fixed Delta Time" };
-		static inline const char* initializationTargets[NumNoiseGenerationTargets]{ "Bedrock", "Sand", "Vegetation", "Abrasion Resistance" };
+		static inline const char* initializationTargets[NumNoiseGenerationTargets]{ "Bedrock", "Sand", "Vegetation", "Abrasion Resistance", "Soil", "Water"};
 		static inline const char* watchTimingNames[10]{ "All CUDA", "Venturi", "Wind Warping", "Wind Shadow", "Vegetation", "Saltation", "Reptation", "Avalanching", "Bedrock Avalanching", "Pressure Projection"};
 		static inline const char* projectionModes[3]{ "None", "Jacobi", "FFT" };
 
@@ -116,9 +116,12 @@ namespace dunes
 		int m_pressureProjectionIterations{ 50 };
 		int m_projectionMode{ static_cast<int>(ProjectionMode::FFT) };
 		int m_bedrockAvalancheIterations{ 1 };
+		int m_soilAvalancheIterations{ 1 };
 		float m_avalancheAngle{ 33.0f };
 		float m_bedrockAngle{ 68.0f };
 		float m_vegetationAngle{ 45.0f };
+		float m_soilAngle{ 45.0f };
+		float m_vegetationSoilAngle{ 68.0f };
 
 		int m_timeMode{ static_cast<int>(TimeMode::FixedDeltaTime) };
 		float m_timeScale{ 1.0f };
