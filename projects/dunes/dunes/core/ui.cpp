@@ -66,11 +66,6 @@ namespace dunes
 		m_simulator->setMinWindShadowAngle(m_minWindShadowAngle);
 		m_simulator->setMaxWindShadowAngle(m_maxWindShadowAngle);
 
-		m_simulator->setStickyStrength(m_stickyStrength);
-		m_simulator->setStickyRange(m_stickyRange);
-		m_simulator->setMaxStickyHeight(m_maxStickyHeight);
-		m_simulator->setStickyAngle(m_stickyAngle);
-
 		m_simulator->setSaltationMode(static_cast<SaltationMode>(m_saltationMode));
 		m_simulator->setSaltationStrength(m_saltationStrength);
 		m_simulator->setAbrasionStrength(m_abrasionStrength);
@@ -223,9 +218,6 @@ namespace dunes
 			dirty |= ImGui::ColorEdit4("Bedrock Color", glm::value_ptr(m_renderParameters.bedrockColor));
 			dirty |= ImGui::ColorEdit4("Wind Shadow Color", glm::value_ptr(m_renderParameters.windShadowColor));
 			dirty |= ImGui::ColorEdit4("Vegetation Color", glm::value_ptr(m_renderParameters.vegetationColor));
-			dirty |= ImGui::ColorEdit4("Erosion Cell Color", glm::value_ptr(m_renderParameters.erosionColor));
-			dirty |= ImGui::ColorEdit4("Sticky Cell Color", glm::value_ptr(m_renderParameters.stickyColor));
-			dirty |= ImGui::ColorEdit4("Object Color", glm::value_ptr(m_renderParameters.objectColor));
 
 			if (dirty) {
 				m_simulator->setRenderParameters(m_renderParameters);
@@ -387,11 +379,6 @@ namespace dunes
 		m_minWindShadowAngle = json["minWindShadowAngle"]; //
 		m_maxWindShadowAngle = json["maxWindShadowAngle"]; //
 
-		m_stickyStrength = json["stickyStrength"]; //
-		m_stickyAngle = json["stickyAngle"]; //
-		m_stickyRange = { json["stickyRange"][0], json["stickyRange"][1] }; //
-		m_maxStickyHeight = json["maxStickyHeight"]; //
-
 		m_abrasionStrength = json["abrasionStrength"]; //
 		m_abrasionThreshold = json["abrasionThreshold"]; //
 		m_saltationMode = getIndexFromNamedArray(saltationModes, IM_ARRAYSIZE(saltationModes), json["saltationMode"], 1); //
@@ -451,9 +438,6 @@ namespace dunes
 		m_renderParameters.bedrockColor = { json["bedrockColor"][0], json["bedrockColor"][1], json["bedrockColor"][2], json["bedrockColor"][3] };
 		m_renderParameters.windShadowColor = { json["windShadowColor"][0], json["windShadowColor"][1], json["windShadowColor"][2], json["windShadowColor"][3] };
 		m_renderParameters.vegetationColor = { json["vegetationColor"][0], json["vegetationColor"][1], json["vegetationColor"][2], json["vegetationColor"][3] };
-		m_renderParameters.erosionColor = { json["erosionColor"][0], json["erosionColor"][1], json["erosionColor"][2], json["erosionColor"][3] };
-		m_renderParameters.stickyColor = { json["stickyColor"][0], json["stickyColor"][1], json["stickyColor"][2], json["stickyColor"][3] };
-		m_renderParameters.objectColor = { json["objectColor"][0], json["objectColor"][1], json["objectColor"][2], json["objectColor"][3] };
 
 		initializeAll();
 
@@ -474,8 +458,6 @@ namespace dunes
 				}
 			}
 		}
-
-		m_simulator->updateStickyCells();
 
 		if (m_calcCoverage) {
 			m_simulator->setupCoverageCalculation();
@@ -526,11 +508,6 @@ namespace dunes
 		json["windShadowDistance"] = m_windShadowDistance;
 		json["minWindShadowAngle"] = m_minWindShadowAngle;
 		json["maxWindShadowAngle"] = m_maxWindShadowAngle;
-
-		json["stickyStrength"] = m_stickyStrength;
-		json["stickyAngle"] = m_stickyAngle;
-		json["stickyRange"] = { m_stickyRange.x, m_stickyRange.y };
-		json["maxStickyHeight"] = m_maxStickyHeight;
 
 		json["abrasionStrength"] = m_abrasionStrength;
 		json["abrasionThreshold"] = m_abrasionThreshold;
@@ -595,21 +572,6 @@ namespace dunes
 			m_renderParameters.vegetationColor.y,
 			m_renderParameters.vegetationColor.z,
 			m_renderParameters.vegetationColor.w
-		};
-		json["erosionColor"] = { m_renderParameters.erosionColor.x,
-			m_renderParameters.erosionColor.y,
-			m_renderParameters.erosionColor.z,
-			m_renderParameters.erosionColor.w
-		};
-		json["stickyColor"] = { m_renderParameters.stickyColor.x,
-			m_renderParameters.stickyColor.y,
-			m_renderParameters.stickyColor.z,
-			m_renderParameters.stickyColor.w
-		};
-		json["objectColor"] = { m_renderParameters.objectColor.x,
-			m_renderParameters.objectColor.y,
-			m_renderParameters.objectColor.z,
-			m_renderParameters.objectColor.w
 		};
 
 		json["exportMaps"] = m_exportMaps;
@@ -963,32 +925,6 @@ namespace dunes
 				if (ImGui::DragFloat("Max. Angle", &m_maxWindShadowAngle))
 				{
 					m_simulator->setMaxWindShadowAngle(m_maxWindShadowAngle);
-				}
-				ImGui::TreePop();
-			}
-
-			if (ImGui::TreeNode("Echo Dunes"))
-			{
-				if (m_simulator->isPaused() && ImGui::Button("Update##sticky")) {
-					m_simulator->updateStickyCells();
-				}
-				if (ImGui::DragFloat("Strength", &m_stickyStrength, 0.01f))
-				{
-					m_simulator->setStickyStrength(m_stickyStrength);
-				}
-
-				if (ImGui::DragFloat2("Range", &m_stickyRange.x, 0.05f))
-				{
-					m_simulator->setStickyRange(m_stickyRange);
-				}
-
-				if (ImGui::DragFloat("Max. Height", &m_maxStickyHeight, 0.05f))
-				{
-					m_simulator->setMaxStickyHeight(m_maxStickyHeight);
-				}
-				if (ImGui::DragFloat("Angle", &m_stickyAngle))
-				{
-					m_simulator->setStickyAngle(m_stickyAngle);
 				}
 				ImGui::TreePop();
 			}

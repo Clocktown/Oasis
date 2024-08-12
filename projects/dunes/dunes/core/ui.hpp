@@ -33,7 +33,7 @@ namespace dunes
 		static inline const char* bedrockAvalancheModes[2]{ "To Sand", "To Bedrock" };
 		static inline const char* timeModes[2]{ "Delta Time", "Fixed Delta Time" };
 		static inline const char* initializationTargets[NumNoiseGenerationTargets]{ "Bedrock", "Sand", "Vegetation", "Abrasion Resistance" };
-		static inline const char* watchTimingNames[10]{ "All CUDA", "Venturi", "Wind Warping", "Wind Shadow", "Sticky Cells", "Saltation", "Reptation", "Avalanching", "Bedrock Avalanching", "Pressure Projection"};
+		static inline const char* watchTimingNames[10]{ "All CUDA", "Venturi", "Wind Warping", "Wind Shadow", "Vegetation", "Saltation", "Reptation", "Avalanching", "Bedrock Avalanching", "Pressure Projection"};
 		static inline const char* projectionModes[3]{ "None", "Jacobi", "FFT" };
 
 		void initializeAll();
@@ -103,11 +103,6 @@ namespace dunes
 		float m_windShadowDistance{ 10.0f };
 		float m_minWindShadowAngle{ 10.0f };
 		float m_maxWindShadowAngle{ 15.0f };
-
-		float m_stickyStrength{ 0.0f };
-		float m_stickyAngle{ 55.0f };
-		float2 m_stickyRange{ 0.4f, 2.0f };
-		float m_maxStickyHeight{ 30.0f };
 
 		float m_abrasionStrength{ 0.0f };
 		float m_abrasionThreshold{ 0.025f };

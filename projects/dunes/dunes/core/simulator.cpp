@@ -149,12 +149,6 @@ namespace dunes
 		m_isAwake = true;
 	}
 
-	void Simulator::updateStickyCells() {
-		map();
-		sticky(m_launchParameters, m_simulationParameters);
-		unmap();
-	}
-
 	void Simulator::updateWindShadow() {
 		map();
 		windShadow(m_launchParameters);
@@ -199,8 +193,10 @@ namespace dunes
 				addSandForCoverage(m_launchParameters, m_simulationParameters.gridSize, true, m_coverageRadius, -m_coverageSubtractAmount);
 			}
 
+			m_watches[4].start();
 			getVegetationCount(m_launchParameters);
 			vegetation(m_launchParameters);
+			m_watches[4].stop();
 			m_watches[0].start();
 			m_watches[1].start();
 			venturi(m_launchParameters);
@@ -214,9 +210,6 @@ namespace dunes
 			m_watches[3].start();
 			windShadow(m_launchParameters);
 			m_watches[3].stop();
-			m_watches[4].start();
-			sticky(m_launchParameters, m_simulationParameters);
-			m_watches[4].stop();
 			m_watches[5].start();
 			continuousSaltation(m_launchParameters);
 			m_watches[5].stop();
@@ -602,26 +595,6 @@ namespace dunes
 	void Simulator::setMaxWindShadowAngle(const float t_maxWindShadowAngle)
 	{
 		m_simulationParameters.maxWindShadowAngle = glm::tan(glm::radians(t_maxWindShadowAngle));
-	}
-
-	void Simulator::setStickyStrength(const float t_stickyStrength)
-	{
-		m_simulationParameters.stickyStrength = t_stickyStrength;
-	}
-
-	void Simulator::setStickyAngle(const float t_stickyAngle)
-	{
-		m_simulationParameters.stickyAngle = glm::tan(glm::radians(t_stickyAngle));
-	}
-
-	void Simulator::setStickyRange(const float2 t_stickyRange)
-	{
-		m_simulationParameters.stickyRange = t_stickyRange;
-	}
-
-	void Simulator::setMaxStickyHeight(const float t_maxStickyHeight)
-	{
-		m_simulationParameters.maxStickyHeight = t_maxStickyHeight;
 	}
 
 	void Simulator::setAbrasionStrength(const float t_abrasionStrength)

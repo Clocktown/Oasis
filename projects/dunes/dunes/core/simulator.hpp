@@ -52,10 +52,6 @@ namespace dunes
 		void setWindShadowDistance(const float t_windShadowDistance);
 		void setMinWindShadowAngle(const float t_minWindShadowAngle);
 		void setMaxWindShadowAngle(const float t_maxWindShadowAngle);
-		void setStickyAngle(const float t_stickyAngle);
-		void setStickyStrength(const float t_stickyStrength);
-		void setStickyRange(const float2 t_stickyRange);
-		void setMaxStickyHeight(const float t_maxStickyHeight);
 		void setAbrasionStrength(const float t_abrasionStrength);
 		void setAbrasionThreshold(const float t_abrasionThreshold);
 		void setSaltationMode(const SaltationMode t_saltationMode);
@@ -107,7 +103,6 @@ namespace dunes
 		void setStopIterations(const int t_stopIterations);
 
 		void updateWindShadow();
-		void updateStickyCells();
 
 		bool queryTimeStepHappened();
 
