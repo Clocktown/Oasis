@@ -63,6 +63,7 @@ struct Fragment
 {
 	vec3 position;
 	vec3 normal;
+	vec3 waterNormal;
 	vec2 uv;
 };
 
@@ -123,7 +124,8 @@ void main()
 	const float viewDistance = length(viewVector);
 	const vec3 viewDirection = viewVector / (viewDistance + EPSILON);
 
-	vec3 normal = fragment.normal;
+	vec3 normal = normalize(fragment.normal);
+	vec3 waterNormal = normalize(fragment.waterNormal);
 
 	const vec3 ambientColor = getAmbientColor();
 	
@@ -201,6 +203,23 @@ void main()
 		{
 		    fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * renderParameters.windShadowColor.rgb, 0.5f * resistances.x);
 		} 
+		if(renderParameters.waterColor.a > 0.5f) {
+			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * renderParameters.waterColor.rgb, min(0.1f * terrain.w, 1));
+			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * renderParameters.waterColor.rgb, clamp(0.1f * terrain.w - 1.f, 0, 1));
+
+			const float specularFactor = clamp(5.f * terrain.w, 0.f, 1.f);
+			const vec3 backgroundColor = 0.95f * vec3(0.7f, 0.9f, 1.0f);
+			const float cosTheta = max(dot(waterNormal, viewDirection), 0.0f);
+			const float cosTheta5 = pow(1 - cosTheta, 5.f);
+			const float rTheta = specularFactor * (0.04 + 0.96 * cosTheta5);
+
+			const vec3 reflection = reflect(-lightDirection, normal);
+			const float cosPsi = max(dot(reflection, viewDirection), 0.0f);
+			const vec3 specularColor = specularFactor * vec3(1);
+			const float cosPsiN = pow(cosPsi, 1600.0f);
+
+			fragmentColor.rgb = mix(fragmentColor.rgb, backgroundColor, rTheta) + cosPsiN * specularColor;
+		}
 	}
 
 	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);

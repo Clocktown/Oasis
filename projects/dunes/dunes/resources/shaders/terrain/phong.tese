@@ -77,10 +77,17 @@ struct Fragment
 {
 	vec3 position;
 	vec3 normal;
+	vec3 waterNormal;
 	vec2 uv;
 };
 
 out Fragment fragment;
+
+vec2 getTerrainForNormal(ivec2 offset) {
+	const vec4 t = textureOffset(t_heightMap, fragment.uv, offset);
+	float sum = t.x + t.y + t.z;
+	return vec2(sum, sum + t.w);
+}
 
 void main()
 {
@@ -103,19 +110,22 @@ void main()
 	if (t_terrain.hasHeightMap) 
 	{
 	    const vec4 terrain = texture(t_heightMap, fragment.uv).xyzw;
-		const float height = t_terrain.heightScale * (terrain.x + terrain.y + terrain.z);
+		const float height = t_terrain.heightScale * (terrain.x + terrain.y + terrain.z + terrain.w);
 		fragment.position.y = height;
 
 		const vec2 size = vec2(2.0f * t_terrain.gridScale,0.0f);
         const ivec3 offset = ivec3(-1, 0, 1);
 
-		const vec3 terrain01 = textureOffset(t_heightMap, fragment.uv, offset.xy).xyz;
-        const vec3 terrain21 = textureOffset(t_heightMap, fragment.uv, offset.zy).xyz;
-        const vec3 terrain10 = textureOffset(t_heightMap, fragment.uv, offset.yx).xyz;
-        const vec3 terrain12 = textureOffset(t_heightMap, fragment.uv, offset.yz).xyz;
-		const vec3 edge1 = normalize(vec3(size.x, t_terrain.heightScale * ((terrain21.x + terrain21.y + terrain21.z) - (terrain01.x + terrain01.y + terrain01.z)), size.y));
-		const vec3 edge2 = normalize(vec3(size.y, t_terrain.heightScale * ((terrain12.x + terrain12.y + terrain12.z) - (terrain10.x + terrain10.y + terrain10.z)), size.x));
+		const vec2 terrain01 = getTerrainForNormal(offset.xy);
+        const vec2 terrain21 = getTerrainForNormal(offset.zy);
+        const vec2 terrain10 = getTerrainForNormal(offset.yx);
+        const vec2 terrain12 = getTerrainForNormal(offset.yz);
+		const vec3 edge1 = normalize(vec3(size.x, t_terrain.heightScale * (terrain21.x - terrain01.x), size.y));
+		const vec3 edge2 = normalize(vec3(size.y, t_terrain.heightScale * (terrain12.x - terrain10.x), size.x));
+		const vec3 wedge1 = normalize(vec3(size.x, t_terrain.heightScale * (terrain21.y - terrain01.y), size.y));
+		const vec3 wedge2 = normalize(vec3(size.y, t_terrain.heightScale * (terrain12.y - terrain10.y), size.x));
 		fragment.normal = cross(edge2, edge1);
+		fragment.waterNormal = cross(wedge2, wedge1);
 		//fragment.normal = vec3(0.0f, 0.0f, 0.0f);
 
 	}
