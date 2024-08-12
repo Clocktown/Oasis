@@ -1,7 +1,6 @@
 #include "kernels.cuh"
 #include "constants.cuh"
 #include "grid.cuh"
-#include "multigrid.cuh"
 #include <sthe/config/debug.hpp>
 #include <dunes/core/simulation_parameters.hpp>
 #include <dunes/core/launch_parameters.hpp>

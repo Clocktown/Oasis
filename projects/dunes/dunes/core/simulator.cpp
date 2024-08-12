@@ -130,7 +130,6 @@ namespace dunes
 		setupArrays();
 		setupBuffers();
 		setupWindWarping();
-		setupMultigrid();
 		setupProjection();
 
 		map();
@@ -347,34 +346,6 @@ namespace dunes
 
 			m_launchParameters.windWarping.gaussKernels[i] = buffer.getData<cuComplex>();
 			m_launchParameters.windWarping.smoothedHeights[i] = m_launchParameters.windWarping.gaussKernels[i] + m_simulationParameters.cellCount;
-		}
-	}
-
-	void Simulator::setupMultigrid()
-	{
-		int2 gridSize{ m_simulationParameters.gridSize };
-		float gridScale{ m_simulationParameters.gridScale };
-		int cellCount{ m_simulationParameters.cellCount };
-
-		m_multigrid.resize(m_launchParameters.multigridLevelCount);
-		m_launchParameters.multigrid.resize(m_launchParameters.multigridLevelCount);
-
-		for (int i{ 0 }; i < m_launchParameters.multigridLevelCount; ++i)
-		{
-			sthe::cu::Buffer& buffer{ m_multigrid[i] };
-			buffer.reinitialize(4 * cellCount, sizeof(float));
-
-			MultigridLevel& level{ m_launchParameters.multigrid[i] };
-			level.gridSize = gridSize;
-			level.gridScale = gridScale;
-			level.cellCount = cellCount;
-			level.terrainBuffer = reinterpret_cast<Buffer<float2>>(buffer.getData<float>());
-			level.fluxBuffer = buffer.getData<float>() + 2 * cellCount;
-			level.avalancheBuffer = level.fluxBuffer + cellCount;
-
-			gridSize /= 2;
-			gridScale *= 2.0f;
-			cellCount /= 4;
 		}
 	}
 
@@ -663,28 +634,6 @@ namespace dunes
 	void Simulator::setVegetationAngle(const float t_vegetationAngle)
 	{
 		m_simulationParameters.vegetationAngle = glm::tan(glm::radians(t_vegetationAngle));
-	}
-
-	void Simulator::setMultigridLevelCount(const int t_multigridLevelCount)
-	{
-		STHE_ASSERT(t_multigridLevelCount >= 1, "Multigrid level count must be greater than or equal to 1");
-
-		m_launchParameters.multigridLevelCount = t_multigridLevelCount;
-
-		if (m_isAwake)
-		{
-			setupMultigrid();
-		}
-	}
-
-	void Simulator::setMultigridVCycleIterations(const int t_multigridVCycleIterations)
-	{
-		m_launchParameters.multigridVCycleIterations = t_multigridVCycleIterations;
-	}
-
-	void Simulator::setMultigridSolverIterations(const int t_multigridSolverIterations)
-	{
-		m_launchParameters.multigridSolverIterations = t_multigridSolverIterations;
 	}
 
 	void Simulator::setTimeMode(const TimeMode t_timeMode)

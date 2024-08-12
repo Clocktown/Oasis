@@ -29,11 +29,6 @@ enum class WindShadowMode : unsigned char
 	Linear, Curved
 };
 
-enum class AvalancheMode : unsigned char
-{
-	AtomicBuffered, AtomicInPlace, SharedAtomicInPlace, MixedInPlace, Multigrid, Taylor, Jacobi
-};
-
 enum class BedrockAvalancheMode : unsigned char
 {
 	ToSand, ToBedrock
@@ -79,16 +74,10 @@ struct LaunchParameters
 	SaltationMode saltationMode{ SaltationMode::Forward };
 	WindWarpingMode windWarpingMode{ WindWarpingMode::None };
 	WindShadowMode windShadowMode{ WindShadowMode::Linear };
-	AvalancheMode avalancheMode{ AvalancheMode::AtomicInPlace };
 	BedrockAvalancheMode bedrockAvalancheMode{ BedrockAvalancheMode::ToSand };
 	bool useBilinear{ true };
 	int avalancheIterations{ 50 };
 	int bedrockAvalancheIterations{ 2 };
-	int avalancheSoftIterationModulus{ 10 };
-	int avalancheFinalSoftIterations{ 5 };
-	int multigridLevelCount{ 1 };
-	int multigridVCycleIterations{ 1 };
-	int multigridSolverIterations{ 50 };
 	TimeMode timeMode{ TimeMode::DeltaTime };
 
 	Array2D<float2> terrainArray;
@@ -105,7 +94,6 @@ struct LaunchParameters
 	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
 	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
 	WindWarping windWarping;
-	std::vector<MultigridLevel> multigrid;
 	Projection projection;
 
 	cufftHandle fftPlan{ 0 };

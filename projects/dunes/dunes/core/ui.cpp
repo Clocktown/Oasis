@@ -79,9 +79,6 @@ namespace dunes
 		m_simulator->setProjectionMode(static_cast<ProjectionMode>(m_projectionMode));
 		m_simulator->setAvalancheAngle(m_avalancheAngle);
 		m_simulator->setVegetationAngle(m_vegetationAngle);
-		m_simulator->setMultigridLevelCount(m_multigridLevelCount);
-		m_simulator->setMultigridVCycleIterations(m_multigridVCycleIterations);
-		m_simulator->setMultigridSolverIterations(m_multigridSolverIterations);
 		m_simulator->setBedrockAvalancheMode(static_cast<BedrockAvalancheMode>(m_bedrockAvalancheMode));
 		m_simulator->setBedrockAvalancheIterations(m_bedrockAvalancheIterations);
 		m_simulator->setBedrockAngle(m_bedrockAngle);
@@ -400,11 +397,6 @@ namespace dunes
 		m_avalancheAngle = json["avalancheAngle"]; //
 		m_bedrockAngle = json["bedrockAngle"]; //
 		m_vegetationAngle = json["vegetationAngle"]; //
-		m_multigridLevelCount = json["multigridLevelCount"]; //
-		if(json.contains("multigridVCycleIterations"))
-			m_multigridVCycleIterations = json["multigridVCycleIterations"]; //
-		if(json.contains("multigridSolverIterations"))
-			m_multigridSolverIterations = json["multigridSolverIterations"]; //
 
 		m_timeMode = getIndexFromNamedArray(timeModes, IM_ARRAYSIZE(timeModes), json["timeMode"], 1); //
 		m_timeScale = json["timeScale"]; //
@@ -520,9 +512,6 @@ namespace dunes
 		json["avalancheAngle"] = m_avalancheAngle;
 		json["bedrockAngle"] = m_bedrockAngle;
 		json["vegetationAngle"] = m_vegetationAngle;
-		json["multigridLevelCount"] = m_multigridLevelCount;
-		json["multigridVCycleIterations"] = m_multigridVCycleIterations;
-		json["multigridSolverIterations"] = m_multigridSolverIterations;
 
 		json["timeMode"] = timeModes[m_timeMode];
 		json["timeScale"] = m_timeScale;
@@ -984,26 +973,6 @@ namespace dunes
 				if (ImGui::DragFloat("Vegetation Angle", &m_vegetationAngle))
 				{
 					m_simulator->setVegetationAngle(m_vegetationAngle);
-				}
-
-				ImGui::TreePop();
-			}
-
-			if (ImGui::TreeNode("Multigrid Avalanching"))
-			{
-				if (ImGui::DragInt("Level Count", &m_multigridLevelCount))
-				{
-					m_simulator->setMultigridLevelCount(m_multigridLevelCount);
-				}
-
-				if (ImGui::DragInt("V-Cycle Iterations", &m_multigridVCycleIterations))
-				{
-					m_simulator->setMultigridVCycleIterations(m_multigridVCycleIterations);
-				}
-
-				if (ImGui::DragInt("Solver Iterations", &m_multigridSolverIterations))
-				{
-					m_simulator->setMultigridSolverIterations(m_multigridSolverIterations);
 				}
 
 				ImGui::TreePop();
