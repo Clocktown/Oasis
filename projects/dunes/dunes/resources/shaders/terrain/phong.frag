@@ -209,7 +209,7 @@ void main()
 			const float cosTheta5 = pow(1 - cosTheta, 5.f);
 			const float rTheta = specularFactor * (0.04 + 0.96 * cosTheta5);
 
-			const vec3 reflection = reflect(-lightDirection, normal);
+			const vec3 reflection = reflect(-lightDirection, waterNormal);
 			const float cosPsi = max(dot(reflection, viewDirection), 0.0f);
 			const vec3 specularColor = specularFactor * vec3(1);
 			const float cosPsiN = pow(cosPsi, 1600.0f);

@@ -58,6 +58,7 @@
       <FastMath Condition="'$(Configuration)|$(Platform)'=='ReleaseSM75|x64'">false</FastMath>
     </CudaCompile>
     <CudaCompile Include="dunes\device\project.cu" />
+    <CudaCompile Include="dunes\device\transport.cu" />
     <CudaCompile Include="dunes\device\vegetation.cu" />
     <CudaCompile Include="dunes\device\venturi.cu" />
     <CudaCompile Include="dunes\device\wind_shadow.cu" />

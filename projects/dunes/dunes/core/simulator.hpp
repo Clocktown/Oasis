@@ -165,11 +165,15 @@ namespace dunes
 		std::shared_ptr<sthe::gl::Texture2D> m_terrainMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_windMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_resistanceMap;
+		std::shared_ptr<sthe::gl::Texture2D> m_fluxMap; // TODO: Needed as texture?
+		std::shared_ptr<sthe::gl::Texture2D> m_waterVelocityMap; // TODO: Needed as texture?
 		std::shared_ptr<sthe::gl::Buffer> m_renderParameterBuffer;
 
 		sthe::cu::Array2D m_terrainArray;
 		sthe::cu::Array2D m_windArray;
 		sthe::cu::Array2D m_resistanceArray;
+		sthe::cu::Array2D m_fluxArray;
+		sthe::cu::Array2D m_waterVelocityArray;
 		sthe::cu::Buffer m_slabBuffer;
 		sthe::cu::Buffer m_tmpBuffer;
 		sthe::cu::Buffer m_vegBuffer;

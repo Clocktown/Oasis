@@ -29,7 +29,7 @@ namespace dunes
 				const float windSpeed{ length(windVelocity) };
 
 				const float4 resistance{ t_resistanceArray.read(cell) };
-				const float saltationScale{ (terrain.w > 0.f ? 0.f : 1.f) * (1.0f - resistance.x) * (1.0f - fmaxf(resistance.y, 0.f)) };
+				const float saltationScale{ (terrain.w > 1e-5f ? 0.f : 1.f) * (1.0f - resistance.x) * (1.0f - fmaxf(resistance.y, 0.f)) };
 
 				// TODO: lower saltation when cell is wet
 				//const float scale{ windSpeed * c_parameters.deltaTime };
@@ -165,10 +165,8 @@ namespace dunes
 				const float abrasionScale{ c_parameters.deltaTime * windSpeed * (1.0f - vegetation) };
 				// TODO: Depositionprob should be higher when cell is wet
 				const float vegetationFactor = (terrain.y > c_parameters.abrasionThreshold ? 0.4f : (terrain.z > c_parameters.abrasionThreshold ? 0.5f : 0.6f));
-				const float waterFactor = (terrain.w > 0.f ? 1.f : 0.f);
-				// Limiting depositionProb. to 95%
-				const float depositionProbability = fminf(fmaxf(fmaxf(resistance.x, (1.0f - vegetationFactor) + vegetation * vegetationFactor), waterFactor), 0.95f);
-
+				const float waterFactor = (terrain.w > 1e-5f ? 0.1f : 1.f);
+				const float depositionProbability = fminf(fmaxf(resistance.x, (1.0f - vegetationFactor) + vegetation * vegetationFactor), waterFactor);
 
 				const float new_slab = slab * (1.f - depositionProbability);
 				const float abrasion{ (terrain.y + terrain.z) < c_parameters.abrasionThreshold && new_slab > 0.f ? (1.f - waterFactor) * c_parameters.abrasionStrength * (1.0f - resistance.z) * abrasionScale * (1.f - depositionProbability) : 0.0f };

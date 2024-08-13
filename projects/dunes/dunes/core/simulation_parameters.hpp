@@ -66,6 +66,8 @@ struct SimulationParameters
 	float soilAngle{ TAN45 };
 	float vegetationSoilAngle{ TAN68 };
 
+	float gravity{ 9.81 };
+
 	float deltaTime{ 1.0f };
 	int timestep = 0;
 };

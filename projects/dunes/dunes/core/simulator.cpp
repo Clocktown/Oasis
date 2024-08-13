@@ -22,6 +22,8 @@ namespace dunes
 		m_terrainMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_windMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_resistanceMap{ std::make_shared<sthe::gl::Texture2D>() },
+		m_waterVelocityMap{ std::make_shared<sthe::gl::Texture2D>() },
+		m_fluxMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_textureDescriptor{},
 		m_isAwake{ false },
 		m_isPaused{ false },
@@ -221,6 +223,7 @@ namespace dunes
 			m_watches[8].start();
 			bedrockAvalanching(m_launchParameters);
 			m_watches[8].stop();
+			transport(m_launchParameters);
 			m_watches[0].stop();
 
 			if (m_coverageMap) {
@@ -281,6 +284,8 @@ namespace dunes
 		m_terrainMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 		m_windMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
 		m_resistanceMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
+		m_waterVelocityMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
+		m_fluxMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 	}
 
 	void Simulator::setupArrays()
@@ -288,6 +293,8 @@ namespace dunes
 		m_terrainArray.reinitialize(*m_terrainMap);
 		m_windArray.reinitialize(*m_windMap);
 		m_resistanceArray.reinitialize(*m_resistanceMap);
+		m_waterVelocityArray.reinitialize(*m_waterVelocityMap);
+		m_fluxArray.reinitialize(*m_fluxMap);
 	}
 
 	void Simulator::setupBuffers()
@@ -442,6 +449,14 @@ namespace dunes
 		m_resistanceArray.map();
 		m_launchParameters.resistanceArray.surface = m_resistanceArray.recreateSurface();
 		m_launchParameters.resistanceArray.texture = m_resistanceArray.recreateTexture(m_textureDescriptor);
+
+		m_fluxArray.map();
+		m_launchParameters.fluxArray.surface = m_fluxArray.recreateSurface();
+		m_launchParameters.fluxArray.texture = m_fluxArray.recreateTexture(m_textureDescriptor);
+
+		m_waterVelocityArray.map();
+		m_launchParameters.waterVelocityArray.surface = m_waterVelocityArray.recreateSurface();
+		m_launchParameters.waterVelocityArray.texture = m_waterVelocityArray.recreateTexture(m_textureDescriptor);
 	}
 
 	void Simulator::unmap()
@@ -449,6 +464,8 @@ namespace dunes
 		m_terrainArray.unmap();
 		m_windArray.unmap();
 		m_resistanceArray.unmap();
+		m_fluxArray.unmap();
+		m_waterVelocityArray.unmap();
 	}
 
 	// Setters
