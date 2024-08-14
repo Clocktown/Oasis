@@ -74,6 +74,10 @@ namespace dunes
 		void setSoilAngle(const float t_Angle);
 		void setVegetationSoilAngle(const float t_Angle);
 
+		void setWavePeriod(const float t_val);
+		void setWaveStrength(const float t_val);
+		void setWaveDepthScale(const float t_val);
+
 		void setTimeMode(const TimeMode t_timeMode);
 		void setTimeScale(const float t_timeScale);
 		void setFixedDeltaTime(const float t_fixedDeltaTime);

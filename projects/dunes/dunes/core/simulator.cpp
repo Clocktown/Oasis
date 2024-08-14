@@ -673,6 +673,18 @@ namespace dunes
 		m_simulationParameters.vegetationSoilAngle = glm::tan(glm::radians(t_vegetationSoilAngle));
 	}
 
+	void Simulator::setWavePeriod(const float t_val) {
+		m_simulationParameters.wavePeriod = t_val;
+	}
+
+	void Simulator::setWaveStrength(const float t_val) {
+		m_simulationParameters.waveStrength = t_val;
+	}
+
+	void Simulator::setWaveDepthScale(const float t_val) {
+		m_simulationParameters.waveDepthScale = t_val;
+	}
+
 	void Simulator::setTimeMode(const TimeMode t_timeMode)
 	{
 		m_launchParameters.timeMode = t_timeMode;

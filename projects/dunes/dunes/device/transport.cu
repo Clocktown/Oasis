@@ -20,7 +20,7 @@ __global__ void pipeKernel(const Array2D<float4> t_terrainArray, Array2D<float4>
 	const float2 wind = /*(1.f - resistanceArray.read(cell).x) */ windArray.read(cell);
 	const float windStrength = length(wind) + 1e-6f;
 	const float2 windNorm = wind / windStrength;
-	const float phase = 0.5f * (1.f + sin(0.02f * c_parameters.timestep * c_parameters.deltaTime));
+	const float phase = 0.5f * (1.f + sin(c_parameters.wavePeriod * c_parameters.timestep * c_parameters.deltaTime));
 	const float4 terrain{ t_terrainArray.read(cell) };
 	const float sand{ terrain.x + terrain.y + terrain.z };
 	const float water{ sand + terrain.w };
@@ -45,7 +45,13 @@ __global__ void pipeKernel(const Array2D<float4> t_terrainArray, Array2D<float4>
 
 		const float deltaHeight{ water - fmaxf(neighbor.water, sand) };
 
-		*(&flux.x + i) = fmaxf(((1.f - 0.01f * c_parameters.deltaTime) * *(&flux.x + i)) + c_parameters.deltaTime * crossSectionalArea  * deltaHeight * c_parameters.rGridScale + 0.005f * (1.f - exp(- 0.1f * (terrain.w + neighbor.terrain.w) * (terrain.w + neighbor.terrain.w))) * phase * windStrength * c_parameters.deltaTime * dot(windNorm, make_float2(c_offsets[i+i])), 0.0f);
+		*(&flux.x + i) = fmaxf(
+			((1.f - 0.01f * c_parameters.deltaTime) * *(&flux.x + i)) + 
+				c_parameters.deltaTime * crossSectionalArea  * c_parameters.rGridScale * 
+					(deltaHeight + 
+					c_parameters.waveStrength * (1.f - exp(-0.5f * c_parameters.waveDepthScale * c_parameters.waveDepthScale * (terrain.w + neighbor.terrain.w) * (terrain.w + neighbor.terrain.w))) * phase * windStrength * dot(windNorm, make_float2(c_offsets[i + i]))
+					)
+			, 0.0f);
 	}
 
 	flux *= fminf(terrain.w * c_parameters.gridScale * c_parameters.gridScale /

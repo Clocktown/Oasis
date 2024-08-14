@@ -124,9 +124,13 @@ namespace dunes
 		float m_soilAngle{ 45.0f };
 		float m_vegetationSoilAngle{ 68.0f };
 
+		float m_wavePeriod{ 0.02f };
+		float m_waveStrength{ 0.005f };
+		float m_waveDepthScale{ 0.1f };
+
 		int m_timeMode{ static_cast<int>(TimeMode::FixedDeltaTime) };
 		float m_timeScale{ 1.0f };
-		float m_fixedDeltaTime{ 1.f };
+		float m_fixedDeltaTime{ 0.5f };
 
 		InitializationParameters m_initializationParameters{};
 		RenderParameters m_renderParameters{};

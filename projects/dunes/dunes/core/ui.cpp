@@ -87,6 +87,10 @@ namespace dunes
 		m_simulator->setSoilAngle(m_soilAngle);
 		m_simulator->setVegetationSoilAngle(m_vegetationSoilAngle);
 
+		m_simulator->setWavePeriod(m_wavePeriod);
+		m_simulator->setWaveStrength(m_waveStrength);
+		m_simulator->setWaveDepthScale(m_waveDepthScale);
+
 		m_simulator->setTimeMode(static_cast<TimeMode>(m_timeMode));
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
@@ -410,6 +414,12 @@ namespace dunes
 			m_vegetationSoilAngle = json["vegetationSoilAngle"];
 		}
 
+		if (json.contains("wavePeriod")) {
+			m_wavePeriod = json["wavePeriod"];
+			m_waveStrength = json["waveStrength"];
+			m_waveDepthScale = json["waveDepthScale"];
+		}
+
 		m_timeMode = getIndexFromNamedArray(timeModes, IM_ARRAYSIZE(timeModes), json["timeMode"], 1); //
 		m_timeScale = json["timeScale"]; //
 		m_fixedDeltaTime = json["fixedDeltaTime"]; //
@@ -533,6 +543,10 @@ namespace dunes
 		json["soilAvalancheIterations"] = m_soilAvalancheIterations;
 		json["soilAngle"] = m_soilAngle;
 		json["vegetationSoilAngle"] = m_vegetationSoilAngle;
+
+		json["wavePeriod"] = m_wavePeriod;
+		json["waveStrength"] = m_waveStrength;
+		json["waveDepthScale"] = m_waveDepthScale;
 
 		json["timeMode"] = timeModes[m_timeMode];
 		json["timeScale"] = m_timeScale;
@@ -876,6 +890,19 @@ namespace dunes
 					m_simulator->setBidirectionalBaseTime(m_windBidirectionalBaseTime);
 				}
 
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Waves")) {
+				if (ImGui::DragFloat("Wave Period", &m_wavePeriod, 0.01f)) {
+					m_simulator->setWavePeriod(m_wavePeriod);
+				}
+				if (ImGui::DragFloat("Wave Strength", &m_waveStrength, 0.001f)) {
+					m_simulator->setWaveStrength(m_waveStrength);
+				}
+				if (ImGui::DragFloat("Wave Depth Scale", &m_waveDepthScale, 0.01f)) {
+					m_simulator->setWaveDepthScale(m_waveDepthScale);
+				}
 				ImGui::TreePop();
 			}
 

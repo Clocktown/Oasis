@@ -66,7 +66,9 @@ struct SimulationParameters
 	float soilAngle{ TAN45 };
 	float vegetationSoilAngle{ TAN68 };
 
-	float gravity{ 9.81 };
+	float wavePeriod{ 0.02f };
+	float waveStrength{ 0.005f };
+	float waveDepthScale{ 0.1f };
 
 	float deltaTime{ 1.0f };
 	int timestep = 0;
