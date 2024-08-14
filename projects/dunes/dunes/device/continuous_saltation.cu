@@ -165,13 +165,14 @@ namespace dunes
 				const float abrasionScale{ c_parameters.deltaTime * windSpeed * (1.0f - vegetation) };
 				// TODO: Depositionprob should be higher when cell is wet
 				const float vegetationFactor = (terrain.y > c_parameters.abrasionThreshold ? 0.4f : (terrain.z > c_parameters.abrasionThreshold ? 0.5f : 0.6f));
-				const float waterFactor = (terrain.w > 1e-5f ? 0.1f : 1.f);
-				const float depositionProbability = fminf(fmaxf(resistance.x, (1.0f - vegetationFactor) + vegetation * vegetationFactor), waterFactor);
+				const float waterProbability = (terrain.w > 1e-5f ? 0.1f : 1.f);
+				const float depositionProbability = fminf(fmaxf(resistance.x, (1.0f - vegetationFactor) + vegetation * vegetationFactor), waterProbability);
 
 				const float new_slab = slab * (1.f - depositionProbability);
-				const float abrasion{ (terrain.y + terrain.z) < c_parameters.abrasionThreshold && new_slab > 0.f ? (1.f - waterFactor) * c_parameters.abrasionStrength * (1.0f - resistance.z) * abrasionScale * (1.f - depositionProbability) : 0.0f };
+				const float waterFactor = (terrain.w > 1e-5f ? 0.f : 1.f);
+				const float abrasion{ (terrain.y + terrain.z) < c_parameters.abrasionThreshold && new_slab > 0.f ? waterFactor * c_parameters.abrasionStrength * (1.0f - resistance.z) * abrasionScale * (1.f - depositionProbability) : 0.0f };
 				// TODO: wet soil should be protected from abrasion
-				const float soilAbrasion{ terrain.y < c_parameters.abrasionThreshold && new_slab > 0.f ? (1.f - waterFactor) * fminf(c_parameters.soilAbrasionStrength * abrasionScale * (1.f - depositionProbability), terrain.z) : 0.0f };
+				const float soilAbrasion{ terrain.y < c_parameters.abrasionThreshold && new_slab > 0.f ? waterFactor * fminf(c_parameters.soilAbrasionStrength * abrasionScale * (1.f - depositionProbability), terrain.z) : 0.0f };
 
 				terrain.y +=  abrasion + soilAbrasion;
 				terrain.x -=  abrasion;
@@ -180,7 +181,7 @@ namespace dunes
 				terrain.y += slab * depositionProbability;
 				t_terrainArray.write(cell, terrain);
 				t_slabBuffer[cellIndex] = slab * (1.f - depositionProbability); // write updated advectedSlabBuffer back to slabBuffer (ping-pong)
-				t_advectedSlabBuffer[cellIndex] = slab * (1.f - vegetation); // Used in Reptation as slabBuffer
+				t_advectedSlabBuffer[cellIndex] = waterFactor * slab * (1.f - vegetation); // Used in Reptation as slabBuffer
 			}
 		}
 	}
