@@ -200,8 +200,9 @@ void main()
 			fragmentColor.rgb += illuminatedColor;
 		}
 		if(renderParameters.waterColor.a > 0.5f) {
-			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * renderParameters.waterColor.rgb, min(0.1f * terrain.w, 1));
-			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * renderParameters.waterColor.rgb, clamp(0.1f * terrain.w - 1.f, 0, 1));
+			const vec3 waterColor = mix(renderParameters.waterColor.rgb, renderParameters.soilColor.rgb, min(10.f * resistances.w, 1.f));
+			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * waterColor, min(0.1f * terrain.w, 1));
+			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * waterColor, clamp(0.1f * terrain.w - 1.f, 0, 1));
 
 			const float specularFactor = clamp(5.f * terrain.w, 0.f, 1.f);
 			const vec3 backgroundColor = 0.95f * vec3(0.7f, 0.9f, 1.0f);
@@ -218,8 +219,9 @@ void main()
 		}
 		if (resistances.x > 0.0f && renderParameters.windShadowColor.a > 0.5f)
 		{
-		    fragmentColor.rgb = mix(fragmentColor.rgb, fragmentColor.rgb * renderParameters.windShadowColor.rgb, 0.5f * resistances.x);
+		    fragmentColor.rgb = mix(fragmentColor.rgb, fragmentColor.rgb * renderParameters.windShadowColor.rgb, max(1.f - terrain.w, 0.f) * 0.5f * resistances.x);
 		} 
+		//fragmentColor.rgb = vec3(resistances.w);
 	}
 
 	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);

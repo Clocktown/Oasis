@@ -23,6 +23,7 @@ namespace dunes
 		m_windMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_resistanceMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_waterVelocityMap{ std::make_shared<sthe::gl::Texture2D>() },
+		m_sedimentMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_fluxMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_textureDescriptor{},
 		m_isAwake{ false },
@@ -223,7 +224,8 @@ namespace dunes
 			m_watches[8].start();
 			bedrockAvalanching(m_launchParameters);
 			m_watches[8].stop();
-			transport(m_launchParameters);
+			transport(m_launchParameters, m_simulationParameters);
+			sediment(m_launchParameters, m_simulationParameters);
 			m_watches[0].stop();
 
 			if (m_coverageMap) {
@@ -286,6 +288,7 @@ namespace dunes
 		m_resistanceMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 		m_waterVelocityMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
 		m_fluxMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
+		m_sedimentMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R32F, false);
 	}
 
 	void Simulator::setupArrays()
@@ -295,6 +298,7 @@ namespace dunes
 		m_resistanceArray.reinitialize(*m_resistanceMap);
 		m_waterVelocityArray.reinitialize(*m_waterVelocityMap);
 		m_fluxArray.reinitialize(*m_fluxMap);
+		m_sedimentArray.reinitialize(*m_sedimentMap);
 	}
 
 	void Simulator::setupBuffers()
@@ -457,6 +461,10 @@ namespace dunes
 		m_waterVelocityArray.map();
 		m_launchParameters.waterVelocityArray.surface = m_waterVelocityArray.recreateSurface();
 		m_launchParameters.waterVelocityArray.texture = m_waterVelocityArray.recreateTexture(m_textureDescriptor);
+
+		m_sedimentArray.map();
+		m_launchParameters.sedimentArray.surface = m_sedimentArray.recreateSurface();
+		m_launchParameters.sedimentArray.texture = m_sedimentArray.recreateTexture(m_textureDescriptor);
 	}
 
 	void Simulator::unmap()
@@ -466,6 +474,7 @@ namespace dunes
 		m_resistanceArray.unmap();
 		m_fluxArray.unmap();
 		m_waterVelocityArray.unmap();
+		m_sedimentArray.unmap();
 	}
 
 	// Setters
@@ -683,6 +692,22 @@ namespace dunes
 
 	void Simulator::setWaveDepthScale(const float t_val) {
 		m_simulationParameters.waveDepthScale = t_val;
+	}
+
+	void Simulator::setSedimentCapacityConstant(const float t_val) {
+		m_simulationParameters.sedimentCapacityConstant = t_val;
+	}
+	void Simulator::setSedimentDepositionConstant(const float t_val) {
+		m_simulationParameters.sedimentDepositionConstant = t_val;
+	}
+	void Simulator::setSandDissolutionConstant(const float t_val) {
+		m_simulationParameters.sandDissolutionConstant = t_val;
+	}
+	void Simulator::setSoilDissolutionConstant(const float t_val) {
+		m_simulationParameters.soilDissolutionConstant = t_val;
+	}
+	void Simulator::setBedrockDissolutionConstant(const float t_val) {
+		m_simulationParameters.bedrockDissolutionConstant = t_val;
 	}
 
 	void Simulator::setTimeMode(const TimeMode t_timeMode)

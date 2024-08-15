@@ -70,6 +70,12 @@ struct SimulationParameters
 	float waveStrength{ 0.005f };
 	float waveDepthScale{ 0.1f };
 
+	float sedimentCapacityConstant{ 0.1f };
+	float sedimentDepositionConstant{ 0.1f };
+	float sandDissolutionConstant{ 0.1f };
+	float soilDissolutionConstant{ 0.05f };
+	float bedrockDissolutionConstant{ 0.01f };
+
 	float deltaTime{ 1.0f };
 	int timestep = 0;
 };

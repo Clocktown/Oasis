@@ -128,6 +128,12 @@ namespace dunes
 		float m_waveStrength{ 0.005f };
 		float m_waveDepthScale{ 0.1f };
 
+		float m_sedimentCapacityConstant{ 0.1f };
+		float m_sedimentDepositionConstant{ 0.1f };
+		float m_sandDissolutionConstant{ 0.1f };
+		float m_soilDissolutionConstant{ 0.05f };
+		float m_bedrockDissolutionConstant{ 0.01f };
+
 		int m_timeMode{ static_cast<int>(TimeMode::FixedDeltaTime) };
 		float m_timeScale{ 1.0f };
 		float m_fixedDeltaTime{ 0.5f };

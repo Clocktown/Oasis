@@ -8,7 +8,7 @@
 namespace dunes
 {
 
-__global__ void pipeKernel(const Array2D<float4> t_terrainArray, Array2D<float4> t_waterFluxArray, const Array2D<float4> resistanceArray, const Array2D<float2> windArray)
+__global__ void pipeKernel(const Array2D<float4> t_terrainArray, Array2D<float4> t_waterFluxArray, const Array2D<float4> resistanceArray, const Array2D<float2> windArray, Buffer<float> slopeBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -20,13 +20,15 @@ __global__ void pipeKernel(const Array2D<float4> t_terrainArray, Array2D<float4>
 	const float2 wind = /*(1.f - resistanceArray.read(cell).x) */ windArray.read(cell);
 	const float windStrength = length(wind) + 1e-6f;
 	const float2 windNorm = wind / windStrength;
-	const float phase = 0.5f * (1.f + sin(c_parameters.wavePeriod * c_parameters.timestep * c_parameters.deltaTime));
+	const float phase = fmaxf(sin(c_parameters.wavePeriod * c_parameters.timestep * c_parameters.deltaTime), 0.f);
 	const float4 terrain{ t_terrainArray.read(cell) };
 	const float sand{ terrain.x + terrain.y + terrain.z };
 	const float water{ sand + terrain.w };
 	float4 flux{ t_waterFluxArray.read(cell) };
 
 	const float crossSectionalArea{ c_parameters.gridScale * c_parameters.gridScale };
+
+	float heights[4];
 
 	struct
 	{
@@ -42,6 +44,7 @@ __global__ void pipeKernel(const Array2D<float4> t_terrainArray, Array2D<float4>
 		neighbor.terrain = t_terrainArray.read(neighbor.cell);
 		neighbor.sand = neighbor.terrain.x + neighbor.terrain.y + neighbor.terrain.z;
 		neighbor.water = neighbor.sand + neighbor.terrain.w;
+		heights[i] = neighbor.sand;
 
 		const float deltaHeight{ water - fmaxf(neighbor.water, sand) };
 
@@ -56,6 +59,13 @@ __global__ void pipeKernel(const Array2D<float4> t_terrainArray, Array2D<float4>
 
 	flux *= fminf(terrain.w * c_parameters.gridScale * c_parameters.gridScale /
 				  ((flux.x + flux.y + flux.z + flux.w) * c_parameters.deltaTime + 1e-06f), 1.0f);
+
+	const float3 gX{ 2.f * c_parameters.gridScale, heights[0] - heights[2], 0.f};
+	const float3 gY{ 0.f, heights[1] - heights[3], 2.f * c_parameters.gridScale};
+	const float cos_alpha{ normalize(cross(gY, gX)).y };
+	const float min_sin_alpha = 0.5f;
+	const float sin_alpha = clamp(min_sin_alpha + (1.f - min_sin_alpha) * sqrt(1.f - cos_alpha * cos_alpha), 0.f, 1.f);
+	slopeBuffer[getCellIndex(cell)] = sin_alpha;
 
 	t_waterFluxArray.write(cell, flux);
 }
@@ -95,10 +105,135 @@ __global__ void transportKernel(Array2D<float4> t_terrainArray, const Array2D<fl
 	t_waterVelocityArray.write(cell, velocity);
 }
 
-void transport(const LaunchParameters& t_launchParameters)
+__global__ void initSedimentKernel(Buffer<float> advectedSedimentBuffer) {
+	const int2 cell{ getGlobalIndex2D() };
+
+	if (isOutside(cell))
+	{
+		return;
+	}
+	const int idx = getCellIndex(cell);
+
+	advectedSedimentBuffer[idx] = 0.f;
+}
+
+__global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array2D<float2> velocityArray, const Buffer<float> advectedSedimentBuffer, const Buffer<float> slopeBuffer, Array2D<float4> terrainArray, Array2D<float4> resistanceArray) {
+	const int2 cell{ getGlobalIndex2D() };
+
+	if (isOutside(cell))
+	{
+		return;
+	}
+	const int idx = getCellIndex(cell);
+
+	const float slope = slopeBuffer[idx];
+	float4 resistance = resistanceArray.read(cell);
+
+	const float speed = length(velocityArray.read(cell));
+	float sediment = advectedSedimentBuffer[idx];
+	float4 terrain = terrainArray.read(cell);
+
+	const float sedimentCapacity = c_parameters.sedimentCapacityConstant * slope * speed * (1.f - 0.5f * resistance.y) * fminf(0.1f + 0.9f * terrain.w, 1.f);
+	const float sandDissolutionRate = c_parameters.sandDissolutionConstant * c_parameters.deltaTime;
+	const float soilDissolutionRate = c_parameters.soilDissolutionConstant * c_parameters.deltaTime;
+	const float bedrockDissolutionRate = c_parameters.bedrockDissolutionConstant * c_parameters.deltaTime;
+	const float depositionRate = c_parameters.sedimentDepositionConstant * (1 + resistance.y) * c_parameters.deltaTime;
+	if (sediment <= sedimentCapacity) {
+		const float sandDissolution = fminf((sedimentCapacity - sediment) * sandDissolutionRate, terrain.y);
+		sediment += sandDissolution;
+		terrain.y -= sandDissolution;
+	}
+	if (terrain.y <= 0.f && sediment <= sedimentCapacity) {
+		const float soilDissolution = fminf((sedimentCapacity - sediment) * soilDissolutionRate, terrain.z);
+		sediment += soilDissolution;
+		terrain.z -= soilDissolution;
+	}
+	if (terrain.z <= 0.f && sediment <= sedimentCapacity) {
+		const float bedrockDissolution = (sedimentCapacity - sediment) * bedrockDissolutionRate;
+		sediment += bedrockDissolution;
+		terrain.x -= bedrockDissolution;
+	}
+	if (sediment > sedimentCapacity) {
+		const float sandDeposition = (sediment - sedimentCapacity) * depositionRate;
+		sediment -= sandDeposition;
+		terrain.y += sandDeposition;
+	}
+
+	resistance.w = sediment;
+	resistanceArray.write(cell, resistance);
+
+	sedimentArray.write(cell, sediment);
+	terrainArray.write(cell, terrain);
+}
+
+__global__ void sedimentAdvectionKernel(const Array2D<float> sedimentArray, const Array2D<float2> velocityArray, Buffer<float> advectedSedimentBuffer) {
+	// Backward
+	/*const int2 cell{getGlobalIndex2D()};
+
+	if (isOutside(cell))
+	{
+		return;
+	}
+
+	const float2 pos{ make_float2(cell) + 0.5f -
+		c_parameters.deltaTime * c_parameters.rGridScale * velocityArray.read(cell) 
+	};
+
+	advectedSedimentBuffer[getCellIndex(cell)] = sedimentArray.sample(pos);*/
+	// Forward
+
+	const int2 cell{ getGlobalIndex2D() };
+
+	if (isOutside(cell))
+	{
+		return;
+	}
+
+	const float slab{ sedimentArray.read(cell) };
+
+	const float2 velocity{ velocityArray.read(cell) };
+
+	const float2 position{ make_float2(cell) };
+
+	if (slab > 0.0f)
+	{
+		const float2 nextPosition{ position + velocity * c_parameters.rGridScale * c_parameters.deltaTime };
+
+		const int2 nextCell{ make_int2(floorf(nextPosition)) };
+
+		for (int x{ nextCell.x }; x <= nextCell.x + 1; ++x)
+		{
+			const float u{ 1.0f - abs(static_cast<float>(x) - nextPosition.x) };
+
+			for (int y{ nextCell.y }; y <= nextCell.y + 1; ++y)
+			{
+				const float v{ 1.0f - abs(static_cast<float>(y) - nextPosition.y) };
+				const float weight{ u * v };
+
+				if (weight > 0.0f)
+				{
+					atomicAdd(advectedSedimentBuffer + getCellIndex(getWrappedCell(int2{ x,y })), weight * slab);
+				}
+			}
+		}
+	}
+}
+
+void transport(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters)
 {
-	pipeKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, t_launchParameters.fluxArray, t_launchParameters.resistanceArray, t_launchParameters.windArray);
+	Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
+
+	pipeKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, t_launchParameters.fluxArray, t_launchParameters.resistanceArray, t_launchParameters.windArray, slopeBuffer);
 	transportKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, t_launchParameters.fluxArray, t_launchParameters.waterVelocityArray);
+}
+
+void sediment(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
+	Buffer<float> advectedSedimentBuffer{ t_launchParameters.tmpBuffer };
+	Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
+
+	initSedimentKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (advectedSedimentBuffer);
+	sedimentAdvectionKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.sedimentArray, t_launchParameters.waterVelocityArray, advectedSedimentBuffer);
+	sedimentExchangeKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.sedimentArray, t_launchParameters.waterVelocityArray, advectedSedimentBuffer, slopeBuffer, t_launchParameters.terrainArray, t_launchParameters.resistanceArray);
 }
 
 }

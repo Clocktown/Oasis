@@ -91,6 +91,12 @@ namespace dunes
 		m_simulator->setWaveStrength(m_waveStrength);
 		m_simulator->setWaveDepthScale(m_waveDepthScale);
 
+		m_simulator->setSedimentCapacityConstant(m_sedimentCapacityConstant);
+		m_simulator->setSedimentDepositionConstant(m_sedimentDepositionConstant);
+		m_simulator->setSandDissolutionConstant(m_sandDissolutionConstant);
+		m_simulator->setSoilDissolutionConstant(m_soilDissolutionConstant);
+		m_simulator->setBedrockDissolutionConstant(m_bedrockDissolutionConstant);
+
 		m_simulator->setTimeMode(static_cast<TimeMode>(m_timeMode));
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
@@ -420,6 +426,14 @@ namespace dunes
 			m_waveDepthScale = json["waveDepthScale"];
 		}
 
+		if (json.contains("sedimentCapacityConstant")) {
+			m_sedimentCapacityConstant = json["sedimentCapacityConstant"];
+			m_sedimentDepositionConstant = json["sedimentDepositionConstant"];
+			m_sandDissolutionConstant = json["sandDissolutionConstant"];
+			m_soilDissolutionConstant = json["soilDissolutionConstant"];
+			m_bedrockDissolutionConstant = json["bedrockDissolutionConstant"];
+		}
+
 		m_timeMode = getIndexFromNamedArray(timeModes, IM_ARRAYSIZE(timeModes), json["timeMode"], 1); //
 		m_timeScale = json["timeScale"]; //
 		m_fixedDeltaTime = json["fixedDeltaTime"]; //
@@ -547,6 +561,12 @@ namespace dunes
 		json["wavePeriod"] = m_wavePeriod;
 		json["waveStrength"] = m_waveStrength;
 		json["waveDepthScale"] = m_waveDepthScale;
+
+		json["sedimentCapacityConstant"] = m_sedimentCapacityConstant;
+		json["sedimentDepositionConstant"] = m_sedimentDepositionConstant;
+		json["sandDissolutionConstant"] = m_sandDissolutionConstant;
+		json["soilDissolutionConstant"] = m_soilDissolutionConstant ;
+		json["bedrockDissolutionConstant"] = m_bedrockDissolutionConstant;
 
 		json["timeMode"] = timeModes[m_timeMode];
 		json["timeScale"] = m_timeScale;
@@ -902,6 +922,25 @@ namespace dunes
 				}
 				if (ImGui::DragFloat("Wave Depth Scale", &m_waveDepthScale, 0.01f)) {
 					m_simulator->setWaveDepthScale(m_waveDepthScale);
+				}
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Hydraulic Erosion")) {
+				if (ImGui::DragFloat("Capacity", &m_sedimentCapacityConstant, 0.001f)) {
+					m_simulator->setSedimentCapacityConstant(m_sedimentCapacityConstant);
+				}
+				if (ImGui::DragFloat("Deposition", &m_sedimentDepositionConstant, 0.001f)) {
+					m_simulator->setSedimentDepositionConstant(m_sedimentDepositionConstant);
+				}
+				if (ImGui::DragFloat("Sand Dissolution", &m_sandDissolutionConstant, 0.001f)) {
+					m_simulator->setSandDissolutionConstant(m_sandDissolutionConstant);
+				}
+				if (ImGui::DragFloat("Soil Dissolution", &m_soilDissolutionConstant, 0.001f)) {
+					m_simulator->setSoilDissolutionConstant(m_soilDissolutionConstant);
+				}
+				if (ImGui::DragFloat("Bedrock Dissolution", &m_bedrockDissolutionConstant, 0.001f)) {
+					m_simulator->setBedrockDissolutionConstant(m_bedrockDissolutionConstant);
 				}
 				ImGui::TreePop();
 			}

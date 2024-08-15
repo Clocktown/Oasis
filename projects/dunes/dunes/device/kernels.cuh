@@ -11,7 +11,8 @@ void addSandForCoverage(const LaunchParameters& t_launchParameters, int2 res, bo
 void initializeWindWarping(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void initializeVegetation(const LaunchParameters& t_launchParameters);
 
-void transport(const LaunchParameters& t_launchParameters);
+void transport(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
+void sediment(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void getVegetationCount(LaunchParameters& t_launchParameters);
 void vegetation(const LaunchParameters& t_launchParameters);
 void venturi(const LaunchParameters& t_launchParameters);

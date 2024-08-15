@@ -78,6 +78,12 @@ namespace dunes
 		void setWaveStrength(const float t_val);
 		void setWaveDepthScale(const float t_val);
 
+		void setSedimentCapacityConstant( const float t_val );
+		void setSedimentDepositionConstant( const float t_val );
+		void setSandDissolutionConstant( const float t_val );
+		void setSoilDissolutionConstant( const float t_val );
+		void setBedrockDissolutionConstant( const float t_val );
+
 		void setTimeMode(const TimeMode t_timeMode);
 		void setTimeScale(const float t_timeScale);
 		void setFixedDeltaTime(const float t_fixedDeltaTime);
@@ -171,6 +177,7 @@ namespace dunes
 		std::shared_ptr<sthe::gl::Texture2D> m_resistanceMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_fluxMap; // TODO: Needed as texture?
 		std::shared_ptr<sthe::gl::Texture2D> m_waterVelocityMap; // TODO: Needed as texture?
+		std::shared_ptr<sthe::gl::Texture2D> m_sedimentMap;
 		std::shared_ptr<sthe::gl::Buffer> m_renderParameterBuffer;
 
 		sthe::cu::Array2D m_terrainArray;
@@ -178,6 +185,7 @@ namespace dunes
 		sthe::cu::Array2D m_resistanceArray;
 		sthe::cu::Array2D m_fluxArray;
 		sthe::cu::Array2D m_waterVelocityArray;
+		sthe::cu::Array2D m_sedimentArray;
 		sthe::cu::Buffer m_slabBuffer;
 		sthe::cu::Buffer m_tmpBuffer;
 		sthe::cu::Buffer m_vegBuffer;
