@@ -19,7 +19,7 @@ void venturi(const LaunchParameters& t_launchParameters);
 void windWarping(const LaunchParameters& t_launchParameters);
 void windShadow(const LaunchParameters& t_launchParameters);
 void pressureProjection(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
-void continuousSaltation(const LaunchParameters& t_launchParameters);
+void continuousSaltation(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void continuousReptation(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void avalanching(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void bedrockAvalanching(const LaunchParameters& t_launchParameters);

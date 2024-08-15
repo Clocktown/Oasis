@@ -213,7 +213,7 @@ namespace dunes
 			windShadow(m_launchParameters);
 			m_watches[3].stop();
 			m_watches[5].start();
-			continuousSaltation(m_launchParameters);
+			continuousSaltation(m_launchParameters, m_simulationParameters);
 			m_watches[5].stop();
 			m_watches[6].start();
 			continuousReptation(m_launchParameters, m_simulationParameters);
@@ -305,6 +305,12 @@ namespace dunes
 	{
 		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.slabBuffer = m_slabBuffer.getData<float>();
+
+		m_airMoistureBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
+		m_launchParameters.airMoistureBuffer = m_airMoistureBuffer.getData<float>();
+
+		m_terrainMoistureBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
+		m_launchParameters.terrainMoistureBuffer = m_terrainMoistureBuffer.getData<float>();
 
 		m_tmpBuffer.reinitialize(5 * m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();

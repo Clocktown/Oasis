@@ -187,6 +187,8 @@ namespace dunes
 		sthe::cu::Array2D m_waterVelocityArray;
 		sthe::cu::Array2D m_sedimentArray;
 		sthe::cu::Buffer m_slabBuffer;
+		sthe::cu::Buffer m_terrainMoistureBuffer;
+		sthe::cu::Buffer m_airMoistureBuffer;
 		sthe::cu::Buffer m_tmpBuffer;
 		sthe::cu::Buffer m_vegBuffer;
 		sthe::cu::Buffer m_seedBuffer;

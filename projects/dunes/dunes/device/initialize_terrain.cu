@@ -77,7 +77,7 @@ namespace dunes
 		);
 	}
 
-	__global__ void initializeTerrainKernel(Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Array2D<float4> fluxArray, Array2D<float2> velocityArray, InitializationParameters t_initializationParameters)
+	__global__ void initializeTerrainKernel(Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Array2D<float4> fluxArray, Array2D<float2> velocityArray, Array2D<float> sedimentArray, Buffer<float> terrainMoisture, Buffer<float> airMoisture, InitializationParameters t_initializationParameters)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -125,10 +125,13 @@ namespace dunes
 		const float4 resistance{ 0.0f, values[2], values[3], 0.0f};
 		t_resistanceArray.write(cell, resistance);
 
-		t_slabBuffer[getCellIndex(cell)] = 0.0f;
+		const int idx = getCellIndex(cell);
+		t_slabBuffer[idx] = 0.0f;
+		terrainMoisture[idx] = 0.0f;
+		airMoisture[idx] = 100.f;
 		fluxArray.write(cell, { 0.f,0.f,0.f,0.f });
 		velocityArray.write(cell, { 0.f, 0.f });
-
+		sedimentArray.write(cell, 0.f);
 	}
 
 	__global__ void addSandForCoverageKernel(Array2D<float4> t_terrainArray, float amount)
@@ -175,7 +178,7 @@ namespace dunes
 
 	void initializeTerrain(const LaunchParameters& t_launchParameters, const InitializationParameters& t_initializationParameters)
 	{
-		initializeTerrainKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.slabBuffer, t_launchParameters.fluxArray, t_launchParameters.waterVelocityArray, t_initializationParameters);
+		initializeTerrainKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.slabBuffer, t_launchParameters.fluxArray, t_launchParameters.waterVelocityArray, t_launchParameters.sedimentArray, t_launchParameters.terrainMoistureBuffer, t_launchParameters.airMoistureBuffer, t_initializationParameters);
 	}
 
 	void addSandForCoverage(const LaunchParameters& t_launchParameters, int2 res, bool uniform, int radius, float amount) {
