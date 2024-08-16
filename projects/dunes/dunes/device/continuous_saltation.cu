@@ -186,15 +186,16 @@ namespace dunes
 				const float temperature = 30.f - 0.01 * fmaxf(terrain.x + terrain.y + terrain.z + terrain.w, 0.f);
 				const float airCapacity = 100000.f * (6.0328f * exp((17.1485f * temperature) / (234.69 + temperature))) / (461.52 * (temperature + 273.15));
 
+				// TODO: Remove air moisture stuff again?
 				terrain.y +=  abrasion + soilAbrasion;
 				terrain.x -=  abrasion;
 				terrain.z -= soilAbrasion;
 				//}
 				terrain.y += slab * depositionProbability;
 				const float deltaWater = fmaxf(moisture - airCapacity, 0.f);
-				terrain.w += deltaWater;
+				//terrain.w += deltaWater;
 				const float evaporation = 0.01f * fmaxf(airCapacity - (moisture - deltaWater), 0.f);
-				terrain.w -= evaporation;
+				//terrain.w -= evaporation;
 				t_terrainArray.write(cell, terrain);
 				t_slabBuffer[cellIndex] = slab * (1.f - depositionProbability); // write updated advectedSlabBuffer back to slabBuffer (ping-pong)
 				t_advectedSlabBuffer[cellIndex] = waterFactor * slab * (1.f - vegetation); // Used in Reptation as slabBuffer

@@ -224,6 +224,7 @@ namespace dunes
 			m_watches[8].start();
 			bedrockAvalanching(m_launchParameters);
 			m_watches[8].stop();
+			rain(m_launchParameters);
 			transport(m_launchParameters, m_simulationParameters);
 			sediment(m_launchParameters, m_simulationParameters);
 			m_watches[0].stop();

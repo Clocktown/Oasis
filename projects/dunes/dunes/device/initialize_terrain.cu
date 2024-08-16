@@ -9,7 +9,69 @@ namespace dunes
 {
 #define M_PI 3.1415926535897932384626433832795
 
+	// https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
 	__device__ float frand(float2 c) { return fract(sin(dot(c, float2{ 12.9898, 78.233 })) * 43758.5453); }
+	__device__ float frand(float2 co, float l) { return frand(float2{ frand(co), l }); }
+	__device__ float frand(float2 co, float l, float t) { return frand(float2{ frand(co, l), t }); }
+
+	__device__ float perlin(float2 p, float dim, float time) {
+		float3 pos = floorf(float3{ p.x * dim, p.y * dim, time });
+		float3 posx = pos + float3{ 1.0f, 0.0f, 0.f };
+		float3 posy = pos + float3{ 0.0f, 1.0f, 0.f };
+		float3 posxy = pos + float3{ 1.0f, 1.0f, 0.f };
+		float3 posz = pos + float3{ 0.f, 0.f, 1.f };
+		float3 posxz = pos + float3{ 1.0f, 0.0f, 1.f };
+		float3 posyz = pos + float3{ 0.0f, 1.0f, 1.f };
+		float3 posxyz = pos + float3{ 1.0f, 1.0f, 1.f };
+	
+		float c = frand({ pos.x, pos.y }, dim, pos.z);
+		float cx = frand({posx.x, posx.y}, dim, posx.z);
+		float cy = frand({ posy.x, posy.y }, dim, posy.z);
+		float cxy = frand({ posxy.x, posxy.y }, dim, posxy.z);
+
+		float cz = frand({ posz.x, posz.y }, dim, posz.z);
+		float cxz = frand({posxz.x, posxz.y}, dim, posxz.z);
+		float cyz = frand({ posyz.x, posyz.y }, dim, posyz.z);
+		float cxyz = frand({ posxyz.x, posxyz.y }, dim, posxyz.z);
+	
+		float3 d = fract(float3{ p.x * dim, p.y * dim, time });
+		d = -0.5 * cos(d * M_PI) + 0.5;
+	
+		return lerp(bilerp(c, cx, cy, cxy, d.x, d.y), bilerp(cz, cxz, cyz, cxyz, d.x, d.y), d.z); // [0,1]
+	}
+
+	__device__ float seamless_perlin(float2 stretch, float2 uv, float2 border, float dim, float time)
+	{
+		float2 centered_uv_xy = 2.f * (uv - float2{ 0.5f, 0.5f });
+		float2  limits = float2{ 1.f, 1.f } - 2.f * border;
+		float2 distance = float2{ 0.f, 0.f };
+
+		distance = max(abs(centered_uv_xy) - limits, float2{ 0.f, 0.f });
+
+		centered_uv_xy = -1.f * sign(centered_uv_xy) * (limits + distance);
+
+		distance /= 2.f * border;
+
+		float2 xy_uv = 0.5f * centered_uv_xy + float2{ 0.5f, 0.5f };
+		xy_uv = stretch * xy_uv;
+		float2 base_uv = stretch * uv;
+
+		float base_sample = perlin(base_uv, dim, time);
+
+		if ((distance.x <= 0.f) && (distance.y <= 0.f))
+		{
+			return base_sample;
+		}
+
+		return bilerp(
+			base_sample,
+			perlin(float2{ xy_uv.x, base_uv.y }, dim, time),
+			perlin(float2{ base_uv.x, xy_uv.y }, dim, time),
+			perlin(xy_uv, dim, time),
+			0.5f * smoothstep(0.f, 1.f, distance.x),
+			0.5f * smoothstep(0.f, 1.f, distance.y)
+		);
+	}
 
 	__device__ float noise(float2 p, float freq)
 	{
@@ -134,6 +196,34 @@ namespace dunes
 		sedimentArray.write(cell, 0.f);
 	}
 
+	__global__ void rainKernel(Array2D<float4> terrainArray) {
+		const int2 cell{ getGlobalIndex2D() };
+
+		if (isOutside(cell))
+		{
+			return;
+		}
+
+		const float rainStrength = 10.f;
+		const float rainPeriod = 0.2f;
+		const float rainScale = 30.f; // Larger = finer resolution
+		float4 terrain{ terrainArray.read(cell) };
+		const float height = terrain.x + terrain.y + terrain.z;
+		const float rainProbability = 1.f * fmaxf(1.f - 0.5f * exp(-0.01f * 0.01f * height * height), 0.1f);
+		const float2 uv = (make_float2(cell) + 0.5f) / make_float2(c_parameters.gridSize);
+
+		float h = seamless_perlin(
+			{ c_parameters.gridSize.x / fmaxf(c_parameters.gridSize.x, c_parameters.gridSize.y), c_parameters.gridSize.y / fmaxf(c_parameters.gridSize.x, c_parameters.gridSize.y) }, 
+			uv, 
+			{0.1f, 0.1f}, 
+			rainScale, 
+			rainPeriod * c_parameters.timestep * c_parameters.deltaTime
+		);
+		terrain.w += rainStrength * h < rainProbability ? 1.f : 0.f;//clamp(h - (1.f - rainProbability), 0.f, 1.f);
+
+		terrainArray.write(cell, terrain);
+	}
+
 	__global__ void addSandForCoverageKernel(Array2D<float4> t_terrainArray, float amount)
 	{
 		const int2 cell{ getGlobalIndex2D() };
@@ -174,6 +264,10 @@ namespace dunes
 
 
 		t_terrainArray.write(cell, curr_terrain);
+	}
+
+	void rain(const LaunchParameters& t_launchParameters) {
+		rainKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray);
 	}
 
 	void initializeTerrain(const LaunchParameters& t_launchParameters, const InitializationParameters& t_initializationParameters)

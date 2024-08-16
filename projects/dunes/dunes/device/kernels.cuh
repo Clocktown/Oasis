@@ -10,6 +10,7 @@ void initializeTerrain(const LaunchParameters& t_launchParameters, const Initial
 void addSandForCoverage(const LaunchParameters& t_launchParameters, int2 res, bool uniform, int radius, float amount);
 void initializeWindWarping(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void initializeVegetation(const LaunchParameters& t_launchParameters);
+void rain(const LaunchParameters& t_launchParameters);
 
 void transport(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void sediment(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
