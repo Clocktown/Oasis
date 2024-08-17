@@ -12,6 +12,7 @@ void initializeWindWarping(const LaunchParameters& t_launchParameters, const Sim
 void initializeVegetation(const LaunchParameters& t_launchParameters);
 void rain(const LaunchParameters& t_launchParameters);
 
+void moisture(const LaunchParameters& t_launchParameters);
 void transport(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void sediment(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void getVegetationCount(LaunchParameters& t_launchParameters);

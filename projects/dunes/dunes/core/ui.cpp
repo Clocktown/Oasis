@@ -97,6 +97,8 @@ namespace dunes
 		m_simulator->setSoilDissolutionConstant(m_soilDissolutionConstant);
 		m_simulator->setBedrockDissolutionConstant(m_bedrockDissolutionConstant);
 
+		m_simulator->setEvaporationRate(m_evaporationRate);
+
 		m_simulator->setRainStrength(m_rainStrength);
 		m_simulator->setRainPeriod(m_rainPeriod);
 		m_simulator->setRainScale(m_rainScale);
@@ -442,6 +444,7 @@ namespace dunes
 		}
 
 		if (json.contains("rainStrength")) {
+			m_evaporationRate = json["evaporationRate"];
 			m_rainStrength = json["rainStrength"];
 			m_rainPeriod = json["rainPeriod"];
 			m_rainScale = json["rainScale"];
@@ -584,6 +587,7 @@ namespace dunes
 		json["soilDissolutionConstant"] = m_soilDissolutionConstant ;
 		json["bedrockDissolutionConstant"] = m_bedrockDissolutionConstant;
 
+		json["evaporationRate"] = m_evaporationRate;
 		json["rainStrength"] = m_rainStrength;
 		json["rainPeriod"] = m_rainPeriod;
 		json["rainScale"] = m_rainScale;
@@ -950,6 +954,9 @@ namespace dunes
 			}
 
 			if (ImGui::TreeNode("Rain")) {
+				if (ImGui::DragFloat("Evaporation", &m_evaporationRate, 0.001f)) {
+					m_simulator->setEvaporationRate(m_evaporationRate);
+				}
 				if (ImGui::DragFloat("Rain Strength", &m_rainStrength, 0.1f)) {
 					m_simulator->setRainStrength(m_rainStrength);
 				}

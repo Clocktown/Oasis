@@ -226,6 +226,7 @@ namespace dunes
 			bedrockAvalanching(m_launchParameters);
 			m_watches[8].stop();
 			rain(m_launchParameters);
+			moisture(m_launchParameters); // Maybe do this after transport?
 			transport(m_launchParameters, m_simulationParameters);
 			sediment(m_launchParameters, m_simulationParameters);
 			m_watches[0].stop();
@@ -717,6 +718,10 @@ namespace dunes
 	}
 	void Simulator::setBedrockDissolutionConstant(const float t_val) {
 		m_simulationParameters.bedrockDissolutionConstant = t_val;
+	}
+
+	void Simulator::setEvaporationRate(float v) {
+		m_simulationParameters.evaporationRate = v;
 	}
 
 	void Simulator::setRainStrength(float v) {

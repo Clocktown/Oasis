@@ -134,6 +134,8 @@ namespace dunes
 		float m_soilDissolutionConstant{ 0.05f };
 		float m_bedrockDissolutionConstant{ 0.01f };
 
+		float m_evaporationRate{ 0.01f };
+
 		float m_rainStrength{0.1f};
 		float m_rainPeriod{0.2f};
 		float m_rainScale{30.f};

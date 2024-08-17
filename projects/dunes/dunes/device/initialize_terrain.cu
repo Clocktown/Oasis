@@ -195,6 +195,7 @@ namespace dunes
 		sedimentArray.write(cell, 0.f);
 	}
 
+	// Rain Kernel here because we have noise functions defined here. The noise functions have to be compiled with fast math disabled to be accurate.
 	__global__ void rainKernel(Array2D<float4> terrainArray) {
 		const int2 cell{ getGlobalIndex2D() };
 

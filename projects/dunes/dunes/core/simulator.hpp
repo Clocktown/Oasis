@@ -84,6 +84,8 @@ namespace dunes
 		void setSoilDissolutionConstant( const float t_val );
 		void setBedrockDissolutionConstant( const float t_val );
 
+		void setEvaporationRate(float v);
+
 		void setRainStrength(float v);
 		void setRainPeriod(float v);
 		void setRainScale(float v);
