@@ -97,6 +97,13 @@ namespace dunes
 		m_simulator->setSoilDissolutionConstant(m_soilDissolutionConstant);
 		m_simulator->setBedrockDissolutionConstant(m_bedrockDissolutionConstant);
 
+		m_simulator->setRainStrength(m_rainStrength);
+		m_simulator->setRainPeriod(m_rainPeriod);
+		m_simulator->setRainScale(m_rainScale);
+		m_simulator->setRainProbabilityMin(m_rainProbabilityMin);
+		m_simulator->setRainProbabilityMax(m_rainProbabilityMax);
+		m_simulator->setRainProbabilityHeightRange(m_rainProbabilityHeightRange);
+
 		m_simulator->setTimeMode(static_cast<TimeMode>(m_timeMode));
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
@@ -434,6 +441,15 @@ namespace dunes
 			m_bedrockDissolutionConstant = json["bedrockDissolutionConstant"];
 		}
 
+		if (json.contains("rainStrength")) {
+			m_rainStrength = json["rainStrength"];
+			m_rainPeriod = json["rainPeriod"];
+			m_rainScale = json["rainScale"];
+			m_rainProbabilityMin = json["rainProbabilityMin"];
+			m_rainProbabilityMax = json["rainProbabilityMax"];
+			m_rainProbabilityHeightRange = json["rainProbabilityHeightRange"];
+		}
+
 		m_timeMode = getIndexFromNamedArray(timeModes, IM_ARRAYSIZE(timeModes), json["timeMode"], 1); //
 		m_timeScale = json["timeScale"]; //
 		m_fixedDeltaTime = json["fixedDeltaTime"]; //
@@ -567,6 +583,13 @@ namespace dunes
 		json["sandDissolutionConstant"] = m_sandDissolutionConstant;
 		json["soilDissolutionConstant"] = m_soilDissolutionConstant ;
 		json["bedrockDissolutionConstant"] = m_bedrockDissolutionConstant;
+
+		json["rainStrength"] = m_rainStrength;
+		json["rainPeriod"] = m_rainPeriod;
+		json["rainScale"] = m_rainScale;
+		json["rainProbabilityMin"] = m_rainProbabilityMin;
+		json["rainProbabilityMax"] = m_rainProbabilityMax;
+		json["rainProbabilityHeightRange"] = m_rainProbabilityHeightRange;
 
 		json["timeMode"] = timeModes[m_timeMode];
 		json["timeScale"] = m_timeScale;
@@ -922,6 +945,28 @@ namespace dunes
 				}
 				if (ImGui::DragFloat("Wave Depth Scale", &m_waveDepthScale, 0.01f)) {
 					m_simulator->setWaveDepthScale(m_waveDepthScale);
+				}
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Rain")) {
+				if (ImGui::DragFloat("Rain Strength", &m_rainStrength, 0.1f)) {
+					m_simulator->setRainStrength(m_rainStrength);
+				}
+				if (ImGui::DragFloat("Rain Period", &m_rainPeriod, 0.01f)) {
+					m_simulator->setRainPeriod(m_rainPeriod);
+				}
+				if (ImGui::DragFloat("Rain Scale", &m_rainScale, 0.1f)) {
+					m_simulator->setRainScale(m_rainScale);
+				}
+				if (ImGui::DragFloat("Rain Min Prob.", &m_rainProbabilityMin, 0.01f)) {
+					m_simulator->setRainProbabilityMin(m_rainProbabilityMin);
+				}
+				if (ImGui::DragFloat("Rain Max Prob.", &m_rainProbabilityMax, 0.01f)) {
+					m_simulator->setRainProbabilityMax(m_rainProbabilityMax);
+				}
+				if (ImGui::DragFloat("Rain Prob. Height Range", &m_rainProbabilityHeightRange, 1.f)) {
+					m_simulator->setRainProbabilityHeightRange(m_rainProbabilityHeightRange);
 				}
 				ImGui::TreePop();
 			}

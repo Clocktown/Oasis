@@ -159,7 +159,7 @@ __global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array
 		terrain.y += sandDeposition;
 	}
 
-	resistance.w = sediment;
+	//resistance.w = sediment;
 	resistanceArray.write(cell, resistance);
 
 	sedimentArray.write(cell, sediment);

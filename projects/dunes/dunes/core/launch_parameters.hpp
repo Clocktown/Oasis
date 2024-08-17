@@ -83,13 +83,12 @@ struct LaunchParameters
 
 	Array2D<float4> terrainArray;
 	Array2D<float2> windArray;
-	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = sticky
+	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = humus
 	Array2D<float4> fluxArray;
 	Array2D<float2> waterVelocityArray;
 	Array2D<float>	sedimentArray;
+	Array2D<float> terrainMoistureArray;
 	Buffer<float> slabBuffer;
-	Buffer<float> terrainMoistureBuffer;
-	Buffer<float> airMoistureBuffer;
 	Buffer<float> tmpBuffer; // 5 * gridSize.x * gridSize.y
 	Buffer<Vegetation> vegBuffer;
 	Buffer<uint4> seedBuffer;

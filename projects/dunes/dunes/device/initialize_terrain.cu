@@ -139,7 +139,7 @@ namespace dunes
 		);
 	}
 
-	__global__ void initializeTerrainKernel(Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Array2D<float4> fluxArray, Array2D<float2> velocityArray, Array2D<float> sedimentArray, Buffer<float> terrainMoisture, Buffer<float> airMoisture, InitializationParameters t_initializationParameters)
+	__global__ void initializeTerrainKernel(Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<float> t_slabBuffer, Array2D<float4> fluxArray, Array2D<float2> velocityArray, Array2D<float> sedimentArray, Array2D<float> terrainMoisture, InitializationParameters t_initializationParameters)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -189,8 +189,7 @@ namespace dunes
 
 		const int idx = getCellIndex(cell);
 		t_slabBuffer[idx] = 0.0f;
-		terrainMoisture[idx] = 0.0f;
-		airMoisture[idx] = 100.f;
+		terrainMoisture.write(cell, 0.f);
 		fluxArray.write(cell, { 0.f,0.f,0.f,0.f });
 		velocityArray.write(cell, { 0.f, 0.f });
 		sedimentArray.write(cell, 0.f);
@@ -204,12 +203,15 @@ namespace dunes
 			return;
 		}
 
-		const float rainStrength = 10.f;
-		const float rainPeriod = 0.2f;
-		const float rainScale = 30.f; // Larger = finer resolution
+		const float rainStrength = c_parameters.rainStrength;
+		const float rainPeriod = c_parameters.rainPeriod;
+		const float rainScale = c_parameters.rainScale; // Larger = finer resolution
+		const float rainProbabilityMin = c_parameters.rainProbabilityMin;
+		const float rainProbabilityMax = c_parameters.rainProbabilityMax;
+		const float iRainProbabilityHeightRange = c_parameters.iRainProbabilityHeightRange;
 		float4 terrain{ terrainArray.read(cell) };
 		const float height = terrain.x + terrain.y + terrain.z;
-		const float rainProbability = 1.f * fmaxf(1.f - 0.5f * exp(-0.01f * 0.01f * height * height), 0.1f);
+		const float rainProbability = rainProbabilityMin + (rainProbabilityMax - rainProbabilityMin) * clamp(height * iRainProbabilityHeightRange, 0.f, 1.f);
 		const float2 uv = (make_float2(cell) + 0.5f) / make_float2(c_parameters.gridSize);
 
 		float h = seamless_perlin(
@@ -219,7 +221,7 @@ namespace dunes
 			rainScale, 
 			rainPeriod * c_parameters.timestep * c_parameters.deltaTime
 		);
-		terrain.w += rainStrength * h < rainProbability ? 1.f : 0.f;//clamp(h - (1.f - rainProbability), 0.f, 1.f);
+		terrain.w += rainStrength * (h < rainProbability ? 1.f : 0.f);//clamp(h - (1.f - rainProbability), 0.f, 1.f);
 
 		terrainArray.write(cell, terrain);
 	}
@@ -272,7 +274,7 @@ namespace dunes
 
 	void initializeTerrain(const LaunchParameters& t_launchParameters, const InitializationParameters& t_initializationParameters)
 	{
-		initializeTerrainKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.slabBuffer, t_launchParameters.fluxArray, t_launchParameters.waterVelocityArray, t_launchParameters.sedimentArray, t_launchParameters.terrainMoistureBuffer, t_launchParameters.airMoistureBuffer, t_initializationParameters);
+		initializeTerrainKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.slabBuffer, t_launchParameters.fluxArray, t_launchParameters.waterVelocityArray, t_launchParameters.sedimentArray, t_launchParameters.terrainMoistureArray, t_initializationParameters);
 	}
 
 	void addSandForCoverage(const LaunchParameters& t_launchParameters, int2 res, bool uniform, int radius, float amount) {

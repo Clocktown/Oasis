@@ -25,6 +25,7 @@ namespace dunes
 		m_waterVelocityMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_sedimentMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_fluxMap{ std::make_shared<sthe::gl::Texture2D>() },
+		m_terrainMoistureMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_textureDescriptor{},
 		m_isAwake{ false },
 		m_isPaused{ false },
@@ -290,6 +291,7 @@ namespace dunes
 		m_waterVelocityMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
 		m_fluxMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 		m_sedimentMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R32F, false);
+		m_terrainMoistureMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R32F, false);
 	}
 
 	void Simulator::setupArrays()
@@ -300,18 +302,13 @@ namespace dunes
 		m_waterVelocityArray.reinitialize(*m_waterVelocityMap);
 		m_fluxArray.reinitialize(*m_fluxMap);
 		m_sedimentArray.reinitialize(*m_sedimentMap);
+		m_terrainMoistureArray.reinitialize(*m_terrainMoistureMap);
 	}
 
 	void Simulator::setupBuffers()
 	{
 		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.slabBuffer = m_slabBuffer.getData<float>();
-
-		m_airMoistureBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
-		m_launchParameters.airMoistureBuffer = m_airMoistureBuffer.getData<float>();
-
-		m_terrainMoistureBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
-		m_launchParameters.terrainMoistureBuffer = m_terrainMoistureBuffer.getData<float>();
 
 		m_tmpBuffer.reinitialize(5 * m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
@@ -472,6 +469,10 @@ namespace dunes
 		m_sedimentArray.map();
 		m_launchParameters.sedimentArray.surface = m_sedimentArray.recreateSurface();
 		m_launchParameters.sedimentArray.texture = m_sedimentArray.recreateTexture(m_textureDescriptor);
+
+		m_terrainMoistureArray.map();
+		m_launchParameters.terrainMoistureArray.surface = m_terrainMoistureArray.recreateSurface();
+		m_launchParameters.terrainMoistureArray.texture = m_terrainMoistureArray.recreateTexture(m_textureDescriptor);
 	}
 
 	void Simulator::unmap()
@@ -482,6 +483,7 @@ namespace dunes
 		m_fluxArray.unmap();
 		m_waterVelocityArray.unmap();
 		m_sedimentArray.unmap();
+		m_terrainMoistureArray.unmap();
 	}
 
 	// Setters
@@ -715,6 +717,25 @@ namespace dunes
 	}
 	void Simulator::setBedrockDissolutionConstant(const float t_val) {
 		m_simulationParameters.bedrockDissolutionConstant = t_val;
+	}
+
+	void Simulator::setRainStrength(float v) {
+		m_simulationParameters.rainStrength = v;
+	}
+	void Simulator::setRainPeriod(float v) {
+		m_simulationParameters.rainPeriod = v;
+	}
+	void Simulator::setRainScale(float v) {
+		m_simulationParameters.rainScale = v;
+	}
+	void Simulator::setRainProbabilityMin(float v) {
+		m_simulationParameters.rainProbabilityMin = v;
+	}
+	void Simulator::setRainProbabilityMax(float v) {
+		m_simulationParameters.rainProbabilityMax = v;
+	}
+	void Simulator::setRainProbabilityHeightRange(float v) {
+		m_simulationParameters.iRainProbabilityHeightRange = v > 1e-6f ? 1.f / v : 0.f;
 	}
 
 	void Simulator::setTimeMode(const TimeMode t_timeMode)

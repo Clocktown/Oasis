@@ -76,6 +76,13 @@ struct SimulationParameters
 	float soilDissolutionConstant{ 0.05f };
 	float bedrockDissolutionConstant{ 0.01f };
 
+	float rainStrength{10.f};
+	float rainPeriod{0.2f};
+	float rainScale{30.f};
+	float rainProbabilityMin{0.5f};
+	float rainProbabilityMax{1.f};
+	float iRainProbabilityHeightRange{0.001f};
+
 	float deltaTime{ 1.0f };
 	int timestep = 0;
 };

@@ -76,5 +76,33 @@ CU_INLINE CU_HOST_DEVICE uint4 pcg(uint4& seed) noexcept
 	return value;
 }
 
+// Convert random unsigned int seed to float in [0,1]
+// https://iquilezles.org/articles/sfrand/
+CU_INLINE CU_HOST_DEVICE float uniform_float( unsigned int seed )
+{
+    union
+    {
+        float fres;
+        unsigned int ires;
+    };
+
+    ires = (seed>>9) | 0x3f800000;
+    return fres - 1.0f;
+}
+
+// Convert random unsigned int seed to float in [-1,1]
+// https://iquilezles.org/articles/sfrand/
+CU_INLINE CU_HOST_DEVICE float uniform_sfloat( unsigned int seed )
+{
+    union
+    {
+        float fres;
+        unsigned int ires;
+    };
+
+    ires = (seed>>9) | 0x40000000;
+    return fres - 3.0f;
+}
+
 }
 }

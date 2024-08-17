@@ -134,6 +134,13 @@ namespace dunes
 		float m_soilDissolutionConstant{ 0.05f };
 		float m_bedrockDissolutionConstant{ 0.01f };
 
+		float m_rainStrength{0.1f};
+		float m_rainPeriod{0.2f};
+		float m_rainScale{30.f};
+		float m_rainProbabilityMin{0.5f};
+		float m_rainProbabilityMax{1.f};
+		float m_rainProbabilityHeightRange{1000.f};
+
 		int m_timeMode{ static_cast<int>(TimeMode::FixedDeltaTime) };
 		float m_timeScale{ 1.0f };
 		float m_fixedDeltaTime{ 0.5f };

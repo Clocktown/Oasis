@@ -74,8 +74,8 @@ namespace dunes {
 			unsigned int seed = seeds[idx].x;
 			random::pcg(seed);
 			seeds[idx].x = seed;
-			const int xi = (seed % 10000000);
-			if (xi < 100) {
+			const float xi = random::uniform_float(seed);
+			if (xi < 0.00001f) {
 				Vegetation veg;
 				veg.type = 0;
 				veg.pos = pos;
@@ -143,9 +143,9 @@ namespace dunes {
 		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
 		const float4 terrain = t_terrainArray.read(vegCell);
 		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };
-		const float height = 0.5f + (seed.z % 100000u) * 0.0003f;
+		const float height = 0.5f + 30.f * random::uniform_float(seed.z);
 		veg.height = { 0.6666f * height, 0.3333f * height };
-		veg.radius = 1.f + (seed.w % 100000u) * 0.00019f;
+		veg.radius = 1.f + 19.f * random::uniform_float(seed.w);
 		vegBuffer[idx] = veg;
 	}
 
