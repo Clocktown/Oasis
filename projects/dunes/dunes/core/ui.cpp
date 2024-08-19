@@ -97,8 +97,14 @@ namespace dunes
 		m_simulator->setSoilDissolutionConstant(m_soilDissolutionConstant);
 		m_simulator->setBedrockDissolutionConstant(m_bedrockDissolutionConstant);
 
-		m_simulator->setEvaporationRate(m_evaporationRate);
+		m_simulator->setMoistureEvaporationScale(m_moistureEvaporationScale);
+		m_simulator->setSandMoistureRate(m_sandMoistureRate);
+		m_simulator->setSoilMoistureRate(m_soilMoistureRate);
+		m_simulator->setTerrainThicknessMoistureThreshold(m_terrainThicknessMoistureThreshold);
+		m_simulator->setMoistureCapacityConstant(m_moistureCapacityConstant);
+		m_simulator->setWaterBorderLevel(m_waterBorderLevel);
 
+		m_simulator->setEvaporationRate(m_evaporationRate);
 		m_simulator->setRainStrength(m_rainStrength);
 		m_simulator->setRainPeriod(m_rainPeriod);
 		m_simulator->setRainScale(m_rainScale);
@@ -237,6 +243,7 @@ namespace dunes
 			dirty |= ImGui::ColorEdit4("Bedrock Color", glm::value_ptr(m_renderParameters.bedrockColor));
 			dirty |= ImGui::ColorEdit4("Water Color", glm::value_ptr(m_renderParameters.waterColor));
 			dirty |= ImGui::ColorEdit4("Wind Shadow Color", glm::value_ptr(m_renderParameters.windShadowColor));
+			dirty |= ImGui::ColorEdit4("Wet Color", glm::value_ptr(m_renderParameters.wetColor));
 
 			if (dirty) {
 				m_simulator->setRenderParameters(m_renderParameters);
@@ -443,6 +450,15 @@ namespace dunes
 			m_bedrockDissolutionConstant = json["bedrockDissolutionConstant"];
 		}
 
+		if (json.contains("sandMoistureRate")) {
+			m_waterBorderLevel = json["waterBorderLevel"];
+			m_moistureEvaporationScale = json["moistureEvaporationScale"];
+			m_sandMoistureRate = json["sandMoistureRate"];
+			m_soilMoistureRate = json["soilMoistureRate"];
+			m_terrainThicknessMoistureThreshold = json["terrainThicknessMoistureThreshold"];
+			m_moistureCapacityConstant = json["moistureCapacityConstant"];
+		}
+
 		if (json.contains("rainStrength")) {
 			m_evaporationRate = json["evaporationRate"];
 			m_rainStrength = json["rainStrength"];
@@ -484,6 +500,7 @@ namespace dunes
 			m_renderParameters.soilColor = { json["soilColor"][0], json["soilColor"][1], json["soilColor"][2], json["soilColor"][3] };
 			m_renderParameters.humusColor = { json["humusColor"][0], json["humusColor"][1], json["humusColor"][2], json["humusColor"][3] };
 			m_renderParameters.waterColor = { json["waterColor"][0], json["waterColor"][1], json["waterColor"][2], json["waterColor"][3] };
+			m_renderParameters.wetColor = { json["wetColor"][0], json["wetColor"][1], json["wetColor"][2], json["wetColor"][3] };
 		}
 
 		initializeAll();
@@ -587,6 +604,13 @@ namespace dunes
 		json["soilDissolutionConstant"] = m_soilDissolutionConstant ;
 		json["bedrockDissolutionConstant"] = m_bedrockDissolutionConstant;
 
+		json["waterBorderLevel"] = m_waterBorderLevel;
+		json["moistureEvaporationScale"] = m_moistureEvaporationScale;
+		json["sandMoistureRate"] = m_sandMoistureRate;
+		json["soilMoistureRate"] = m_soilMoistureRate;
+		json["terrainThicknessMoistureThreshold"] = m_terrainThicknessMoistureThreshold;
+		json["moistureCapacityConstant"] = m_moistureCapacityConstant;
+
 		json["evaporationRate"] = m_evaporationRate;
 		json["rainStrength"] = m_rainStrength;
 		json["rainPeriod"] = m_rainPeriod;
@@ -655,6 +679,13 @@ namespace dunes
 			m_renderParameters.waterColor.y,
 			m_renderParameters.waterColor.z,
 			m_renderParameters.waterColor.w
+		};
+
+		json["wetColor"] = { 
+			m_renderParameters.wetColor.x,
+			m_renderParameters.wetColor.y,
+			m_renderParameters.wetColor.z,
+			m_renderParameters.wetColor.w
 		};
 
 		json["exportMaps"] = m_exportMaps;
@@ -953,7 +984,29 @@ namespace dunes
 				ImGui::TreePop();
 			}
 
+			if (ImGui::TreeNode("Moisture")) {
+				if (ImGui::DragFloat("Moisture Evaporation Scale", &m_moistureEvaporationScale, 0.01f)) {
+					m_simulator->setMoistureEvaporationScale(m_moistureEvaporationScale);
+				}
+				if (ImGui::DragFloat("Sand Moisture Rate", &m_sandMoistureRate, 0.01f)) {
+					m_simulator->setSandMoistureRate(m_sandMoistureRate);
+				}
+				if (ImGui::DragFloat("Soil Moisture Rate", &m_soilMoistureRate, 0.01f)) {
+					m_simulator->setSoilMoistureRate(m_soilMoistureRate);
+				}
+				if (ImGui::DragFloat("Terrain Thickness Threshold", &m_terrainThicknessMoistureThreshold, 0.01f)) {
+					m_simulator->setTerrainThicknessMoistureThreshold(m_terrainThicknessMoistureThreshold);
+				}
+				if (ImGui::DragFloat("Moisture Capacity", &m_moistureCapacityConstant, 0.01f)) {
+					m_simulator->setMoistureCapacityConstant(m_moistureCapacityConstant);
+				}
+				ImGui::TreePop();
+			}
+
 			if (ImGui::TreeNode("Rain")) {
+				if (ImGui::DragFloat("Water Level", &m_waterBorderLevel, 0.1f)) {
+					m_simulator->setWaterBorderLevel(m_waterBorderLevel);
+				}
 				if (ImGui::DragFloat("Evaporation", &m_evaporationRate, 0.001f)) {
 					m_simulator->setEvaporationRate(m_evaporationRate);
 				}

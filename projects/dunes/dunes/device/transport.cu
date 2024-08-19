@@ -1,6 +1,7 @@
 #include "kernels.cuh"
 #include "constants.cuh"
 #include "grid.cuh"
+#include "common.cuh"
 #include <dunes/core/simulation_parameters.hpp>
 #include <dunes/core/launch_parameters.hpp>
 #include <sthe/device/vector_extension.cuh>
@@ -101,6 +102,9 @@ __global__ void transportKernel(Array2D<float4> t_terrainArray, const Array2D<fl
 
 	const float2 velocity{ 0.5f * float2{ flux.x - flux.y, flux.z - flux.w } };
 
+	//TODO: make optional, also not working properly, may need to add it to different kernels.
+	setBorderWaterLevelMin(cell, terrain, c_parameters.waterBorderLevel);
+
 	t_terrainArray.write(cell, terrain);
 	t_waterVelocityArray.write(cell, velocity);
 }
@@ -129,9 +133,9 @@ __global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array
 	const float slope = slopeBuffer[idx];
 	float4 resistance = resistanceArray.read(cell);
 
-	const float speed = length(velocityArray.read(cell));
 	float sediment = advectedSedimentBuffer[idx];
 	float4 terrain = terrainArray.read(cell);
+	const float speed = length(velocityArray.read(cell)) / fmaxf(0.1f * terrain.w, 1.f); // Velocity is at the surface, so decrease it for deep water
 
 	const float sedimentCapacity = c_parameters.sedimentCapacityConstant * slope * speed * (1.f - 0.5f * resistance.y) * fminf(0.1f + 0.9f * terrain.w, 1.f);
 	const float sandDissolutionRate = c_parameters.sandDissolutionConstant * c_parameters.deltaTime;

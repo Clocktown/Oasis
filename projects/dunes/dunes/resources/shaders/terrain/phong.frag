@@ -76,6 +76,7 @@ struct RenderParameters
 	vec4 soilColor;
 	vec4 waterColor;
 	vec4 humusColor;
+	vec4 wetColor;
 };
 
 layout(std140, binding = 0) uniform PipelineBuffer
@@ -104,6 +105,7 @@ layout(binding = 2) uniform sampler2D t_heightMap;
 
 layout(binding = 8) uniform sampler2D t_windMap;
 layout(binding = 9) uniform sampler2D t_resistanceMap;
+layout(binding = 10) uniform sampler2D t_moistureMap;
 
 layout(early_fragment_tests) in;
 in Fragment fragment;
@@ -176,12 +178,14 @@ void main()
 
 
 		const vec4 terrain = texture(t_heightMap, fragment.uv);
+		const float moisture = texture(t_moistureMap, fragment.uv).r;
 		const vec4 resistances = texture(t_resistanceMap, fragment.uv);
 		const vec3 bedrockColor = mix(renderParameters.bedrockColor.rgb, vec3(0), 0.75 * resistances.z);
 		vec3 diffuseColor = mix(renderParameters.soilColor.rgb, bedrockColor, clamp((1.f - terrain.z) / (1.f), 0.f, 1.f));
 	    diffuseColor = mix(renderParameters.sandColor.rgb, diffuseColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
 		diffuseColor = mix(diffuseColor, renderParameters.vegetationColor.rgb, max(resistances.y, 0.f));
 		//diffuseColor = mix(diffuseColor, renderParameters.objectColor.rgb, max(-resistances.y,0));
+		diffuseColor = mix(diffuseColor, renderParameters.wetColor.rgb, clamp(renderParameters.wetColor.a * moisture, 0, 1));
 			
 	    const vec3 specularColor = vec3(0);
 		const float cosPsiN = pow(cosPsi, 80.0f);

@@ -178,7 +178,7 @@ namespace dunes
 		values[3] = clamp(values[3], 0.f, 1.f);
 		values[1] = fmaxf(values[1], 0.f);
 		values[4] = fmaxf(values[4], 0.f);
-		values[5] = fmaxf(values[5] - (values[0] + values[1] + values[2]), 0.f);
+		values[5] = fmaxf(values[5] - (values[0] + values[1] + values[4]), 0.f);
 
 		// Regular initialization
 		const float4 terrain{ values[0], values[1], values[4], values[5]};

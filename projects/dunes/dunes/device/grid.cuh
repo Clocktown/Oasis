@@ -89,6 +89,11 @@ namespace dunes
 		return t_cell.x >= t_gridSize.x || t_cell.y >= t_gridSize.y;
 	}
 
+	__forceinline__ __device__ bool isBorder(const int2& t_cell, const int2& t_gridSize = c_parameters.gridSize)
+	{
+		return t_cell.x == 0 || t_cell.y == 0 || t_cell.x == (t_gridSize.x - 1) || t_cell.y == (t_gridSize.y - 1);
+	}
+
 	template<bool TUseBilinear>
 	__forceinline__ __device__  float2 sampleLinearOrNearest(const Array2D<float2>& arr, const float2& pos) {
 		if constexpr (TUseBilinear) {

@@ -67,6 +67,7 @@ namespace dunes
 		m_material->setProgram(m_program);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0, m_windMap);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
+		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
 
 		m_textureDescriptor.addressMode[0] = cudaAddressModeWrap;
 		m_textureDescriptor.addressMode[1] = cudaAddressModeWrap;
@@ -226,8 +227,8 @@ namespace dunes
 			bedrockAvalanching(m_launchParameters);
 			m_watches[8].stop();
 			rain(m_launchParameters);
-			moisture(m_launchParameters); // Maybe do this after transport?
 			transport(m_launchParameters, m_simulationParameters);
+			moisture(m_launchParameters, m_simulationParameters);
 			sediment(m_launchParameters, m_simulationParameters);
 			m_watches[0].stop();
 
@@ -720,10 +721,29 @@ namespace dunes
 		m_simulationParameters.bedrockDissolutionConstant = t_val;
 	}
 
+	void Simulator::setMoistureEvaporationScale(float v) {
+		m_simulationParameters.moistureEvaporationScale = v;
+	}
+	void Simulator::setSandMoistureRate(float v) {
+		m_simulationParameters.sandMoistureRate = v;
+	}
+	void Simulator::setSoilMoistureRate(float v) {
+		m_simulationParameters.soilMoistureRate = v;
+	}
+	void Simulator::setTerrainThicknessMoistureThreshold(float v) {
+		m_simulationParameters.iTerrainThicknessMoistureThreshold = v > 1e-6f ? 1.f / v : 0.f;
+	}
+	void Simulator::setMoistureCapacityConstant(float v) {
+		m_simulationParameters.moistureCapacityConstant = v;
+	}
+
+	void Simulator::setWaterBorderLevel(float v) {
+		m_simulationParameters.waterBorderLevel = v;
+	}
+
 	void Simulator::setEvaporationRate(float v) {
 		m_simulationParameters.evaporationRate = v;
 	}
-
 	void Simulator::setRainStrength(float v) {
 		m_simulationParameters.rainStrength = v;
 	}

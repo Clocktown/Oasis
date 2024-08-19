@@ -36,6 +36,7 @@
     <ClInclude Include="dunes\core\simulation_parameters.hpp" />
     <ClInclude Include="dunes\core\simulator.hpp" />
     <ClInclude Include="dunes\core\ui.hpp" />
+    <ClInclude Include="dunes\device\common.cuh" />
     <ClInclude Include="dunes\device\constants.cuh" />
     <ClInclude Include="dunes\device\grid.cuh" />
     <ClInclude Include="dunes\device\kernels.cuh" />

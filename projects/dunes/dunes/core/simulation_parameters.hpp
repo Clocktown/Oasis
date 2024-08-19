@@ -76,8 +76,15 @@ struct SimulationParameters
 	float soilDissolutionConstant{ 0.05f };
 	float bedrockDissolutionConstant{ 0.01f };
 
-	float evaporationRate{ 0.01f };
+	float waterBorderLevel{ 20.f };
 
+	float moistureEvaporationScale{ 1.f };
+	float sandMoistureRate{ 0.1f };
+	float soilMoistureRate{ 0.02f };
+	float iTerrainThicknessMoistureThreshold{ 1.f };
+	float moistureCapacityConstant{ 1.f };
+
+	float evaporationRate{ 0.01f };
 	float rainStrength{10.f};
 	float rainPeriod{0.2f};
 	float rainScale{30.f};

@@ -80,7 +80,7 @@ __global__ void bedrockAvalancheKernel(const Array2D<float4> t_resistanceArray, 
 	}
 }
 
-__global__ void soilAvalancheKernel(const Array2D<float4> t_resistanceArray, Buffer<float4> t_terrainBuffer)
+__global__ void soilAvalancheKernel(const Array2D<float4> t_resistanceArray, Buffer<float4> t_terrainBuffer, const Array2D<float> moistureArray)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -96,8 +96,21 @@ __global__ void soilAvalancheKernel(const Array2D<float4> t_resistanceArray, Buf
 
 	const float vegetation{ t_resistanceArray.read(cell).y };
 
+	const float terrainThickness = terrain.y + terrain.z;
+	const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
+	const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
+	const float moisture{ 2 * clamp(moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1  };
+
+	const float moistureFactor = moisture > 0.f ?
+		1.5f - 1.4f * moisture :
+		1.5f + 0.5f * moisture;
+
+	const float moistureVegetationFactor = moisture > 0.f ?
+		1.5f - 1.3f * moisture :
+		1.5f + 0.5f * moisture;
+
 	// Store precomputed angle
-	const float soilAngle = lerp(c_parameters.soilAngle, c_parameters.vegetationSoilAngle, fmaxf(vegetation, 0.f));
+	const float soilAngle = lerp(moistureFactor * c_parameters.soilAngle, moistureVegetationFactor * c_parameters.vegetationSoilAngle, fmaxf(vegetation, 0.f));
 	
 	int nextCellIndices[8];
 	float avalanches[8];
@@ -177,7 +190,7 @@ void bedrockAvalanching(const LaunchParameters& t_launchParameters)
 
 	for (int i = 0; i < t_launchParameters.soilAvalancheIterations; ++i)
 	{
-		soilAvalancheKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.resistanceArray, terrainBuffer);
+		soilAvalancheKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.resistanceArray, terrainBuffer, t_launchParameters.terrainMoistureArray);
 	}
 
 	finishBedrockAvalancheKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, terrainBuffer);
