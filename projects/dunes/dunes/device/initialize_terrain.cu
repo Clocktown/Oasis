@@ -152,18 +152,20 @@ namespace dunes
 
 		const float4 curr_terrain = t_terrainArray.read(cell);
 		const float4 curr_resistance = t_resistanceArray.read(cell);
+		const float curr_moisture = terrainMoisture.read(cell);
 
-		const int indices[6]{
+		const int indices[7]{
 			(int)NoiseGenerationTarget::Bedrock,
 			(int)NoiseGenerationTarget::Sand,
 			(int)NoiseGenerationTarget::Vegetation,
 			(int)NoiseGenerationTarget::AbrasionResistance,
 			(int)NoiseGenerationTarget::Soil,
-			(int)NoiseGenerationTarget::Water
+			(int)NoiseGenerationTarget::Water,
+			(int)NoiseGenerationTarget::Moisture
 		};
-		float values[6] = { curr_terrain.x, curr_terrain.y, curr_resistance.y, curr_resistance.z, curr_terrain.z, curr_terrain.w };
+		float values[7] = { curr_terrain.x, curr_terrain.y, curr_resistance.y, curr_resistance.z, curr_terrain.z, curr_terrain.w, curr_moisture };
 
-		for (int i = 0; i < 6; ++i) {
+		for (int i = 0; i < 7; ++i) {
 			const auto& params = t_initializationParameters.noiseGenerationParameters[indices[i]];
 			values[i] = params.enabled ?
 				(params.bias +
@@ -179,6 +181,7 @@ namespace dunes
 		values[1] = fmaxf(values[1], 0.f);
 		values[4] = fmaxf(values[4], 0.f);
 		values[5] = fmaxf(values[5] - (values[0] + values[1] + values[4]), 0.f);
+		values[6] = fmaxf(values[6], 0.f);
 
 		// Regular initialization
 		const float4 terrain{ values[0], values[1], values[4], values[5]};
@@ -189,7 +192,7 @@ namespace dunes
 
 		const int idx = getCellIndex(cell);
 		t_slabBuffer[idx] = 0.0f;
-		terrainMoisture.write(cell, 0.f);
+		terrainMoisture.write(cell, values[6]);
 		fluxArray.write(cell, { 0.f,0.f,0.f,0.f });
 		velocityArray.write(cell, { 0.f, 0.f });
 		sedimentArray.write(cell, 0.f);

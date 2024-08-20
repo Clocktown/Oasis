@@ -117,11 +117,11 @@ struct NoiseGenerationParameters
 	bool uniform_random = false;
 };
 
-constexpr int NumNoiseGenerationTargets = 6;
+constexpr int NumNoiseGenerationTargets = 7;
 
 enum class NoiseGenerationTarget : unsigned char
 {
-	Bedrock, Sand, Vegetation, AbrasionResistance, Soil, Water
+	Bedrock, Sand, Vegetation, AbrasionResistance, Soil, Water, Moisture
 };
 
 struct InitializationParameters
@@ -132,7 +132,8 @@ struct InitializationParameters
 		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 1.f, 0.f, 0, true, true, false},
 		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 1.f, 0.f, 0, true, true, false},
 		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 10.f, 0, true, true, false},
-		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 20.f, 0, true, true, false}
+		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 20.f, 0, true, true, false},
+		{{ 0.f, 0.f }, { 1.f, 1.f }, { 0.1f , 0.1f }, 100.f, 0.3f, 0, true, true, false}
 	};
 };
 
