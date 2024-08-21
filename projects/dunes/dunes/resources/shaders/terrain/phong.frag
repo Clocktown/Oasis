@@ -106,6 +106,8 @@ layout(binding = 2) uniform sampler2D t_heightMap;
 layout(binding = 8) uniform sampler2D t_windMap;
 layout(binding = 9) uniform sampler2D t_resistanceMap;
 layout(binding = 10) uniform sampler2D t_moistureMap;
+layout(binding = 11) uniform sampler2D t_sedimentMap;
+
 
 layout(early_fragment_tests) in;
 in Fragment fragment;
@@ -180,10 +182,12 @@ void main()
 		const vec4 terrain = texture(t_heightMap, fragment.uv);
 		const float moisture = texture(t_moistureMap, fragment.uv).r;
 		const vec4 resistances = texture(t_resistanceMap, fragment.uv);
+		const float sediment = texture(t_sedimentMap, fragment.uv).r;
 		const vec3 bedrockColor = mix(renderParameters.bedrockColor.rgb, vec3(0), 0.75 * resistances.z);
 		vec3 diffuseColor = mix(renderParameters.soilColor.rgb, bedrockColor, clamp((1.f - terrain.z) / (1.f), 0.f, 1.f));
 	    diffuseColor = mix(renderParameters.sandColor.rgb, diffuseColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
-		diffuseColor = mix(diffuseColor, renderParameters.vegetationColor.rgb, max(resistances.y, 0.f));
+		diffuseColor = mix(diffuseColor, renderParameters.humusColor.rgb, renderParameters.humusColor.a * max(resistances.w, 0.f));
+		diffuseColor = mix(diffuseColor, renderParameters.vegetationColor.rgb, renderParameters.vegetationColor.a * max(resistances.y, 0.f));
 		//diffuseColor = mix(diffuseColor, renderParameters.objectColor.rgb, max(-resistances.y,0));
 		diffuseColor = mix(diffuseColor, renderParameters.wetColor.rgb, clamp(renderParameters.wetColor.a * moisture, 0, 1));
 			
@@ -204,7 +208,7 @@ void main()
 			fragmentColor.rgb += illuminatedColor;
 		}
 		if(renderParameters.waterColor.a > 0.5f) {
-			const vec3 waterColor = mix(renderParameters.waterColor.rgb, renderParameters.soilColor.rgb, min(10.f * resistances.w, 1.f));
+			const vec3 waterColor = mix(renderParameters.waterColor.rgb, 0.5f * renderParameters.soilColor.rgb, min(10.f * sediment, 1.f));
 			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * waterColor, min(0.1f * terrain.w, 1));
 			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * waterColor, clamp(0.1f * terrain.w - 1.f, 0, 1));
 

@@ -31,6 +31,7 @@ namespace dunes
 		moisture = moisture * exp(-c_parameters.moistureEvaporationScale * moistureRate * moistureEvaporationFactor * c_parameters.deltaTime);
 
 		setBorderWaterLevelMin(cell, terrain, c_parameters.waterBorderLevel);
+		setWaterLevelMin(cell, terrain, c_parameters.waterLevel);
 
 		terrainArray.write(cell, terrain);
 		moistureArray.write(cell, moisture);
@@ -66,6 +67,7 @@ namespace dunes
 		}
 
 		setBorderWaterLevelMin(cell, terrain, c_parameters.waterBorderLevel);
+		setWaterLevelMin(cell, terrain, c_parameters.waterLevel);
 
 		terrainArray.write(cell, terrain);
 		moistureArray.write(cell, moisture);

@@ -8,6 +8,10 @@ namespace dunes {
 		terrain.w = isBorder(cell) ? fmaxf(terrain.w, fmaxf(level - (terrain.x + terrain.y + terrain.z), 0.f)) : terrain.w;
 	}
 
+	__forceinline__ __device__ void setWaterLevelMin(int2 cell, float4& terrain, float level) {
+		terrain.w = fmaxf(terrain.w, fmaxf(level - (terrain.x + terrain.y + terrain.z), 0.f));
+	}
+
 	__forceinline__ __device__ void setBorderWaterLevel(int2 cell, float4& terrain, float level) {
 		terrain.w = isBorder(cell) ? fmaxf(level - (terrain.x + terrain.y + terrain.z), 0.f) : terrain.w;
 	}

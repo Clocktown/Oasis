@@ -104,6 +104,7 @@ __global__ void transportKernel(Array2D<float4> t_terrainArray, const Array2D<fl
 
 	//TODO: make optional, also not working properly, may need to add it to different kernels.
 	setBorderWaterLevelMin(cell, terrain, c_parameters.waterBorderLevel);
+	setWaterLevelMin(cell, terrain, c_parameters.waterLevel);
 
 	t_terrainArray.write(cell, terrain);
 	t_waterVelocityArray.write(cell, velocity);
@@ -131,7 +132,7 @@ __global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array
 	const int idx = getCellIndex(cell);
 
 	const float slope = slopeBuffer[idx];
-	float4 resistance = resistanceArray.read(cell);
+	const float4 resistance = resistanceArray.read(cell);
 
 	float sediment = advectedSedimentBuffer[idx];
 	float4 terrain = terrainArray.read(cell);
@@ -162,9 +163,6 @@ __global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array
 		sediment -= sandDeposition;
 		terrain.y += sandDeposition;
 	}
-
-	//resistance.w = sediment;
-	resistanceArray.write(cell, resistance);
 
 	sedimentArray.write(cell, sediment);
 	terrainArray.write(cell, terrain);

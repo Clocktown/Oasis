@@ -15,8 +15,9 @@ namespace dunes {
 
 	__forceinline__ __device__ float getVegetationDensity(const Vegetation& veg, const float3& pos) {
 		const float r2 = 0.25 * veg.radius * veg.radius;
-		const float stem2 = 0.25 * veg.height.x * veg.height.x;
-		const float root2 = 0.25 * veg.height.y * veg.height.y;
+		const float2 height = c_vegTypes[veg.type].height;
+		const float stem2 = height.x * height.x * r2;
+		const float root2 = height.y * height.y * r2;
 		const float3 covarStem{ 1.f / r2, 1.f / r2, 1.f / stem2 };
 		const float3 covarRoot{ covarStem.x, covarStem.y, 1.f / root2 };
 		const float3 covar = pos.z >= veg.pos.z ? covarStem : covarRoot;
@@ -62,7 +63,10 @@ namespace dunes {
 			for (int j = yStart; j <= yEnd; ++j) {
 				const uint2 indices = uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
 				for (unsigned int k = indices.x; k < indices.y && resistance.y < 1.f; ++k) {
-					resistance.y += getVegetationDensity(vegBuffer[k], pos);
+					const float density = getVegetationDensity(vegBuffer[k], pos);
+					const bool isAlive = vegBuffer[k].health > 0.f;
+					resistance.y += isAlive ? density : 0.f;
+					resistance.w += isAlive ? 0.f : density;
 				}
 			}
 		}
@@ -79,7 +83,8 @@ namespace dunes {
 				Vegetation veg;
 				veg.type = 0;
 				veg.pos = pos;
-				veg.height = { 10.f, 10.f };
+				veg.age = 0.f;
+				veg.health = 1.f;
 				veg.radius = 1.f;
 				int oldIndex = atomicAdd(vegCount, 1);
 				if (oldIndex < maxVegCount - 1) {
@@ -100,6 +105,9 @@ namespace dunes {
 		}
 
 		Vegetation veg = vegBuffer[idx];
+		if (veg.health == 0.f) {
+			veg.health = -1.f;
+		}
 		const float2 gridPos = { veg.pos.x * c_parameters.rGridScale, veg.pos.y * c_parameters.rGridScale };
 		const float2 uniformGridPos = { veg.pos.x * c_parameters.rUniformGridScale, veg.pos.y * c_parameters.rUniformGridScale };
 		const int xStart = int(uniformGridPos.x - 0.5f);
@@ -124,7 +132,13 @@ namespace dunes {
 		}
 
 		// TODO: grow height? Remove height entirely?
-		vegBuffer[idx].radius = fminf(veg.radius + fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * 0.1f, 20.f); // TODO: 20.f = max radius
+		veg.age += c_parameters.deltaTime;
+		veg.radius = fminf(veg.radius + fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_vegTypes[veg.type].growthRate, c_vegTypes[veg.type].maxRadius);
+		if (veg.age > c_vegTypes[veg.type].maxMaturityTime && veg.radius < 0.2f * c_vegTypes[veg.type].maxRadius) {
+			veg.health = fminf(veg.health, 0.f);
+		}
+
+		vegBuffer[idx] = veg;
 	}
 
 
@@ -138,14 +152,14 @@ namespace dunes {
 		uint4 seed = seeds[idx];
 		Vegetation veg;
 		veg.type = 0;
+		veg.age = 0.f;
+		veg.health = 1.f;
 		random::pcg(seed);
 		seeds[idx] = seed;
 		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
 		const float4 terrain = t_terrainArray.read(vegCell);
 		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };
-		const float height = 0.5f + 30.f * random::uniform_float(seed.z);
-		veg.height = { 0.6666f * height, 0.3333f * height };
-		veg.radius = 1.f + 19.f * random::uniform_float(seed.w);
+		veg.radius = 1.f + (c_vegTypes[veg.type].maxRadius - 1.f) * random::uniform_float(seed.z);
 		vegBuffer[idx] = veg;
 	}
 
@@ -158,7 +172,8 @@ namespace dunes {
 		uniformGrid[idx] = { 0,0 };
 	}
 
-	__global__ void fillKeys(const Buffer<Vegetation> vegBuffer, Buffer<unsigned int> keys, int count) {
+	// Also handles deletion of vegetation
+	__global__ void fillKeys(const Buffer<Vegetation> vegBuffer, Buffer<unsigned int> keys, int count, Buffer<int> countBuffer) {
 		const int idx = getGlobalIndex1D();
 		if (idx >= count) {
 			return;
@@ -167,7 +182,15 @@ namespace dunes {
 		const auto pos = vegBuffer[idx].pos;
 		const int2 uniformCell = make_int2(float2{ pos.x * c_parameters.rUniformGridScale, pos.y * c_parameters.rUniformGridScale });
 		const int uniformIdx = getCellIndex(getWrappedCell(uniformCell, c_parameters.uniformGridSize), c_parameters.uniformGridSize);
-		keys[idx] = uniformIdx;
+		constexpr unsigned int maxIndex = (unsigned int)-1;
+
+		if (vegBuffer[idx].health < 0.f) {
+			keys[idx] = maxIndex;
+			atomicAdd(countBuffer, -1);
+		}
+		else {
+			keys[idx] = uniformIdx;
+		}
 	}
 
 	__global__ void findGridStart(const Buffer<unsigned int> keys, Buffer<uint2> uniformGrid, int count) {
@@ -204,7 +227,7 @@ namespace dunes {
 		int count = 0;
 		cudaMemcpy(&count, t_launchParameters.vegetationCount, sizeof(int), cudaMemcpyDeviceToHost);
 		count = min(count, t_launchParameters.maxVegetation);
-		std::cout << count << std::endl;
+		//std::cout << count << std::endl;
 		t_launchParameters.numVegetation = count;
 		t_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(t_launchParameters.blockSize1D)));
 	}
@@ -214,11 +237,19 @@ namespace dunes {
 		initVegetation << < t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.seedBuffer, count, t_launchParameters.terrainArray);
 	}
 
-	void vegetation(const LaunchParameters& t_launchParameters) {
+	void vegetation(LaunchParameters& t_launchParameters) {
 		int count = t_launchParameters.numVegetation;
 		initUniformGrid << <t_launchParameters.uniformGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.uniformGrid);
-		fillKeys << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count);
+		fillKeys << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count, t_launchParameters.vegetationCount);
 		thrust::sort_by_key(thrust::device, t_launchParameters.keyBuffer, t_launchParameters.keyBuffer + count, t_launchParameters.vegBuffer);
+
+		getVegetationCount(t_launchParameters);
+		int diff = count - t_launchParameters.numVegetation;
+		if (diff > 0) {
+			std::cout << "Deleted " << count - t_launchParameters.numVegetation << " plants." << std::endl;
+		}
+		count = t_launchParameters.numVegetation;
+
 		findGridStart << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
 		findGridEnd << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
 

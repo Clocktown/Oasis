@@ -32,6 +32,30 @@ struct WindWarping
 	Buffer<cuComplex> smoothedHeights[4];
 };
 
+struct VegetationType
+{
+	float maxRadius; // Plant is mature at 10% of maxRadius
+	float growthRate;
+	float maxMaturityTime; // If Plant hasn't reached maturity after this time, it dies
+	float2 height; // .x * maxRadius = height above ground; .y * maxRadius = root depth; relevant for vegetation density and growth
+	float waterUsageRate;
+	float waterStorageCapacity;
+	float waterResistance; // How well the plant can handle standing water
+	float airResistance; // How well the plant can handle being exposed to air
+	float2 moistureRange; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
+	float soilCompatibility; // controls growth in soil
+	float sandCompatibility; // controls growth in sand
+};
+
+struct Vegetation
+{
+	int type{ 0 };
+	float3 pos{}; // pos where root and stem start
+	float health{ 1.f };
+	float age{ 0.f };
+	float radius{ 0.f };
+};
+
 struct SimulationParameters
 {
 	int2 gridSize{ 2048, 2048 };
@@ -77,6 +101,7 @@ struct SimulationParameters
 	float bedrockDissolutionConstant{ 0.01f };
 
 	float waterBorderLevel{ 20.f };
+	float waterLevel{ 0.f };
 
 	float moistureEvaporationScale{ 1.f };
 	float sandMoistureRate{ 0.1f };

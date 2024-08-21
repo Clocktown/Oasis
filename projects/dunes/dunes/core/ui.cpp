@@ -103,6 +103,7 @@ namespace dunes
 		m_simulator->setTerrainThicknessMoistureThreshold(m_terrainThicknessMoistureThreshold);
 		m_simulator->setMoistureCapacityConstant(m_moistureCapacityConstant);
 		m_simulator->setWaterBorderLevel(m_waterBorderLevel);
+		m_simulator->setWaterLevel(m_waterLevel);
 
 		m_simulator->setEvaporationRate(m_evaporationRate);
 		m_simulator->setRainStrength(m_rainStrength);
@@ -452,6 +453,7 @@ namespace dunes
 
 		if (json.contains("sandMoistureRate")) {
 			m_waterBorderLevel = json["waterBorderLevel"];
+			m_waterLevel = json["waterLevel"];
 			m_moistureEvaporationScale = json["moistureEvaporationScale"];
 			m_sandMoistureRate = json["sandMoistureRate"];
 			m_soilMoistureRate = json["soilMoistureRate"];
@@ -605,6 +607,7 @@ namespace dunes
 		json["bedrockDissolutionConstant"] = m_bedrockDissolutionConstant;
 
 		json["waterBorderLevel"] = m_waterBorderLevel;
+		json["waterLevel"] = m_waterLevel;
 		json["moistureEvaporationScale"] = m_moistureEvaporationScale;
 		json["sandMoistureRate"] = m_sandMoistureRate;
 		json["soilMoistureRate"] = m_soilMoistureRate;
@@ -1004,8 +1007,11 @@ namespace dunes
 			}
 
 			if (ImGui::TreeNode("Rain")) {
-				if (ImGui::DragFloat("Water Level", &m_waterBorderLevel, 0.1f)) {
+				if (ImGui::DragFloat("Water Border Level", &m_waterBorderLevel, 0.1f)) {
 					m_simulator->setWaterBorderLevel(m_waterBorderLevel);
+				}
+				if (ImGui::DragFloat("Water Level", &m_waterLevel, 0.1f)) {
+					m_simulator->setWaterLevel(m_waterLevel);
 				}
 				if (ImGui::DragFloat("Evaporation", &m_evaporationRate, 0.001f)) {
 					m_simulator->setEvaporationRate(m_evaporationRate);

@@ -135,6 +135,7 @@ namespace dunes
 		float m_bedrockDissolutionConstant{ 0.01f };
 
 		float m_waterBorderLevel{ 20.f };
+		float m_waterLevel{ 0.f };
 
 		float m_moistureEvaporationScale{ 0.1f };
 		float m_sandMoistureRate{ 0.1f };

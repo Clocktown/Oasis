@@ -68,6 +68,7 @@ namespace dunes
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0, m_windMap);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
+		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 3, m_sedimentMap);
 
 		m_textureDescriptor.addressMode[0] = cudaAddressModeWrap;
 		m_textureDescriptor.addressMode[1] = cudaAddressModeWrap;
@@ -739,6 +740,10 @@ namespace dunes
 
 	void Simulator::setWaterBorderLevel(float v) {
 		m_simulationParameters.waterBorderLevel = v;
+	}
+
+	void Simulator::setWaterLevel(float v) {
+		m_simulationParameters.waterLevel = v;
 	}
 
 	void Simulator::setEvaporationRate(float v) {
