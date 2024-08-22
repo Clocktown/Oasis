@@ -143,7 +143,8 @@ namespace dunes
 		initializeTerrain(m_launchParameters, m_initializationParameters);
 		initializeWindWarping(m_launchParameters, m_simulationParameters);
 		initializeVegetation(m_launchParameters);
-		vegetation(m_launchParameters);
+		// TODO: slope Buffer not properly initialized when this runs
+		vegetation(m_launchParameters, m_simulationParameters);
 		venturi(m_launchParameters);
 		windWarping(m_launchParameters);
 		pressureProjection(m_launchParameters, m_simulationParameters);
@@ -200,7 +201,7 @@ namespace dunes
 
 			m_watches[4].start();
 			getVegetationCount(m_launchParameters);
-			vegetation(m_launchParameters);
+			vegetation(m_launchParameters, m_simulationParameters);
 			m_watches[4].stop();
 			m_watches[0].start();
 			m_watches[1].start();

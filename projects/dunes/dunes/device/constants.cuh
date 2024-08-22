@@ -10,6 +10,6 @@ extern __constant__ SimulationParameters c_parameters;
 extern __constant__ int2 c_offsets[8];
 extern __constant__ float c_distances[8];
 extern __constant__ float c_rDistances[8];
-extern __constant__ VegetationType c_vegTypes[1];
+extern __constant__ VegetationType c_vegTypes[2];
 
 }

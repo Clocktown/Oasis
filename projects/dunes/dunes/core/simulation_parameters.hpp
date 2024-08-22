@@ -37,14 +37,16 @@ struct VegetationType
 	float maxRadius; // Plant is mature at 10% of maxRadius
 	float growthRate;
 	float maxMaturityTime; // If Plant hasn't reached maturity after this time, it dies
+	float maturityPercentage; // %radius needed to be mature
 	float2 height; // .x * maxRadius = height above ground; .y * maxRadius = root depth; relevant for vegetation density and growth
 	float waterUsageRate;
 	float waterStorageCapacity;
-	float waterResistance; // How well the plant can handle standing water
-	float airResistance; // How well the plant can handle being exposed to air
+	float waterResistance; // How well the plant can handle standing water. >= 1 is a water plant, which follows different rules
 	float2 moistureRange; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
 	float soilCompatibility; // controls growth in soil
 	float sandCompatibility; // controls growth in sand
+	float2 terrainCoverageResistance; // .x threshold for how much roots need to be covered; .y threshold for how much of stem is allowed to be covered
+	float2 slopeRange;
 };
 
 struct Vegetation

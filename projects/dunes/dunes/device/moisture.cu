@@ -9,7 +9,7 @@
 namespace dunes
 {
 
-	__global__ void evaporationKernel(Array2D<float4> terrainArray, Array2D<float> moistureArray) {
+	__global__ void evaporationKernel(Array2D<float4> terrainArray, Array2D<float> moistureArray, const Array2D<float4> resistanceArray) {
 		const int2 cell{ getGlobalIndex2D() };
 
 		if (isOutside(cell))
@@ -26,7 +26,8 @@ namespace dunes
 		const float sandFactor = 1.f - clamp(terrain.y * iTerrainThicknessThreshold, 0.f, 1.f);
 		const float moistureRate = lerp(sandMoistureRate, soilMoistureRate, sandFactor);
 
-		const float moistureEvaporationFactor = 1.f - clamp(terrain.w * 10.f, 0.f, 1.f);
+		const float vegetation = resistanceArray.read(cell).y;
+		const float moistureEvaporationFactor = (1.f - clamp(terrain.w * 10.f, 0.f, 1.f)) * (1.f - 0.5f * vegetation);
 		terrain.w = terrain.w * exp(- c_parameters.evaporationRate * c_parameters.deltaTime);
 		moisture = moisture * exp(-c_parameters.moistureEvaporationScale * moistureRate * moistureEvaporationFactor * c_parameters.deltaTime);
 
@@ -120,7 +121,7 @@ namespace dunes
 	void moisture(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
 		Buffer<float> diffusedMoistureBuffer{ t_launchParameters.tmpBuffer };
 
-		evaporationKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.terrainMoistureArray);
+		evaporationKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.terrainMoistureArray, t_launchParameters.resistanceArray);
 		moistureKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.terrainMoistureArray);
 
 		initMoistureDiffusionKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (diffusedMoistureBuffer);

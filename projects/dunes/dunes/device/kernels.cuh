@@ -16,7 +16,7 @@ void moisture(const LaunchParameters& t_launchParameters, const SimulationParame
 void transport(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void sediment(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void getVegetationCount(LaunchParameters& t_launchParameters);
-void vegetation(LaunchParameters& t_launchParameters);
+void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void venturi(const LaunchParameters& t_launchParameters);
 void windWarping(const LaunchParameters& t_launchParameters);
 void windShadow(const LaunchParameters& t_launchParameters);
