@@ -86,6 +86,7 @@ namespace dunes {
 				veg.pos = pos;
 				veg.age = 0.f;
 				veg.health = 1.f;
+				veg.water = 0.f;
 				const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / c_vegTypes[veg.type].height.y, c_vegTypes[veg.type].maxRadius);
 
 				veg.radius = 0.05f * maxRadius;
@@ -127,6 +128,10 @@ namespace dunes {
 			const float soilHeight = bedrockHeight + terrain.z;
 			const float sandHeight = soilHeight + terrain.y;
 			const float waterLevel = sandHeight + terrain.w;
+			const float terrainThickness = terrain.y + terrain.z;
+			const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
+			const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
+			const float relativeMoisture{ clamp(moisture / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 
 			float overlap = 0.f;
 
@@ -161,6 +166,29 @@ namespace dunes {
 			const float rootDamage = -(rootCoverage - c_vegTypes[veg.type].terrainCoverageResistance.x) / c_vegTypes[veg.type].terrainCoverageResistance.x;
 			const float stemDamage = (stemCoverage - c_vegTypes[veg.type].terrainCoverageResistance.y) / (1 - c_vegTypes[veg.type].terrainCoverageResistance.y);
 
+			// Water usage
+			const float waterCapacity = 4.1888f * (plantDepth + plantHeight) * veg.radius * veg.radius * c_vegTypes[veg.type].waterStorageCapacity;
+			const float availableGroundWater = c_parameters.deltaTime * 4.1888f * plantDepth * veg.radius * veg.radius * moisture;
+			const float requiredWater = c_vegTypes[veg.type].waterUsageRate * c_parameters.deltaTime * 4.1888f * plantHeight * veg.radius * veg.radius;
+			const float waterDifference = availableGroundWater - requiredWater;
+			const float missingWater = clamp(((availableGroundWater + veg.water) - requiredWater) / requiredWater, -1.f, 1.f);
+			if (waterDifference > 0.f) {
+				veg.water = fminf(veg.water + c_parameters.deltaTime * fmaxf(waterCapacity - veg.water, 0.f) * waterDifference, waterCapacity);
+			}
+			else if (waterDifference < 0.f) {
+				veg.water = fmaxf(veg.water + waterDifference, 0.f);
+			}
+			const float thirstDamage = fmaxf(-missingWater, 0.f);
+			const float thirstGrowth = 1.f + missingWater;
+
+			// Moisture compatibility
+			const float moistureDamage = fmaxf((relativeMoisture - c_vegTypes[veg.type].maxMoisture) / (1.f - c_vegTypes[veg.type].maxMoisture), 0.f);
+			const float moistureGrowth = moistureDamage > 0.f ? 0.f : 1.f;
+
+			// Slope compatibility
+			const float slopeDamage = fmaxf((slope - c_vegTypes[veg.type].maxSlope) / (1.f - c_vegTypes[veg.type].maxSlope), 0.f);
+			const float slopeGrowth = fmaxf((c_vegTypes[veg.type].maxSlope - slope) / c_vegTypes[veg.type].maxSlope, 0.f);
+			 
 			// Surface water conditions
 			const float waterOverlap = clamp((waterLevel - fmaxf(veg.pos.z, sandHeight)) / plantHeight, 0.f, 1.f);
 			const float waterRate = (waterOverlap - c_vegTypes[veg.type].waterResistance);
@@ -169,8 +197,8 @@ namespace dunes {
 
 
 			// Calculate growth and health
-			const float growthRate = soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_vegTypes[veg.type].growthRate;
-			veg.health -= 0.1f * c_parameters.deltaTime * (fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f));
+			const float growthRate = slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_vegTypes[veg.type].growthRate;
+			veg.health -= 0.1f * c_parameters.deltaTime * (fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage);
 			veg.health += growthRate;
 
 			// Calculate maximum radius based on root depth and bedrock and grow plant
@@ -207,6 +235,7 @@ namespace dunes {
 		veg.type = seed.w % 2;
 		veg.age = 0.f;
 		veg.health = 1.f;
+		veg.water = 0.f;
 		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
 		const float4 terrain = t_terrainArray.read(vegCell);
 		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };

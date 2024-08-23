@@ -25,11 +25,11 @@ __constant__ VegetationType c_vegTypes[2]{
         0.1f,
         1.f,
         0.1f,
-        {0.2f, 0.8f},
+        0.8f,
         1.f,
         0.2f,
         {0.75f, 0.25f},
-        {0.f, 0.5f}
+        0.5f
     }, 
     {
         // Seaweed or something
@@ -41,11 +41,11 @@ __constant__ VegetationType c_vegTypes[2]{
         0.1f,
         1.f,
         1.0f,
-        {0.2f, 0.8f},
+        1.f,
         1.f,
         0.2f,
         {0.75f, 0.25f},
-        {0.f, 0.5f}
+        0.25f
     } 
 };
 }

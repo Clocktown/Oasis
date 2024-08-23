@@ -34,7 +34,7 @@ struct WindWarping
 
 struct VegetationType
 {
-	float maxRadius; // Plant is mature at 10% of maxRadius
+	float maxRadius; // Plant is mature at maturityPercentage of maxRadius
 	float growthRate;
 	float maxMaturityTime; // If Plant hasn't reached maturity after this time, it dies
 	float maturityPercentage; // %radius needed to be mature
@@ -42,11 +42,11 @@ struct VegetationType
 	float waterUsageRate;
 	float waterStorageCapacity;
 	float waterResistance; // How well the plant can handle standing water. >= 1 is a water plant, which follows different rules
-	float2 moistureRange; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
+	float maxMoisture; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
 	float soilCompatibility; // controls growth in soil
 	float sandCompatibility; // controls growth in sand
 	float2 terrainCoverageResistance; // .x threshold for how much roots need to be covered; .y threshold for how much of stem is allowed to be covered
-	float2 slopeRange;
+	float maxSlope;
 };
 
 struct Vegetation
@@ -54,6 +54,7 @@ struct Vegetation
 	int type{ 0 };
 	float3 pos{}; // pos where root and stem start
 	float health{ 1.f };
+	float water{ 0.f };
 	float age{ 0.f };
 	float radius{ 0.f };
 };
