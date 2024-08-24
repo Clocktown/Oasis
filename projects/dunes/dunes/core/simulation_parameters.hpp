@@ -47,6 +47,10 @@ struct VegetationType
 	float sandCompatibility; // controls growth in sand
 	float2 terrainCoverageResistance; // .x threshold for how much roots need to be covered; .y threshold for how much of stem is allowed to be covered
 	float maxSlope;
+	float baseSpawnRate;
+	float densitySpawnMultiplier;
+	float windSpawnMultiplier;
+	float humusRate;
 };
 
 struct Vegetation

@@ -34,7 +34,7 @@ namespace dunes {
 
 	}
 
-	__global__ void rasterizeVegetation(const Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid, Buffer<int> vegCount, int maxVegCount, Buffer<uint4> seeds)
+	__global__ void rasterizeVegetation(const Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid, Buffer<int> vegCount, int maxVegCount, Buffer<uint4> seeds, const Array2D<float2> windArray, const Array2D<float> moistureArray, const Buffer<float> slopeBuffer)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -58,41 +58,75 @@ namespace dunes {
 		const int yEnd = int(gridPosition.y + 0.5f);
 		const float4 terrain = t_terrainArray.read(cell);
 		const float3 pos{ position.x, position.y, terrain.x + terrain.y + terrain.z };
+		
+		const float terrainThickness = terrain.y + terrain.z;
+		const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
+		const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
+		const float moisture{ clamp(moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+
+		const float slope = 2 * slopeBuffer[getCellIndex(cell)] - 1;
+
+		float2 wind = windArray.read(cell);
+		wind = wind / (length(wind) + 1e-6f);
+		float typeProbabilities[2] = { c_vegTypes[0].baseSpawnRate, c_vegTypes[1].baseSpawnRate };
 
 		for (int i = xStart; i <= xEnd; ++i) {
 			for (int j = yStart; j <= yEnd; ++j) {
 				const uint2 indices = uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
 				for (unsigned int k = indices.x; k < indices.y && resistance.y < 1.f; ++k) {
-					const float density = getVegetationDensity(vegBuffer[k], pos);
-					const bool isAlive = vegBuffer[k].health > 0.f;
+					const Vegetation veg = vegBuffer[k];
+					const float density = getVegetationDensity(veg, pos);
+					const bool isAlive = veg.health > 0.f;
+					typeProbabilities[veg.type] += isAlive ? c_vegTypes[veg.type].densitySpawnMultiplier * density + c_vegTypes[veg.type].windSpawnMultiplier * fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f) : 0.f;
 					resistance.y += isAlive ? density : 0.f;
-					resistance.w += isAlive ? 0.f : density;
+					resistance.w += isAlive ? c_vegTypes[veg.type].humusRate * c_parameters.deltaTime * density : density;
 				}
 			}
 		}
 
+		float probabilitySum = 0.f;
+		for (int i = 0; i < c_numVegetationTypes; ++i) {
+			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_vegTypes[i].height.y, c_vegTypes[i].maxRadius);
+			const bool waterCompatible = c_vegTypes[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius : terrain.w * c_vegTypes[i].waterResistance <= 0.05f * maxRadius;
+			const bool moistureCompatible = moisture <= c_vegTypes[i].maxMoisture;
+			const bool slopeCompatible = slope <= c_vegTypes[i].maxSlope;
+			const float soilCompatibility = terrain.y > 0.1f ? c_vegTypes[i].sandCompatibility * terrain.y : c_vegTypes[i].soilCompatibility * terrain.z;
+			const bool soilCompatible = soilCompatibility > 0.1f;
+			const float probability = waterCompatible && moistureCompatible && slopeCompatible && soilCompatible ? typeProbabilities[i] : 0.f;
+			typeProbabilities[i] = probabilitySum + probability;
+			probabilitySum += probability;
+		}
 
 		// TODO: Super simplistic algorithm.
-		if (resistance.y == 0.f && *vegCount < maxVegCount) {
+		if (resistance.y <= 0.25f && *vegCount < maxVegCount) {
 			int idx = getCellIndex(cell);
-			uint2 seed{ seeds[idx].x, seeds[idx].y };
+			uint4 seed{ seeds[idx] };
 			random::pcg(seed);
-			seeds[idx].x = seed.x;
-			seeds[idx].y = seed.y;
+			seeds[idx] = seed;
 			const float xi = random::uniform_float(seed.x);
 			if (xi < 0.00001f) {
+				const float yi = random::uniform_float(seed.y) * fmaxf(probabilitySum, 1.f);
 				Vegetation veg;
-				veg.type = seed.y % 2;
-				veg.pos = pos;
-				veg.age = 0.f;
-				veg.health = 1.f;
-				veg.water = 0.f;
-				const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / c_vegTypes[veg.type].height.y, c_vegTypes[veg.type].maxRadius);
+				veg.type = -1;
+				for (int i = 0; i < c_numVegetationTypes; ++i) {
+					if (yi < typeProbabilities[i]) {
+						veg.type = i;
+						break;
+					}
+				}
 
-				veg.radius = 0.05f * maxRadius;
-				int oldIndex = atomicAdd(vegCount, 1);
-				if (oldIndex < maxVegCount - 1) {
-					vegBuffer[oldIndex] = veg;
+				if (veg.type >= 0) {
+					veg.pos = pos;
+					veg.age = 0.f;
+					veg.health = 1.f;
+					veg.water = 0.f;
+					const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / c_vegTypes[veg.type].height.y, c_vegTypes[veg.type].maxRadius);
+
+					veg.radius = 0.05f * maxRadius;
+					int oldIndex = atomicAdd(vegCount, 1);
+					if (oldIndex < maxVegCount - 1) {
+						vegBuffer[oldIndex] = veg;
+					}
 				}
 			}
 		}
@@ -322,23 +356,25 @@ namespace dunes {
 	void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
 		int count = t_launchParameters.numVegetation;
 		initUniformGrid << <t_launchParameters.uniformGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.uniformGrid);
-		fillKeys << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count, t_launchParameters.vegetationCount);
-		thrust::sort_by_key(thrust::device, t_launchParameters.keyBuffer, t_launchParameters.keyBuffer + count, t_launchParameters.vegBuffer);
+		
+		if (count > 0) {
+			fillKeys << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count, t_launchParameters.vegetationCount);
+			thrust::sort_by_key(thrust::device, t_launchParameters.keyBuffer, t_launchParameters.keyBuffer + count, t_launchParameters.vegBuffer);
 
-		getVegetationCount(t_launchParameters);
-		int diff = count - t_launchParameters.numVegetation;
-		if (diff > 0) {
-			std::cout << "Deleted " << count - t_launchParameters.numVegetation << " plants." << std::endl;
+			getVegetationCount(t_launchParameters);
+			int diff = count - t_launchParameters.numVegetation;
+			if (diff > 0) {
+				std::cout << "Deleted " << count - t_launchParameters.numVegetation << " plants." << std::endl;
+			}
+			count = t_launchParameters.numVegetation;
+
+			findGridStart << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
+			findGridEnd << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
 		}
-		count = t_launchParameters.numVegetation;
-
-		findGridStart << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
-		findGridEnd << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
-
 
 		Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
 
 		growVegetation << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, count, t_launchParameters.terrainArray, t_launchParameters.uniformGrid, slopeBuffer, t_launchParameters.terrainMoistureArray);
-		rasterizeVegetation << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid, t_launchParameters.vegetationCount, t_launchParameters.maxVegetation, t_launchParameters.seedBuffer);
+		rasterizeVegetation << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid, t_launchParameters.vegetationCount, t_launchParameters.maxVegetation, t_launchParameters.seedBuffer, t_launchParameters.windArray, t_launchParameters.terrainMoistureArray, slopeBuffer);
 	}
 }
