@@ -122,7 +122,7 @@ __global__ void initSedimentKernel(Buffer<float> advectedSedimentBuffer) {
 	advectedSedimentBuffer[idx] = 0.f;
 }
 
-__global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array2D<float2> velocityArray, const Buffer<float> advectedSedimentBuffer, const Buffer<float> slopeBuffer, Array2D<float4> terrainArray, Array2D<float4> resistanceArray) {
+__global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array2D<float2> velocityArray, const Buffer<float> advectedSedimentBuffer, const Buffer<float> slopeBuffer, Array2D<float4> terrainArray, Array2D<float4> resistanceArray, const Array2D<float> moistureArray) {
 	const int2 cell{ getGlobalIndex2D() };
 
 	if (isOutside(cell))
@@ -132,10 +132,22 @@ __global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array
 	const int idx = getCellIndex(cell);
 
 	const float slope = slopeBuffer[idx];
-	const float4 resistance = resistanceArray.read(cell);
+	float4 resistance = resistanceArray.read(cell);
 
 	float sediment = advectedSedimentBuffer[idx];
 	float4 terrain = terrainArray.read(cell);
+	const float moisture = moistureArray.read(cell);
+	// Humus conversion TODO: UI parameter
+	const float humusConversion = fminf(0.01f * c_parameters.deltaTime * (0.01f + 0.99f * resistance.y) * moisture, fminf(terrain.y, resistance.w));
+	terrain.y -= humusConversion;
+	terrain.z += humusConversion;
+	resistance.w -= humusConversion;
+	// Soil drying out TODO: UI parameter
+	const float drying = fminf(0.01f * c_parameters.deltaTime * (1.f - 0.99f * resistance.y) * fmaxf(1.f - 50.f * moisture, 0.f) * expf(-10.f * terrain.y), terrain.z);
+	terrain.z -= drying;
+	terrain.y += drying;
+
+
 	const float speed = length(velocityArray.read(cell)) / fmaxf(0.1f * terrain.w, 1.f); // Velocity is at the surface, so decrease it for deep water
 
 	const float sedimentCapacity = c_parameters.sedimentCapacityConstant * slope * speed * (1.f - 0.5f * resistance.y) * fminf(0.1f + 0.9f * terrain.w, 1.f);
@@ -166,6 +178,7 @@ __global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array
 
 	sedimentArray.write(cell, sediment);
 	terrainArray.write(cell, terrain);
+	resistanceArray.write(cell, resistance);
 }
 
 __global__ void sedimentAdvectionKernel(const Array2D<float> sedimentArray, const Array2D<float2> velocityArray, Buffer<float> advectedSedimentBuffer) {
@@ -235,7 +248,7 @@ void sediment(const LaunchParameters& t_launchParameters, const SimulationParame
 
 	initSedimentKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (advectedSedimentBuffer);
 	sedimentAdvectionKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.sedimentArray, t_launchParameters.waterVelocityArray, advectedSedimentBuffer);
-	sedimentExchangeKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.sedimentArray, t_launchParameters.waterVelocityArray, advectedSedimentBuffer, slopeBuffer, t_launchParameters.terrainArray, t_launchParameters.resistanceArray);
+	sedimentExchangeKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.sedimentArray, t_launchParameters.waterVelocityArray, advectedSedimentBuffer, slopeBuffer, t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.terrainMoistureArray);
 }
 
 }
