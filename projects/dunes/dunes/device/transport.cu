@@ -144,6 +144,7 @@ __global__ void sedimentExchangeKernel(Array2D<float> sedimentArray, const Array
 	resistance.w -= humusConversion;
 	// Soil drying out TODO: UI parameter
 	const float drying = fminf(0.01f * c_parameters.deltaTime * (1.f - 0.99f * resistance.y) * fmaxf(1.f - 50.f * moisture, 0.f) * expf(-10.f * terrain.y), terrain.z);
+	resistance.w -= fminf(drying, resistance.w);
 	terrain.z -= drying;
 	terrain.y += drying;
 
