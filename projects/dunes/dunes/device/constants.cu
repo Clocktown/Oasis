@@ -14,6 +14,11 @@ __constant__ int2 c_offsets[8]{ int2{ 1, 0 }, int2{ 1, 1 }, int2{ 0, 1 }, int2{ 
 
 __constant__ float c_distances[8]{ 1.0f, SQRT2, 1.0f, SQRT2, 1.0f, SQRT2, 1.0f, SQRT2 };
 __constant__ float c_rDistances[8]{ 1.0f, RSQRT2, 1.0f, RSQRT2, 1.0f, RSQRT2, 1.0f, RSQRT2 };
+// TODO: Dominance/compatibility Matrix
+__constant__ float c_vegetationMatrix[2][2]{
+    {1.f, 1.f},
+    {1.f, 1.f}
+};
 __constant__ int c_numVegetationTypes{ 2 };
 __constant__ VegetationType c_vegTypes[2]{
     {
