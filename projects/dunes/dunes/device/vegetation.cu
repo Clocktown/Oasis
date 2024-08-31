@@ -346,7 +346,7 @@ namespace dunes {
 		count = min(count, t_launchParameters.maxVegetation);
 		//std::cout << count << std::endl;
 		t_launchParameters.numVegetation = count;
-		t_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(t_launchParameters.blockSize1D)));
+		t_launchParameters.vegetationGridSize1D = count == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(t_launchParameters.blockSize1D)));
 	}
 
 	void initializeVegetation(const LaunchParameters& t_launchParameters) {

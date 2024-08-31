@@ -318,10 +318,10 @@ namespace dunes
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
 		const int maxCount = 100000;
-		const int count = 1; // TODO: Figure out why things go wrong with count = 0
+		const int count = 0; // TODO: Figure out why things go wrong with count = 0
 		m_launchParameters.numVegetation = count;
 		m_launchParameters.maxVegetation = maxCount;
-		m_launchParameters.vegetationGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(m_launchParameters.blockSize1D)));
+		m_launchParameters.vegetationGridSize1D = count == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(m_launchParameters.blockSize1D)));
 
 		m_vegBuffer.reinitialize(maxCount, sizeof(Vegetation));
 		m_launchParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
