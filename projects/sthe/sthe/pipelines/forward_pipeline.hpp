@@ -32,6 +32,7 @@ struct ForwardPipeline
 	glm::mat4 inverseModelMatrix;
 	glm::mat4 modelViewMatrix;
 	glm::mat4 inverseModelViewMatrix;
+	glm::ivec4 userID;
 
 	union
 	{

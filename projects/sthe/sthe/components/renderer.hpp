@@ -1,6 +1,7 @@
 #pragma once
 
 #include <sthe/core/component.hpp>
+#include <glm/glm.hpp>
 
 namespace sthe
 {
@@ -23,14 +24,17 @@ public:
 	// Setters
 	void setBaseInstance(const int t_baseInstance);
 	void setInstanceCount(const int t_instanceCount);
+	void setUserID(const glm::ivec4& userID);
 
 	// Getters
 	int getBaseInstance() const;
 	int getInstanceCount() const;
+	const glm::ivec4& getUserID() const;
 private:
 	// Attributes
 	int m_baseInstance;
 	int m_instanceCount;
+	glm::ivec4 m_userID;
 };
 
 }

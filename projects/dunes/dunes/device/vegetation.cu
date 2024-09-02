@@ -340,13 +340,51 @@ namespace dunes {
 		}
 	}
 
+	__global__ void prepareVegMapKernel(const Buffer<Vegetation> vegBuffer, Buffer<int> countBuffer, Buffer<int> relMapBuffer)
+	{
+		const int count{ min(*countBuffer, c_parameters.maxVegetation) };
+		const int stride{ getGridStride1D() };
+
+		for (int index{ getGlobalIndex1D() }; index < count; index += stride)
+		{
+			relMapBuffer[index] = atomicAdd(countBuffer + 1 + vegBuffer[index].type, 1);
+		}
+	}
+
+	__global__ void vegMapKernel(const Buffer<Vegetation> vegBuffer, Buffer<int> countBuffer, Buffer<int> relMapBuffer, Buffer<int> vegMapBuffer)
+	{
+		const int count{ min(*countBuffer, c_parameters.maxVegetation) };
+		const int stride{ getGridStride1D() };
+
+		int offsets[c_numVegetationTypes];
+		offsets[0] = 0;
+
+		for (int i{ 1 }; i < c_numVegetationTypes; ++i)
+		{
+			offsets[i] = offsets[i - 1] + countBuffer[1 + (i - 1)];
+		}
+
+		for (int index{ getGlobalIndex1D() }; index < count; index += stride)
+		{
+			vegMapBuffer[offsets[vegBuffer[index].type] + relMapBuffer[index]] = index;
+		}
+	}
+
 	void getVegetationCount(LaunchParameters& t_launchParameters) {
-		int count = 0;
-		cudaMemcpy(&count, t_launchParameters.vegetationCount, sizeof(int), cudaMemcpyDeviceToHost);
-		count = min(count, t_launchParameters.maxVegetation);
-		//std::cout << count << std::endl;
-		t_launchParameters.numVegetation = count;
-		t_launchParameters.vegetationGridSize1D = count == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(t_launchParameters.blockSize1D)));
+		int counts[1 + c_numVegetationTypes];
+		cudaMemcpy(counts, t_launchParameters.vegetationCount, (1 + c_numVegetationTypes) * sizeof(int), cudaMemcpyDeviceToHost);
+
+		counts[0] = min(counts[0], t_launchParameters.maxVegetation);
+		//std::cout << counts[0] << std::endl;
+
+		t_launchParameters.numVegetation = counts[0];
+
+		for (int i{ 0 }; i < c_numVegetationTypes; ++i) 
+		{
+			t_launchParameters.numVegetationTypes[i] = counts[1 + i];
+		}
+
+		t_launchParameters.vegetationGridSize1D = counts[0] == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(counts[0]) / static_cast<float>(t_launchParameters.blockSize1D)));
 	}
 
 	void initializeVegetation(const LaunchParameters& t_launchParameters) {
@@ -358,25 +396,36 @@ namespace dunes {
 		int count = t_launchParameters.numVegetation;
 		initUniformGrid << <t_launchParameters.uniformGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.uniformGrid);
 		
+		Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
+		Buffer<int> relMapBuffer{ reinterpret_cast<Buffer<int>>(slopeBuffer + t_simulationParameters.cellCount) };
+
 		if (count > 0) {
-			fillKeys << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count, t_launchParameters.vegetationCount);
+			fillKeys<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count, t_launchParameters.vegetationCount);
 			thrust::sort_by_key(thrust::device, t_launchParameters.keyBuffer, t_launchParameters.keyBuffer + count, t_launchParameters.vegBuffer);
+
+			// memset type counter 0
+			CU_CHECK_ERROR(cudaMemset(t_launchParameters.vegetationCount + 1, 0, c_numVegetationTypes * sizeof(int)));
+
+			// atomic adds for type counter
+			// return of atomic in tmp buffer for veg id
+			prepareVegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(t_launchParameters.vegBuffer, t_launchParameters.vegetationCount, relMapBuffer);
+			
+			// second pass use relative offset in tmp buffer + global counter offset to write global id in map 
+			vegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(t_launchParameters.vegBuffer, t_launchParameters.vegetationCount, relMapBuffer, t_launchParameters.vegMapBuffer);
 
 			getVegetationCount(t_launchParameters);
 			int diff = count - t_launchParameters.numVegetation;
 			if (diff > 0) {
-				std::cout << "Deleted " << count - t_launchParameters.numVegetation << " plants." << std::endl;
+				//std::cout << "Deleted " << count - t_launchParameters.numVegetation << " plants." << std::endl;
 			}
 			count = t_launchParameters.numVegetation;
 
-			findGridStart << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
-			findGridEnd << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
+			findGridStart<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
+			findGridEnd<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
 		}
 
-		Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
-
 		// Fix double humus generation
-		growVegetation << <t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, count, t_launchParameters.terrainArray, t_launchParameters.uniformGrid, slopeBuffer, t_launchParameters.terrainMoistureArray);
-		rasterizeVegetation << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid, t_launchParameters.vegetationCount, t_launchParameters.maxVegetation, t_launchParameters.seedBuffer, t_launchParameters.windArray, t_launchParameters.terrainMoistureArray, slopeBuffer);
+		growVegetation<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, count, t_launchParameters.terrainArray, t_launchParameters.uniformGrid, slopeBuffer, t_launchParameters.terrainMoistureArray);
+		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid, t_launchParameters.vegetationCount, t_launchParameters.maxVegetation, t_launchParameters.seedBuffer, t_launchParameters.windArray, t_launchParameters.terrainMoistureArray, slopeBuffer);
 	}
 }

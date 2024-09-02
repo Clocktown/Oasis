@@ -64,6 +64,7 @@ layout(std140, binding = 0) uniform PipelineBuffer
 	mat4 t_inverseModelMatrix;
 	mat4 t_modelViewMatrix;
 	mat4 t_inverseModelViewMatrix;
+	ivec4 t_userID;
 	Terrain t_terrain;
 };
 
@@ -78,8 +79,8 @@ void main()
 
 	tescUV = (position + offset) / vec2(subDivision);
 
-	gl_Position = vec4(t_terrain.gridScale * (tescUV.x - 0.5f) * float(t_terrain.gridSize.x), 
+	gl_Position = vec4(t_terrain.gridScale * tescUV.x * float(t_terrain.gridSize.x), 
 	                   0.0f, 
-					   t_terrain.gridScale * (tescUV.y - 0.5f) * float(t_terrain.gridSize.y), 
+					   t_terrain.gridScale * tescUV.y * float(t_terrain.gridSize.y), 
 					   1.0f);
 }

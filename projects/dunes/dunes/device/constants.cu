@@ -1,5 +1,6 @@
 #include <dunes/core/simulation_parameters.hpp>
 #include <cuda_runtime.h>
+#include "constants.cuh"
 
 #define SQRT2 1.414213562f
 #define RSQRT2 0.707106782f
@@ -15,12 +16,11 @@ __constant__ int2 c_offsets[8]{ int2{ 1, 0 }, int2{ 1, 1 }, int2{ 0, 1 }, int2{ 
 __constant__ float c_distances[8]{ 1.0f, SQRT2, 1.0f, SQRT2, 1.0f, SQRT2, 1.0f, SQRT2 };
 __constant__ float c_rDistances[8]{ 1.0f, RSQRT2, 1.0f, RSQRT2, 1.0f, RSQRT2, 1.0f, RSQRT2 };
 // TODO: Dominance/compatibility Matrix
-__constant__ float c_vegetationMatrix[2][2]{
+__constant__ float c_vegetationMatrix[c_numVegetationTypes][c_numVegetationTypes]{
     {1.f, 1.f},
     {1.f, 1.f}
 };
-__constant__ int c_numVegetationTypes{ 2 };
-__constant__ VegetationType c_vegTypes[2]{
+__constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
     {
         // Trees or something
         20.f,

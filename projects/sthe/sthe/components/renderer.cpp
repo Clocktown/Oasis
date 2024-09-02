@@ -28,6 +28,11 @@ void Renderer::setInstanceCount(const int t_instanceCount)
 	m_instanceCount = t_instanceCount;
 }
 
+void Renderer::setUserID(const glm::ivec4& userID)
+{
+	m_userID = userID;
+}
+
 // Getters
 int Renderer::getBaseInstance() const
 {
@@ -37,6 +42,11 @@ int Renderer::getBaseInstance() const
 int Renderer::getInstanceCount() const
 {
 	return m_instanceCount;
+}
+
+const glm::ivec4& Renderer::getUserID() const
+{
+	return m_userID;
 }
 
 }

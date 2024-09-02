@@ -148,6 +148,7 @@ namespace dunes
 		void setupBuffers();
 		void setupWindWarping();
 		void setupProjection();
+		void setupVegPrefabs();
 		void map();
 		void unmap();
 
@@ -208,8 +209,9 @@ namespace dunes
 		sthe::cu::Buffer m_slabBuffer;
 		sthe::cu::Buffer m_tmpBuffer;
 		sthe::cu::Buffer m_vegBuffer;
+		sthe::cu::Buffer m_vegMapBuffer;
+		sthe::cu::Buffer m_vegCountBuffer;
 		sthe::cu::Buffer m_seedBuffer;
-		sthe::cu::Buffer m_vegetationCount;
 		sthe::cu::Buffer m_uniformGrid;
 		sthe::cu::Buffer m_keys;
 		std::array<sthe::cu::Buffer, 4> m_windWarpingBuffers;
@@ -224,6 +226,14 @@ namespace dunes
 		std::vector<float> m_watchTimings;
 		std::vector<float> m_meanWatchTimings;
 		std::vector<sthe::cu::Stopwatch> m_watches;
-	};
 
+		struct VegetationPrefabs 
+		{
+			std::shared_ptr<sthe::gl::Program> program;
+			std::shared_ptr<sthe::gl::Buffer> buffer;
+			std::shared_ptr<sthe::gl::Buffer> mapBuffer;
+			std::array<sthe::GameObject*, c_numVegetationTypes> gameObjects{};
+			std::array<std::vector<sthe::MeshRenderer*>, c_numVegetationTypes> meshRenderers{};
+		} m_vegPrefabs;
+	};
 }

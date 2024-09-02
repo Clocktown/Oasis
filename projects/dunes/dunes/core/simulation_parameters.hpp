@@ -53,10 +53,10 @@ struct VegetationType
 	float humusRate;
 };
 
-struct Vegetation
+struct Vegetation // needs to be aligned for gl
 {
-	int type{ 0 };
 	float3 pos{}; // pos where root and stem start
+	int type{ 0 };
 	float health{ 1.f };
 	float water{ 0.f };
 	float age{ 0.f };
@@ -123,6 +123,8 @@ struct SimulationParameters
 	float rainProbabilityMin{0.5f};
 	float rainProbabilityMax{1.f};
 	float iRainProbabilityHeightRange{0.001f};
+
+	int maxVegetation{ 100000 };
 
 	float deltaTime{ 1.0f };
 	int timestep = 0;

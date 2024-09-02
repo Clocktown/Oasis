@@ -63,6 +63,26 @@ layout(std140, binding = 0) uniform PipelineBuffer
 	Material t_material;
 };
 
+struct Vegetation
+{
+    vec3 pos; 
+	int type;
+	float health;
+	float water;
+	float age;
+	float radius;
+};
+
+layout(std430, binding = 3) buffer VegBuffer
+{
+	Vegetation t_vegs[];
+};
+
+layout(std430, binding = 4) buffer VegMapBuffer
+{
+	int t_vegMap[];
+};
+
 // Output
 struct Fragment
 {
@@ -77,9 +97,10 @@ flat out mat3 tbnMatrix;
 // Functionality
 void main()
 {
+    const Vegetation veg = t_vegs[t_vegMap[t_userID.x + gl_InstanceID]];
 	const mat3 normalMatrix = mat3(t_modelMatrix);
 
-	fragment.position = (t_modelMatrix * t_position).xyz;
+	fragment.position = (t_modelMatrix * vec4(veg.pos.xzy + veg.radius * t_position.xyz, 1.0f)).xyz;
 	fragment.normal = normalize(normalMatrix * t_normal.xyz);
 	fragment.uv = t_uv;
 

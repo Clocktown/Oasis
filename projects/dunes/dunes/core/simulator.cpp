@@ -2,6 +2,7 @@
 #include "simulation_parameters.hpp"
 #include "render_parameters.hpp"
 #include "launch_parameters.hpp"
+#include <dunes/device/constants.cuh>
 #include <dunes/device/kernels.cuh>
 #include <dunes/util/io.hpp>
 #include <sthe/sthe.hpp>
@@ -64,6 +65,11 @@ namespace dunes
 		m_program->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "terrain/phong.frag" });
 		m_program->link();
 
+		m_vegPrefabs.program = std::make_shared<sthe::gl::Program>();
+		m_vegPrefabs.program->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "vegetation/phong.vert" });
+		m_vegPrefabs.program->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "vegetation/phong.frag" });
+		m_vegPrefabs.program->link();
+
 		m_material->setProgram(m_program);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0, m_windMap);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
@@ -115,6 +121,7 @@ namespace dunes
 		m_simulationParameters.uniformGridScale = { uniformGridScale };
 		m_simulationParameters.rUniformGridScale = { 1.f / uniformGridScale };
 		m_simulationParameters.uniformGridCount = { uniformGridSize.x * uniformGridSize.y };
+		m_simulationParameters.maxVegetation = m_launchParameters.maxVegetation;
 
 		if (m_launchParameters.fftPlan != 0)
 		{
@@ -127,16 +134,23 @@ namespace dunes
 		{
 			awake();
 		}
+		else
+		{
+			getGameObject().getTransform().setLocalPosition(-0.5f * getGameObject().getTransform().getLocalScale() * glm::vec3{ gridDim.x, 0.0f, gridDim.y });
+		}
 	}
 
 	void Simulator::awake()
 	{
+		getGameObject().getTransform().setLocalPosition(-0.5f * getGameObject().getTransform().getLocalScale() * m_simulationParameters.gridScale * glm::vec3{ m_simulationParameters.gridSize.x, 0.0f, m_simulationParameters.gridSize.y });
+
 		setupLaunchParameters();
 		setupTerrain();
 		setupArrays();
 		setupBuffers();
 		setupWindWarping();
 		setupProjection();
+		setupVegPrefabs();
 
 		map();
 
@@ -243,6 +257,19 @@ namespace dunes
 
 			unmap();
 
+			int userID{ 0 };
+
+			for (int i{ 0 }; i < c_numVegetationTypes; ++i)
+			{
+				for (sthe::MeshRenderer* const meshRenderer : m_vegPrefabs.meshRenderers[i])
+				{
+					meshRenderer->setInstanceCount(m_launchParameters.numVegetationTypes[i]);
+					meshRenderer->setUserID({ userID, 0, 0, 0 });
+				}
+
+				userID += m_launchParameters.numVegetationTypes[i];
+			}
+
 			for (int i = 0; i < m_watches.size(); ++i) {
 				float t = m_watches[i].getTime();
 				m_watchTimings[i] = t;
@@ -318,16 +345,20 @@ namespace dunes
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
 		const int maxCount = 100000;
-		const int count = 0; // TODO: Figure out why things go wrong with count = 0
-		m_launchParameters.numVegetation = count;
+		const int counts[1 + c_numVegetationTypes]{};
+		m_launchParameters.numVegetation = counts[0];
 		m_launchParameters.maxVegetation = maxCount;
-		m_launchParameters.vegetationGridSize1D = count == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(count) / static_cast<float>(m_launchParameters.blockSize1D)));
+		m_launchParameters.vegetationGridSize1D = counts[0] == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(counts[0]) / static_cast<float>(m_launchParameters.blockSize1D)));
 
-		m_vegBuffer.reinitialize(maxCount, sizeof(Vegetation));
-		m_launchParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
-		m_vegetationCount.reinitialize(1, sizeof(int));
-		m_vegetationCount.upload(&count, 1);
-		m_launchParameters.vegetationCount = m_vegetationCount.getData<int>();
+		m_vegPrefabs.buffer = std::make_shared<sthe::gl::Buffer>(maxCount, sizeof(Vegetation));
+		m_vegPrefabs.mapBuffer = std::make_shared<sthe::gl::Buffer>(maxCount, sizeof(int));
+	
+		m_vegBuffer.reinitialize(*m_vegPrefabs.buffer);
+		m_vegMapBuffer.reinitialize(*m_vegPrefabs.mapBuffer);
+
+		m_vegCountBuffer.reinitialize(1 + c_numVegetationTypes, sizeof(int));
+		m_vegCountBuffer.upload(counts, 1 + c_numVegetationTypes);
+		m_launchParameters.vegetationCount = m_vegCountBuffer.getData<int>();
 
 		std::random_device rd;
 		std::mt19937 gen(rd());
@@ -380,6 +411,34 @@ namespace dunes
 		m_velocityBuffer.reinitialize(4 * size, sizeof(float));
 		m_launchParameters.projection.velocities[0] = m_velocityBuffer.getData<float>();
 		m_launchParameters.projection.velocities[1] = m_launchParameters.projection.velocities[0] + 2 * size;
+	}
+
+	void Simulator::setupVegPrefabs()
+	{
+		std::filesystem::path resourcePath{ getResourcePath() };
+		std::filesystem::path models[c_numVegetationTypes]{ resourcePath / "models" / "cube.obj",
+			                                                resourcePath / "models" / "sphere.obj" };
+		for (int i{ 0 }; i < c_numVegetationTypes; ++i)
+		{
+			sthe::Importer importer{ models[i].string() };
+
+			sthe::GameObject& gameObject{ importer.importModel(getScene(), m_vegPrefabs.program) };
+			gameObject.getTransform().setParent(&getGameObject().getTransform(), false);
+
+			m_vegPrefabs.gameObjects[i] = &gameObject;
+			m_vegPrefabs.meshRenderers[i] = gameObject.getComponentsInChildren<sthe::MeshRenderer>();
+
+			for (sthe::MeshRenderer* const meshRenderer : m_vegPrefabs.meshRenderers[i])
+			{
+				meshRenderer->setInstanceCount(0);
+			}
+			
+			for (auto& material : importer.getMaterials())
+			{
+				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0, m_vegPrefabs.buffer);
+				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0 + 1, m_vegPrefabs.mapBuffer);
+			}
+		}
 	}
 
 	void Simulator::setupCoverageCalculation() {
@@ -476,6 +535,12 @@ namespace dunes
 		m_terrainMoistureArray.map();
 		m_launchParameters.terrainMoistureArray.surface = m_terrainMoistureArray.recreateSurface();
 		m_launchParameters.terrainMoistureArray.texture = m_terrainMoistureArray.recreateTexture(m_textureDescriptor);
+
+		m_vegBuffer.map(sizeof(Vegetation));
+		m_launchParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
+
+		m_vegMapBuffer.map(sizeof(int));
+		m_launchParameters.vegMapBuffer = m_vegMapBuffer.getData<int>();
 	}
 
 	void Simulator::unmap()
@@ -487,6 +552,8 @@ namespace dunes
 		m_waterVelocityArray.unmap();
 		m_sedimentArray.unmap();
 		m_terrainMoistureArray.unmap();
+		m_vegBuffer.unmap();
+		m_vegMapBuffer.unmap();
 	}
 
 	// Setters

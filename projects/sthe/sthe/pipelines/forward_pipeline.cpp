@@ -151,7 +151,8 @@ void ForwardPipeline::meshRendererPass(const Scene& t_scene)
 			m_data.inverseModelMatrix = transform.getInverseModelMatrix();
 			m_data.modelViewMatrix = m_data.viewMatrix * m_data.modelMatrix;
 			m_data.inverseModelViewMatrix = m_data.inverseModelMatrix * m_data.inverseViewMatrix;
-			m_pipelineBuffer->upload(reinterpret_cast<char*>(&m_data.modelMatrix), static_cast<int>(offsetof(uniform::ForwardPipeline, modelMatrix)), 4 * sizeof(glm::mat4));
+			m_data.userID = meshRenderer.getUserID();
+			m_pipelineBuffer->upload(reinterpret_cast<char*>(&m_data.modelMatrix), static_cast<int>(offsetof(uniform::ForwardPipeline, modelMatrix)), 4 * sizeof(glm::mat4) + sizeof(glm::ivec4));
 
 			const Mesh& mesh{ *meshRenderer.getMesh() };
 			mesh.bind();
@@ -182,6 +183,7 @@ void ForwardPipeline::meshRendererPass(const Scene& t_scene)
 					materialData.shininess = activeMaterial->getShininess();
 					materialData.hasDiffuseMap = activeMaterial->hasDiffuseMap();
 					materialData.hasNormalMap = activeMaterial->hasNormalMap();
+
 					m_pipelineBuffer->upload(reinterpret_cast<char*>(&materialData), static_cast<int>(offsetof(uniform::ForwardPipeline, material)), sizeof(uniform::Material));
 				}
 

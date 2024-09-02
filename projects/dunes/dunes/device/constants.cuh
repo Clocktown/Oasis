@@ -6,12 +6,13 @@
 namespace dunes
 {
 
+constexpr int c_numVegetationTypes{ 2 };
+
 extern __constant__ SimulationParameters c_parameters;
 extern __constant__ int2 c_offsets[8];
 extern __constant__ float c_distances[8];
 extern __constant__ float c_rDistances[8];
-extern __constant__ float c_vegetationMatrix[2][2];
-extern __constant__ int c_numVegetationTypes;
-extern __constant__ VegetationType c_vegTypes[2];
+extern __constant__ float c_vegetationMatrix[c_numVegetationTypes][c_numVegetationTypes];
+extern __constant__ VegetationType c_vegTypes[c_numVegetationTypes];
 
 }

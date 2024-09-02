@@ -1,6 +1,7 @@
 #pragma once
 
 #include "simulation_parameters.hpp"
+#include <dunes/device/constants.cuh>
 #include <cuda_runtime.h>
 #include <cufft.h>
 #include <array>
@@ -83,9 +84,11 @@ struct LaunchParameters
 	Buffer<float> slabBuffer;
 	Buffer<float> tmpBuffer; // 5 * gridSize.x * gridSize.y
 	Buffer<Vegetation> vegBuffer;
+	Buffer<int> vegMapBuffer;
 	Buffer<uint4> seedBuffer;
 	Buffer<int> vegetationCount;
-	int numVegetation{ 100 };
+	int numVegetation{ 0 };
+	int numVegetationTypes[c_numVegetationTypes]{};
 	int maxVegetation{ 100000 };
 	Buffer<uint2> uniformGrid;
 	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count

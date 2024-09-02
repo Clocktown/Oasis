@@ -70,6 +70,7 @@ layout(std140, binding = 0) uniform PipelineBuffer
 	mat4 t_inverseModelMatrix;
 	mat4 t_modelViewMatrix;
 	mat4 t_inverseModelViewMatrix;
+	ivec4 t_userID;
 	Material t_material;
 };
 
@@ -192,9 +193,9 @@ void main()
 			}
 		}
 
-		const vec3 halfwayDirection = normalize(lightDirection + viewDirection);
+		const vec3 reflection = reflect(-lightDirection, normal);
 		const float cosPhi = max(dot(normal, lightDirection), 0.0f);
-		const float cosPsiN = t_material.shininess > 0.0f ? pow(max(dot(normal, halfwayDirection), 0.0f), t_material.shininess) : 0.0f;
+		const float cosPsiN = t_material.shininess > 0.0f ? pow(max(dot(reflection, viewDirection), 0.0f), t_material.shininess) : 0.0f;
 
 		fragmentColor.rgb += attenuation * t_environment.lights[i].intensity * t_environment.lights[i].color * 
 			                 (cosPhi * diffuseColor + cosPsiN * specularColor);

@@ -70,6 +70,7 @@ layout(std140, binding = 0) uniform PipelineBuffer
 	mat4 t_inverseModelMatrix;
 	mat4 t_modelViewMatrix;
 	mat4 t_inverseModelViewMatrix;
+	ivec4 t_userID;
 	Material t_material;
 };
 
