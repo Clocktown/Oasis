@@ -32,7 +32,7 @@ namespace dunes
 				const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 				const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
 				const float moisture{ clamp(moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
-				const float moistureFactor{ clamp(1.f - 2.f * moisture, 0.f, 1.f) };
+				const float moistureFactor{ clamp(1.f - 10.f * moisture, 0.f, 1.f) };
 
 				const float4 resistance{ t_resistanceArray.read(cell) };
 				const float saltationScale{ (terrain.w > 1e-5f ? 0.f : 1.f) * (1.0f - resistance.x) * (1.0f - fmaxf(resistance.y, 0.f)) * moistureFactor };
@@ -168,7 +168,7 @@ namespace dunes
 				const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
 				const float moisture{ clamp(moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 				const float abrasionMoistureFactor{ clamp(1.f - 2.f * moisture, 0.f, 1.f) };
-				const float depositionMoistureFactor{ 0.39f * clamp(moisture, 0.f, 1.f) };
+				const float saltationMoistureFactor{ clamp(1.f - 10.f * moisture, 0.01f, 1.f) };
 
 				const float slab{ t_advectedSlabBuffer[cellIndex] };
 
@@ -178,9 +178,9 @@ namespace dunes
 				const float vegetation = fmaxf(resistance.y, 0.f);
 				const float abrasionScale{ c_parameters.deltaTime * windSpeed * (1.0f - vegetation) };
 
-				const float vegetationFactor = (terrain.y > c_parameters.abrasionThreshold ? (0.4f + depositionMoistureFactor) : (terrain.z > c_parameters.abrasionThreshold ? (0.5f + depositionMoistureFactor) : 0.6f));
+				const float vegetationFactor = (terrain.y > c_parameters.abrasionThreshold ? (0.4f) : (terrain.z > c_parameters.abrasionThreshold ? (0.5f) : 0.6f));
 				const float waterProbability = (terrain.w > 1e-5f ? .01f : 1.f);
-				const float depositionProbability = fminf(fmaxf(resistance.x, (1.0f - vegetationFactor) + vegetation * vegetationFactor), waterProbability);
+				const float depositionProbability = fminf(saltationMoistureFactor * fmaxf(resistance.x, (1.0f - vegetationFactor) + vegetation * vegetationFactor), waterProbability);
 
 				const float new_slab = slab * (1.f - depositionProbability);
 				const float waterFactor = (terrain.w > 1e-5f ? 0.f : 1.f);
