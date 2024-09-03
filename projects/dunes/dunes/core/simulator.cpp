@@ -416,7 +416,7 @@ namespace dunes
 	void Simulator::setupVegPrefabs()
 	{
 		std::filesystem::path resourcePath{ getResourcePath() };
-		std::filesystem::path models[c_numVegetationTypes]{ resourcePath / "models" / "cube.obj",
+		std::filesystem::path models[c_numVegetationTypes]{ resourcePath / "models" / "sphere.obj",
 															resourcePath / "models" / "sphere.obj",
 			                                                resourcePath / "models" / "sphere.obj" };
 		for (int i{ 0 }; i < c_numVegetationTypes; ++i)

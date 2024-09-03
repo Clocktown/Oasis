@@ -175,9 +175,10 @@ namespace dunes {
 					for (unsigned int k = indices.x; k < indices.y; ++k) {
 						if (k == idx) continue;
 						// TODO: Very adhoc formula. Doesn't really consider the volume. Read literature what they actually do.
+						const float incompatibility = c_vegetationMatrix[veg.type][vegBuffer[k].type];
 						float d = -0.5f * fminf(length(vegBuffer[k].pos - veg.pos) - (veg.radius + vegBuffer[k].radius), 0); // TODO: pos is not centered right now. Maybe have it centered and change height? or compute center here?
 						d /= veg.radius;
-						overlap += d * d;
+						overlap += incompatibility * d * d;
 					}
 				}
 			}
@@ -229,22 +230,27 @@ namespace dunes {
 			const float waterDamage = isWaterPlant ? 0.f : waterRate / (1.f - c_vegTypes[veg.type].waterResistance);
 			const float waterGrowth = isWaterPlant ? 1.f : fmaxf(-waterRate / c_vegTypes[veg.type].waterResistance, 0.f);
 
+			// Max radius based on neighborhood and terrain
+			const float baseMaxRadius = fmaxf(1.f - overlap, 0.f) * fminf(fmaxf(veg.pos.z - bedrockHeight, 0.f) / c_vegTypes[veg.type].height.y, c_vegTypes[veg.type].maxRadius);
+			const float waterMaxRadius = fminf(baseMaxRadius, fmaxf((waterLevel - veg.pos.z) / c_vegTypes[veg.type].height.x, 0.f));
+			const float maxRadius = isWaterPlant ? waterMaxRadius : baseMaxRadius;
+
+			// Shrink, if possible
+			veg.radius -= clamp(c_vegTypes[veg.type].shrinkRate * c_parameters.deltaTime * (veg.radius > 1.1*maxRadius ? 1.f : 0.f), 0.f, veg.radius - maxRadius);
+
+			// Damage plant if it is still too large given the current conditions
+			const float radiusDamage = fmaxf((veg.radius - 1.1*maxRadius) / veg.radius, 0.f);
 
 			// Calculate growth and health
 			const float growthRate = slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_vegTypes[veg.type].growthRate;
-			veg.health -= 0.1f * c_parameters.deltaTime * (fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage);
+			veg.health -= 0.1f * c_parameters.deltaTime * (fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage + radiusDamage);
 			// TODO: maybe also a constant rate?
 			veg.health += growthRate;
 
 			// Calculate maximum radius based on root depth and bedrock and grow plant
-			const float maxRadius = fminf(fmaxf(veg.pos.z - bedrockHeight, 0.f) / c_vegTypes[veg.type].height.y, c_vegTypes[veg.type].maxRadius);
 			const float newRadius = fminf(veg.radius + growthRate, maxRadius);
 			veg.radius = newRadius > veg.radius ? newRadius : veg.radius;
 
-			if (isWaterPlant) {
-				// water plant, force it to not grow outside of water
-				veg.radius = fminf(veg.radius, fmaxf((waterLevel - veg.pos.z) / c_vegTypes[veg.type].height.x, 0.f));
-			}
 			// Check if maturity condition met
 			if (veg.age > c_vegTypes[veg.type].maxMaturityTime && veg.radius < c_vegTypes[veg.type].maturityPercentage * c_vegTypes[veg.type].maxRadius) {
 				veg.health = 0.f;

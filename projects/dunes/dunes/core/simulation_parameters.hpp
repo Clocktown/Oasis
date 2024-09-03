@@ -36,6 +36,7 @@ struct VegetationType
 {
 	float maxRadius; // Plant is mature at maturityPercentage of maxRadius
 	float growthRate;
+	float shrinkRate; // if > 0.f, plant is able to "shrink" to a smaller size if environment doesn't support its current size anymore
 	float maxMaturityTime; // If Plant hasn't reached maturity after this time, it dies
 	float maturityPercentage; // %radius needed to be mature
 	float2 height; // .x * maxRadius = height above ground; .y * maxRadius = root depth; relevant for vegetation density and growth

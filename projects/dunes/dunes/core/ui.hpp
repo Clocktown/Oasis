@@ -137,14 +137,14 @@ namespace dunes
 		float m_waterBorderLevel{ 20.f };
 		float m_waterLevel{ 0.f };
 
-		float m_moistureEvaporationScale{ 0.1f };
+		float m_moistureEvaporationScale{ 0.05f };
 		float m_sandMoistureRate{ 0.1f };
 		float m_soilMoistureRate{ 0.02f };
 		float m_terrainThicknessMoistureThreshold{ 1.f };
 		float m_moistureCapacityConstant{ 1.f };
 
 		float m_evaporationRate{ 0.01f };
-		float m_rainStrength{0.1f};
+		float m_rainStrength{0.001f};
 		float m_rainPeriod{0.2f};
 		float m_rainScale{30.f};
 		float m_rainProbabilityMin{0.5f};
