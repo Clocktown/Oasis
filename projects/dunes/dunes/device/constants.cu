@@ -26,6 +26,8 @@ __constant__ float c_vegetationMatrix[c_numVegetationTypes][c_numVegetationTypes
 //{
 //	float maxRadius; // Plant is mature at maturityPercentage of maxRadius
 //	float growthRate;
+//  float positionAdjustRate; // how fast the plant can change its position (height) to match the terrain
+//  float damageRate; // How resistant the plant is to being damaged, lower values cause it to be able to survive for longer in bad environments
 // 	float shrinkRate; // if > 0.f, plant is able to "shrink" to a smaller size if environment doesn't support its current size anymore
 //	float maxMaturityTime; // If Plant hasn't reached maturity after this time, it dies
 //	float maturityPercentage; // %radius needed to be mature
@@ -49,6 +51,8 @@ __constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
         // Trees or something
         20.f,
         0.1f,
+        0.0001f,
+        0.02f,
         0.f,
         100.f,
         0.2f,
@@ -70,6 +74,8 @@ __constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
         // Grass (for touching)
         2.f,
         0.2f,
+        0.01f,
+        0.1f,
         0.1f,
         20.f,
         0.2f,
@@ -91,6 +97,8 @@ __constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
         // Seaweed or something
         1.f,
         0.3f,
+        0.01f,
+        0.1f,
         1.f,
         30.f,
         0.1f,

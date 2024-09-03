@@ -185,6 +185,8 @@ namespace dunes {
 			// Age plant
 			veg.age += c_parameters.deltaTime;
 
+			veg.pos.z += c_vegTypes[veg.type].positionAdjustRate * (sandHeight - veg.pos.z);
+
 			// Plant parameters
 			const float plantHeight = (veg.radius * c_vegTypes[veg.type].height.x);
 			const float plantDepth = (veg.radius * c_vegTypes[veg.type].height.y);
@@ -235,15 +237,17 @@ namespace dunes {
 			const float waterMaxRadius = fminf(baseMaxRadius, fmaxf((waterLevel - veg.pos.z) / c_vegTypes[veg.type].height.x, 0.f));
 			const float maxRadius = isWaterPlant ? waterMaxRadius : baseMaxRadius;
 
+			// 1.1 * maxRadius serves as a Buffer and prevents oscillations
 			// Shrink, if possible
 			veg.radius -= clamp(c_vegTypes[veg.type].shrinkRate * c_parameters.deltaTime * (veg.radius > 1.1*maxRadius ? 1.f : 0.f), 0.f, veg.radius - maxRadius);
 
 			// Damage plant if it is still too large given the current conditions
 			const float radiusDamage = fmaxf((veg.radius - 1.1*maxRadius) / veg.radius, 0.f);
+			const float radiusRate = radiusDamage > 0.f ? 0.f : 1.f;
 
 			// Calculate growth and health
-			const float growthRate = slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_vegTypes[veg.type].growthRate;
-			veg.health -= 0.1f * c_parameters.deltaTime * (fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage + radiusDamage);
+			const float growthRate = radiusRate * slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_vegTypes[veg.type].growthRate;
+			veg.health -= c_vegTypes[veg.type].damageRate * c_parameters.deltaTime * (fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage + radiusDamage);
 			// TODO: maybe also a constant rate?
 			veg.health += growthRate;
 
