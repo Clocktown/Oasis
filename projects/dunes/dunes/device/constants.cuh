@@ -6,7 +6,8 @@
 namespace dunes
 {
 
-constexpr int c_numVegetationTypes{ 2 };
+constexpr int c_numVegetationTypes{ 3 };
+constexpr float c_maxVegetationRadius{ 20.f };
 
 extern __constant__ SimulationParameters c_parameters;
 extern __constant__ int2 c_offsets[8];

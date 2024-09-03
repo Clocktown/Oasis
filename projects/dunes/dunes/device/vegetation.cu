@@ -30,7 +30,7 @@ namespace dunes {
 
 		const float scale = 1.f; // peak vegetation density
 		// gaussian distribution faded toward 0 at veg.radius
-		return  fmaxf(scale * expf(-0.5f * dot(d, covar * d)) -  (length(float2{pos.x - veg.pos.x, pos.y - veg.pos.y}) / veg.radius) * expf(-2.f), 0.f);
+		return  fmaxf(scale * expf(-0.5f * dot(d, covar * d)) -  (length(float2{pos.x - veg.pos.x, pos.y - veg.pos.y}) / c_maxVegetationRadius) * expf(-2.f), 0.f); // interpolate to 0 at global max radius for uniform grid
 
 	}
 
@@ -68,7 +68,7 @@ namespace dunes {
 
 		float2 wind = windArray.read(cell);
 		wind = wind / (length(wind) + 1e-6f);
-		float typeProbabilities[2] = { c_vegTypes[0].baseSpawnRate, c_vegTypes[1].baseSpawnRate };
+		float typeProbabilities[c_numVegetationTypes] = { c_vegTypes[0].baseSpawnRate, c_vegTypes[1].baseSpawnRate, c_vegTypes[2].baseSpawnRate };
 
 		for (int i = xStart; i <= xEnd; ++i) {
 			for (int j = yStart; j <= yEnd; ++j) {
@@ -77,7 +77,7 @@ namespace dunes {
 					const Vegetation veg = vegBuffer[k];
 					const float density = getVegetationDensity(veg, pos);
 					const bool isAlive = veg.health > 0.f;
-					typeProbabilities[veg.type] += isAlive ? c_vegTypes[veg.type].densitySpawnMultiplier * density + c_vegTypes[veg.type].windSpawnMultiplier * fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f) : 0.f;
+					typeProbabilities[veg.type] += isAlive ? c_vegTypes[veg.type].baseSpawnRate * (c_vegTypes[veg.type].densitySpawnMultiplier * density + c_vegTypes[veg.type].windSpawnMultiplier * fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)) : 0.f;
 					resistance.y += isAlive ? density : 0.f;
 					resistance.w += isAlive ? c_vegTypes[veg.type].humusRate * c_parameters.deltaTime * density : density;
 				}
@@ -104,7 +104,7 @@ namespace dunes {
 			random::pcg(seed);
 			seeds[idx] = seed;
 			const float xi = random::uniform_float(seed.x);
-			if (xi < 0.00001f) {
+			if (xi < 0.00001f * fmaxf(probabilitySum, 1.f)) {
 				const float yi = random::uniform_float(seed.y) * fmaxf(probabilitySum, 1.f);
 				Vegetation veg;
 				veg.type = -1;

@@ -114,7 +114,7 @@ namespace dunes
 		m_simulationParameters.gridScale = t_gridScale;
 		m_simulationParameters.rGridScale = 1.0f / t_gridScale;
 
-		const float uniformGridScale = 40.f;
+		const float uniformGridScale = 2.f * c_maxVegetationRadius;
 		const glm::vec2 gridDim = glm::vec2(t_gridSize) * t_gridScale;
 		const glm::ivec2 uniformGridSize = glm::ivec2(glm::ceil(gridDim / uniformGridScale)); // 20.f max radius
 		m_simulationParameters.uniformGridSize = { uniformGridSize.x, uniformGridSize.y };
@@ -417,6 +417,7 @@ namespace dunes
 	{
 		std::filesystem::path resourcePath{ getResourcePath() };
 		std::filesystem::path models[c_numVegetationTypes]{ resourcePath / "models" / "cube.obj",
+															resourcePath / "models" / "sphere.obj",
 			                                                resourcePath / "models" / "sphere.obj" };
 		for (int i{ 0 }; i < c_numVegetationTypes; ++i)
 		{
