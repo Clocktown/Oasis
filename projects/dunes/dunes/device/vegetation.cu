@@ -104,7 +104,8 @@ namespace dunes {
 			random::pcg(seed);
 			seeds[idx] = seed;
 			const float xi = random::uniform_float(seed.x);
-			if (xi < 0.00001f * fmaxf(probabilitySum, 1.f)) {
+			const float baseProbability = c_parameters.deltaTime / c_parameters.cellCount; // TODO: Add a parameter to scale this
+			if (xi < baseProbability * fmaxf(probabilitySum, 1.f)) {
 				const float yi = random::uniform_float(seed.y) * fmaxf(probabilitySum, 1.f);
 				Vegetation veg;
 				veg.type = -1;

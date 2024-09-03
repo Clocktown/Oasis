@@ -65,7 +65,7 @@ __constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
         0.2f,
         {0.75f, 0.25f},
         0.5f,
-        0.001f,
+        0.1f,
         10.f,
         100.f,
         0.01f
@@ -88,7 +88,7 @@ __constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
         0.4f,
         {0.75f, 0.75f},
         0.75f,
-        0.001f,
+        1.f,
         1000000.f,
         10.f,
         0.01f
@@ -111,7 +111,7 @@ __constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
         0.2f,
         {0.75f, 0.25f},
         0.25f,
-        0.01f,
+        0.5f,
         1.f,
         0.1f,
         0.001f
