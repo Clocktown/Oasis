@@ -20,6 +20,13 @@ namespace dunes
 		m_terrain{ std::make_shared<sthe::Terrain>() },
 		m_material{ std::make_shared<sthe::CustomMaterial>() },
 		m_program{ std::make_shared<sthe::gl::Program>() },
+		m_rimMaterial{ std::make_shared<sthe::CustomMaterial>() },
+		m_rimProgram{ std::make_shared<sthe::gl::Program>() },
+		m_water{ std::make_shared<Water>() },
+		m_waterMaterial{ std::make_shared<sthe::CustomMaterial>() },
+		m_waterProgram{ std::make_shared<sthe::gl::Program>() },
+		m_waterRimMaterial{ std::make_shared<sthe::CustomMaterial>() },
+		m_waterRimProgram{ std::make_shared<sthe::gl::Program>() },
 		m_terrainMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_windMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_resistanceMap{ std::make_shared<sthe::gl::Texture2D>() },
@@ -58,12 +65,35 @@ namespace dunes
 		m_terrain->setHeightMap(m_terrainMap);
 		m_terrain->addLayer(std::make_shared<sthe::TerrainLayer>(glm::vec3(194.0f, 178.0f, 128.0f) / 255.0f));
 
+		m_water->setHeightMap(m_terrainMap);
+
 		m_program->setPatchVertexCount(4);
 		m_program->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, sthe::getShaderPath() + "terrain/phong.vert" });
 		m_program->attachShader(sthe::gl::Shader{ GL_TESS_CONTROL_SHADER, sthe::getShaderPath() + "terrain/phong.tesc" });
 		m_program->attachShader(sthe::gl::Shader{ GL_TESS_EVALUATION_SHADER, getShaderPath() + "terrain/phong.tese" });
 		m_program->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "terrain/phong.frag" });
 		m_program->link();
+
+		m_rimProgram->setPatchVertexCount(4);
+		m_rimProgram->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "terrainRim/phong.vert" });
+		m_rimProgram->attachShader(sthe::gl::Shader{ GL_TESS_CONTROL_SHADER, getShaderPath() + "terrainRim/phong.tesc" });
+		m_rimProgram->attachShader(sthe::gl::Shader{ GL_TESS_EVALUATION_SHADER, getShaderPath() + "terrainRim/phong.tese" });
+		m_rimProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "terrainRim/phong.frag" });
+		m_rimProgram->link();
+
+		m_waterProgram->setPatchVertexCount(4);
+		m_waterProgram->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "water/phong.vert" });
+		m_waterProgram->attachShader(sthe::gl::Shader{ GL_TESS_CONTROL_SHADER, getShaderPath() + "water/phong.tesc" });
+		m_waterProgram->attachShader(sthe::gl::Shader{ GL_TESS_EVALUATION_SHADER, getShaderPath() + "water/phong.tese" });
+		m_waterProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "water/phong.frag" });
+		m_waterProgram->link();
+
+		m_waterRimProgram->setPatchVertexCount(4);
+		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "waterRim/phong.vert" });
+		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_TESS_CONTROL_SHADER, getShaderPath() + "waterRim/phong.tesc" });
+		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_TESS_EVALUATION_SHADER, getShaderPath() + "waterRim/phong.tese" });
+		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "waterRim/phong.frag" });
+		m_waterRimProgram->link();
 
 		m_vegPrefabs.program = std::make_shared<sthe::gl::Program>();
 		m_vegPrefabs.program->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "vegetation/phong.vert" });
@@ -75,6 +105,24 @@ namespace dunes
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
 		m_material->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 3, m_sedimentMap);
+
+		m_rimMaterial->setProgram(m_rimProgram);
+		m_rimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0, m_windMap);
+		m_rimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
+		m_rimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
+		m_rimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 3, m_sedimentMap);
+
+		m_waterMaterial->setProgram(m_waterProgram);
+		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0, m_windMap);
+		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
+		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
+		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 3, m_sedimentMap);
+
+		m_waterRimMaterial->setProgram(m_waterRimProgram);
+		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0, m_windMap);
+		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
+		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
+		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 3, m_sedimentMap);
 
 		m_textureDescriptor.addressMode[0] = cudaAddressModeWrap;
 		m_textureDescriptor.addressMode[1] = cudaAddressModeWrap;
@@ -312,9 +360,18 @@ namespace dunes
 		m_terrainRenderer = &getGameObject().addComponent<sthe::TerrainRenderer>();
 		m_terrainRenderer->setTerrain(m_terrain);
 		m_terrainRenderer->setMaterial(m_material);
+		m_terrainRenderer->setRimMaterial(m_rimMaterial);
+
+		m_waterRenderer = &getGameObject().addComponent<WaterRenderer>();
+		m_waterRenderer->setWater(m_water);
+		m_waterRenderer->setMaterial(m_waterMaterial);
+		m_waterRenderer->setRimMaterial(m_waterRimMaterial);
 
 		m_terrain->setGridSize(glm::ivec2{ m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y });
 		m_terrain->setGridScale(m_simulationParameters.gridScale);
+
+		m_water->setGridSize(glm::ivec2{ m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y });
+		m_water->setGridScale(m_simulationParameters.gridScale);
 
 		m_terrainMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 		m_windMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);

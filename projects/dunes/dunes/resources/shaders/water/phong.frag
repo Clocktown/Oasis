@@ -37,33 +37,20 @@ struct Environment
 	Light lights[16];
 };
 
-struct TerrainLayer
-{
-	vec3 diffuseColor;
-    float specularIntensity;
-	vec3 specularColor;
-	float shininess;
-	bool hasDiffuseMap;
-	int pad1, pad2, pad3;
-};
-
-struct Terrain
+struct Water
 {
 	ivec2 gridSize;
 	float gridScale;
 	float heightScale;
 	int tesselationLevel;
-	int layerCount;
 	bool hasHeightMap;
-	bool hasAlphaMap;
-	TerrainLayer layers[4];
 };
 
 struct Fragment
 {
 	vec3 position;
 	vec3 normal;
-	//vec3 waterNormal;
+	vec3 waterNormal;
 	vec2 uv;
 };
 
@@ -94,7 +81,7 @@ layout(std140, binding = 0) uniform PipelineBuffer
 	mat4 t_modelViewMatrix;
 	mat4 t_inverseModelViewMatrix;
 	ivec4 t_userID;
-	Terrain t_terrain;
+	Water t_water;
 };
 
 layout(std140, binding = 4) uniform RenderParametersBuffer
@@ -130,7 +117,7 @@ void main()
 	const vec3 viewDirection = viewVector / (viewDistance + EPSILON);
 
 	vec3 normal = normalize(fragment.normal);
-	//vec3 waterNormal = normalize(fragment.waterNormal);
+	vec3 waterNormal = normalize(fragment.waterNormal);
 
 	const vec3 ambientColor = getAmbientColor();
 	
@@ -208,7 +195,7 @@ void main()
 		{
 			fragmentColor.rgb += illuminatedColor;
 		}
-		/*if(renderParameters.waterColor.a > 0.5f) {
+		if(renderParameters.waterColor.a > 0.5f) {
 			const vec3 waterColor = mix(renderParameters.waterColor.rgb, 0.5f * renderParameters.soilColor.rgb, min(10.f * sediment, 1.f));
 			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * waterColor, min(0.1f * terrain.w, 1));
 			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * waterColor, clamp(0.1f * terrain.w - 1.f, 0, 1));
@@ -225,7 +212,7 @@ void main()
 			const float cosPsiN = pow(cosPsi, 1600.0f);
 
 			fragmentColor.rgb = mix(fragmentColor.rgb, backgroundColor, rTheta) + cosPsiN * specularColor;
-		}*/
+		}
 		if (resistances.x > 0.0f && renderParameters.windShadowColor.a > 0.5f)
 		{
 		    fragmentColor.rgb = mix(fragmentColor.rgb, fragmentColor.rgb * renderParameters.windShadowColor.rgb, max(1.f - terrain.w, 0.f) * 0.5f * resistances.x);

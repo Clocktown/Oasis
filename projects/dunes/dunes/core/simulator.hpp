@@ -1,5 +1,7 @@
 #pragma once
 
+#include <dunes/core/water.hpp>
+#include <dunes/components/water_renderer.hpp>
 #include "simulation_parameters.hpp"
 #include "launch_parameters.hpp"
 #include "render_parameters.hpp"
@@ -190,6 +192,16 @@ namespace dunes
 		std::shared_ptr<sthe::Terrain> m_terrain;
 		std::shared_ptr<sthe::CustomMaterial> m_material;
 		std::shared_ptr<sthe::gl::Program> m_program;
+		std::shared_ptr<sthe::CustomMaterial> m_rimMaterial;
+		std::shared_ptr<sthe::gl::Program> m_rimProgram;
+
+		WaterRenderer* m_waterRenderer;
+		std::shared_ptr<Water> m_water;
+		std::shared_ptr<sthe::CustomMaterial> m_waterMaterial;
+		std::shared_ptr<sthe::gl::Program> m_waterProgram;
+		std::shared_ptr<sthe::CustomMaterial> m_waterRimMaterial;
+		std::shared_ptr<sthe::gl::Program> m_waterRimProgram;
+
 		std::shared_ptr<sthe::gl::Texture2D> m_terrainMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_windMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_resistanceMap;

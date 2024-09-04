@@ -13,7 +13,7 @@ class TerrainRenderer : public Component
 {
 public:
 	// Constructors
-	explicit TerrainRenderer(const std::shared_ptr<Terrain>& t_terrain = nullptr, const std::shared_ptr<CustomMaterial>& t_material = nullptr);
+	explicit TerrainRenderer(const std::shared_ptr<Terrain>& t_terrain = nullptr, const std::shared_ptr<CustomMaterial>& t_material = nullptr, const std::shared_ptr<CustomMaterial>& t_rimMaterial = nullptr);
 	TerrainRenderer(const TerrainRenderer& t_terrainRenderer) = delete;
 	TerrainRenderer(TerrainRenderer&& t_terrainRenderer) = default;
 
@@ -27,16 +27,20 @@ public:
 	// Setters
 	void setTerrain(const std::shared_ptr<Terrain>& t_terrain);
 	void setMaterial(const std::shared_ptr<CustomMaterial>& t_material);
+	void setRimMaterial(const std::shared_ptr<CustomMaterial>& t_material);
 
 	// Getters
 	const std::shared_ptr<Terrain>& getTerrain() const;
 	bool hasTerrain() const;
 	const std::shared_ptr<CustomMaterial>& getMaterial() const;
 	bool hasMaterial() const;
+	const std::shared_ptr<CustomMaterial>& getRimMaterial() const;
+	bool hasRimMaterial() const;
 private:
 	// Attribute 
 	std::shared_ptr<Terrain> m_terrain;
 	std::shared_ptr<CustomMaterial> m_material;
+	std::shared_ptr<CustomMaterial> m_rimMaterial;
 };
 
 }

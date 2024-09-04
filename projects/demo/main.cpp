@@ -4,7 +4,9 @@
 int main()
 {
 	sthe::Application& application{ sthe::createApplication("Demo", 1200, 800) };
+	auto pipeline{ std::make_shared<dunes::DunesPipeline>() };
 	application.setTargetFrameRate(0);
+	application.setPipeline(pipeline);
 
 	sthe::Scene& scene{ application.addScene() };
 	sthe::GameObject& light{ scene.addDirectionalLight() };

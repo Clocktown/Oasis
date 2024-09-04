@@ -24,17 +24,22 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="dunes\components\water_renderer.cpp" />
     <ClCompile Include="dunes\core\simulator.cpp" />
+    <ClCompile Include="dunes\core\water.cpp" />
     <ClCompile Include="dunes\core\ui.cpp" />
+    <ClCompile Include="dunes\pipelines\dunes_pipeline.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="dunes\util\io.inl" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="dunes\components\water_renderer.hpp" />
     <ClInclude Include="dunes\core\launch_parameters.hpp" />
     <ClInclude Include="dunes\core\render_parameters.hpp" />
     <ClInclude Include="dunes\core\simulation_parameters.hpp" />
     <ClInclude Include="dunes\core\simulator.hpp" />
+    <ClInclude Include="dunes\core\water.hpp" />
     <ClInclude Include="dunes\core\ui.hpp" />
     <ClInclude Include="dunes\device\common.cuh" />
     <ClInclude Include="dunes\device\constants.cuh" />
@@ -42,6 +47,7 @@
     <ClInclude Include="dunes\device\kernels.cuh" />
     <ClInclude Include="dunes\device\random.cuh" />
     <ClInclude Include="dunes\dunes.hpp" />
+    <ClInclude Include="dunes\pipelines\dunes_pipeline.hpp" />
     <ClInclude Include="dunes\util\io.hpp" />
   </ItemGroup>
   <ItemGroup>

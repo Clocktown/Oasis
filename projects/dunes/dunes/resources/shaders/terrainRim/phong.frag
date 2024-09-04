@@ -63,8 +63,8 @@ struct Fragment
 {
 	vec3 position;
 	vec3 normal;
-	//vec3 waterNormal;
 	vec2 uv;
+	float height;
 };
 
 struct RenderParameters
@@ -180,57 +180,26 @@ void main()
 		const vec3 lightColor = attenuation * t_environment.lights[i].intensity * t_environment.lights[i].color;
 
 
-		const vec4 terrain = texture(t_heightMap, fragment.uv);
-		const float moisture = texture(t_moistureMap, fragment.uv).r;
+		vec3 originalTerrain = texture(t_heightMap, fragment.uv).xzy;
+		float terrainSum = 0.f;
+		for(int i = 0; i < 3; ++i) {
+			terrainSum += originalTerrain[i];
+			terrainSum = min(terrainSum, fragment.height);
+			originalTerrain[i] = terrainSum;
+		}
+		const vec3 terrain = vec3(originalTerrain.x, originalTerrain.z - originalTerrain.y, originalTerrain.y - originalTerrain.x);
 		const vec4 resistances = texture(t_resistanceMap, fragment.uv);
-		const float sediment = texture(t_sedimentMap, fragment.uv).r;
 		const vec3 bedrockColor = mix(renderParameters.bedrockColor.rgb, vec3(0), 0.75 * resistances.z);
 		vec3 diffuseColor = mix(renderParameters.soilColor.rgb, bedrockColor, clamp((1.f - terrain.z) / (1.f), 0.f, 1.f));
 	    diffuseColor = mix(renderParameters.sandColor.rgb, diffuseColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
-		diffuseColor = mix(diffuseColor, renderParameters.humusColor.rgb, renderParameters.humusColor.a * max(resistances.w, 0.f));
-		diffuseColor = mix(diffuseColor, renderParameters.vegetationColor.rgb, renderParameters.vegetationColor.a * max(resistances.y, 0.f));
-		//diffuseColor = mix(diffuseColor, renderParameters.objectColor.rgb, max(-resistances.y,0));
-		diffuseColor = mix(diffuseColor, renderParameters.wetColor.rgb, clamp(renderParameters.wetColor.a * moisture, 0, 1));
 			
 	    const vec3 specularColor = vec3(0);
 		const float cosPsiN = pow(cosPsi, 80.0f);
 		   
 		fragmentColor.rgb += ambientColor * diffuseColor;
 		const vec3 illuminatedColor = lightColor * (cosPhi * diffuseColor + cosPsiN * specularColor);
-		//if (resistances.w < 0.0f && renderParameters.erosionColor.a > 0.5f) 
-		//{
-		//    fragmentColor.rgb += mix(illuminatedColor, illuminatedColor * renderParameters.erosionColor.rgb, 0.5f);
-		//}
-		//else if (resistances.w > 0.0f && renderParameters.stickyColor.a > 0.5f) 
-		//{
-		//    fragmentColor.rgb += mix(illuminatedColor, illuminatedColor * renderParameters.stickyColor.rgb, 0.5f * resistances.w);
-		//} else 
-		{
-			fragmentColor.rgb += illuminatedColor;
-		}
-		/*if(renderParameters.waterColor.a > 0.5f) {
-			const vec3 waterColor = mix(renderParameters.waterColor.rgb, 0.5f * renderParameters.soilColor.rgb, min(10.f * sediment, 1.f));
-			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * waterColor, min(0.1f * terrain.w, 1));
-			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * waterColor, clamp(0.1f * terrain.w - 1.f, 0, 1));
-
-			const float specularFactor = clamp(5.f * terrain.w, 0.f, 1.f);
-			const vec3 backgroundColor = 0.95f * vec3(0.7f, 0.9f, 1.0f);
-			const float cosTheta = max(dot(waterNormal, viewDirection), 0.0f);
-			const float cosTheta5 = pow(1 - cosTheta, 5.f);
-			const float rTheta = specularFactor * (0.04 + 0.96 * cosTheta5);
-
-			const vec3 reflection = reflect(-lightDirection, waterNormal);
-			const float cosPsi = max(dot(reflection, viewDirection), 0.0f);
-			const vec3 specularColor = specularFactor * vec3(1);
-			const float cosPsiN = pow(cosPsi, 1600.0f);
-
-			fragmentColor.rgb = mix(fragmentColor.rgb, backgroundColor, rTheta) + cosPsiN * specularColor;
-		}*/
-		if (resistances.x > 0.0f && renderParameters.windShadowColor.a > 0.5f)
-		{
-		    fragmentColor.rgb = mix(fragmentColor.rgb, fragmentColor.rgb * renderParameters.windShadowColor.rgb, max(1.f - terrain.w, 0.f) * 0.5f * resistances.x);
-		} 
-		//fragmentColor.rgb = vec3(resistances.w);
+		
+		fragmentColor.rgb += illuminatedColor;
 	}
 
 	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);
