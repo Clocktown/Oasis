@@ -83,6 +83,7 @@ flat in mat3 tbnMatrix;
 
 // Output
 layout(location = 0) out vec4 fragmentColor;
+layout(location = 1) out vec4 fragmentDepth;
 
 // Functionality
 vec3 getAmbientColor()
@@ -150,6 +151,10 @@ void main()
 	const float viewDistance = length(viewVector);
 	const vec3 viewDirection = viewVector / (viewDistance + EPSILON);
 
+
+
+	fragmentDepth = vec4(viewDistance, fragment.position.xz, fragment.position.y);
+
 	fragmentColor.rgb = getAmbientColor() * diffuseColor;
 	fragmentColor.a = t_material.opacity;
 
@@ -202,5 +207,5 @@ void main()
 	}
 
 	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);
-	fragmentColor.rgb = mix(t_environment.fogColor, fragmentColor.rgb, getFogIntensity(viewDistance));
+	fragmentColor.a = 1.f;
 }

@@ -5,6 +5,7 @@
 #include <sthe/core/scene.hpp>
 #include <sthe/core/material.hpp>
 #include <sthe/components/camera.hpp>
+#include <sthe/gl/framebuffer.hpp>
 #include <sthe/gl/program.hpp>
 #include <sthe/gl/buffer.hpp>
 #include <memory>
@@ -69,12 +70,24 @@ private:
 	void meshRendererPass(const Scene& t_scene);
 	void terrainRendererPass(const Scene& t_scene);
 	void waterRendererPass(const Scene& t_scene);
+	void setupFramebuffers(int width, int height);
 
 	// Attributes
 	uniform::DunesPipeline m_data;
+	std::shared_ptr<gl::VertexArray> m_vertexArray;
 	std::shared_ptr<gl::Program> m_meshProgram;
 	std::shared_ptr<gl::Program> m_terrainProgram;
 	std::shared_ptr<gl::Buffer> m_pipelineBuffer;
+	std::shared_ptr<gl::Framebuffer> m_terrainFrameBuffer;
+	std::shared_ptr<gl::Framebuffer> m_waterFrameBuffer;
+	std::shared_ptr<sthe::gl::Texture2D> m_terrainDiffuseMap;
+	std::shared_ptr<sthe::gl::Texture2D> m_terrainPositionMap;
+	std::shared_ptr<sthe::gl::Texture2D> m_depthMap;
+	std::shared_ptr<sthe::CustomMaterial> m_screenMaterial;
+	std::shared_ptr<sthe::gl::Program> m_screenProgram;
+
+	std::shared_ptr<sthe::gl::Texture2D> m_waterDiffuseMap;
+	std::shared_ptr<sthe::gl::Texture2D> m_waterPositionOffsetMap;
 };
 
 }

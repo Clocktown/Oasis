@@ -115,6 +115,7 @@ in Fragment fragment;
 
 // Output
 layout(location = 0) out vec4 fragmentColor;
+layout(location = 1) out vec4 fragmentDepth;
 
 // Functionality
 vec3 getAmbientColor()
@@ -128,12 +129,27 @@ void main()
 	const vec3 viewVector = t_inverseViewMatrix[3].xyz - fragment.position;
 	const float viewDistance = length(viewVector);
 	const vec3 viewDirection = viewVector / (viewDistance + EPSILON);
+	fragmentDepth = vec4(viewDistance, fragment.position.xz, 1000000.f);
 
 	vec3 normal = normalize(fragment.normal);
-	//vec3 waterNormal = normalize(fragment.waterNormal);
 
 	const vec3 ambientColor = getAmbientColor();
+
+	vec3 originalTerrain = texture(t_heightMap, fragment.uv).xzy;
+	float terrainSum = 0.f;
+	for(int i = 0; i < 3; ++i) {
+		terrainSum += originalTerrain[i];
+		terrainSum = min(terrainSum, fragment.height);
+		originalTerrain[i] = terrainSum;
+	}
+	const vec3 terrain = vec3(originalTerrain.x, originalTerrain.z - originalTerrain.y, originalTerrain.y - originalTerrain.x);
+	const vec4 resistances = texture(t_resistanceMap, fragment.uv);
+	const vec3 bedrockColor = mix(renderParameters.bedrockColor.rgb, vec3(0), 0.75 * resistances.z);
+	vec3 diffuseColor = mix(renderParameters.soilColor.rgb, bedrockColor, clamp((1.f - terrain.z) / (1.f), 0.f, 1.f));
+	diffuseColor = mix(renderParameters.sandColor.rgb, diffuseColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
 	
+	fragmentColor.rgb = ambientColor * diffuseColor;
+
 	for (int i = 0; i < t_environment.lightCount; ++i)
 	{
 		vec3 lightDirection;
@@ -178,29 +194,15 @@ void main()
 		const float cosPhi = max(dot(normal, lightDirection), 0.0f);
 		const float cosPsi = max(dot(reflection, viewDirection), 0.0f);
 		const vec3 lightColor = attenuation * t_environment.lights[i].intensity * t_environment.lights[i].color;
-
-
-		vec3 originalTerrain = texture(t_heightMap, fragment.uv).xzy;
-		float terrainSum = 0.f;
-		for(int i = 0; i < 3; ++i) {
-			terrainSum += originalTerrain[i];
-			terrainSum = min(terrainSum, fragment.height);
-			originalTerrain[i] = terrainSum;
-		}
-		const vec3 terrain = vec3(originalTerrain.x, originalTerrain.z - originalTerrain.y, originalTerrain.y - originalTerrain.x);
-		const vec4 resistances = texture(t_resistanceMap, fragment.uv);
-		const vec3 bedrockColor = mix(renderParameters.bedrockColor.rgb, vec3(0), 0.75 * resistances.z);
-		vec3 diffuseColor = mix(renderParameters.soilColor.rgb, bedrockColor, clamp((1.f - terrain.z) / (1.f), 0.f, 1.f));
-	    diffuseColor = mix(renderParameters.sandColor.rgb, diffuseColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
 			
 	    const vec3 specularColor = vec3(0);
 		const float cosPsiN = pow(cosPsi, 80.0f);
 		   
-		fragmentColor.rgb += ambientColor * diffuseColor;
 		const vec3 illuminatedColor = lightColor * (cosPhi * diffuseColor + cosPsiN * specularColor);
 		
 		fragmentColor.rgb += illuminatedColor;
 	}
 
 	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);
+	fragmentColor.a = 1.f;
 }

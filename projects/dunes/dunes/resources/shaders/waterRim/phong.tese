@@ -65,7 +65,6 @@ struct Fragment
 {
 	vec3 position;
 	vec3 normal;
-	vec3 waterNormal;
 	vec2 uv;
 };
 
@@ -101,21 +100,7 @@ void main()
 		const float height = t_water.heightScale * (terrain.x + terrain.y + terrain.z + fragment.position.y * terrain.w);
 		fragment.position.y = height;
 
-		const vec2 size = vec2(2.0f * t_water.gridScale,0.0f);
-        const ivec3 offset = ivec3(-1, 0, 1);
-
-		const vec2 terrain01 = getTerrainForNormal(offset.xy);
-        const vec2 terrain21 = getTerrainForNormal(offset.zy);
-        const vec2 terrain10 = getTerrainForNormal(offset.yx);
-        const vec2 terrain12 = getTerrainForNormal(offset.yz);
-		const vec3 edge1 = normalize(vec3(size.x, t_water.heightScale * (terrain21.x - terrain01.x), size.y));
-		const vec3 edge2 = normalize(vec3(size.y, t_water.heightScale * (terrain12.x - terrain10.x), size.x));
-		const vec3 wedge1 = normalize(vec3(size.x, t_water.heightScale * (terrain21.y - terrain01.y), size.y));
-		const vec3 wedge2 = normalize(vec3(size.y, t_water.heightScale * (terrain12.y - terrain10.y), size.x));
-		fragment.normal = cross(edge2, edge1);
-		fragment.waterNormal = normalize(vec3(uv10.y - uv00.y, 0.f, uv00.x - uv10.x));//cross(wedge2, wedge1);
-		//fragment.normal = vec3(0.0f, 0.0f, 0.0f);
-
+		fragment.normal = normalize(vec3(uv10.y - uv00.y, 0.f, uv00.x - uv10.x));
 	}
 	else 
 	{

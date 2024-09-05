@@ -92,7 +92,7 @@ namespace dunes
 		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "waterRim/phong.vert" });
 		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_TESS_CONTROL_SHADER, getShaderPath() + "waterRim/phong.tesc" });
 		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_TESS_EVALUATION_SHADER, getShaderPath() + "waterRim/phong.tese" });
-		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "waterRim/phong.frag" });
+		m_waterRimProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "water/phong.frag" });
 		m_waterRimProgram->link();
 
 		m_vegPrefabs.program = std::make_shared<sthe::gl::Program>();

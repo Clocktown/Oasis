@@ -65,7 +65,6 @@ struct Fragment
 {
 	vec3 position;
 	vec3 normal;
-	vec3 waterNormal;
 	vec2 uv;
 };
 
@@ -108,14 +107,10 @@ void main()
         const vec2 terrain21 = getTerrainForNormal(offset.zy);
         const vec2 terrain10 = getTerrainForNormal(offset.yx);
         const vec2 terrain12 = getTerrainForNormal(offset.yz);
-		const vec3 edge1 = normalize(vec3(size.x, t_water.heightScale * (terrain21.x - terrain01.x), size.y));
-		const vec3 edge2 = normalize(vec3(size.y, t_water.heightScale * (terrain12.x - terrain10.x), size.x));
+
 		const vec3 wedge1 = normalize(vec3(size.x, t_water.heightScale * (terrain21.y - terrain01.y), size.y));
 		const vec3 wedge2 = normalize(vec3(size.y, t_water.heightScale * (terrain12.y - terrain10.y), size.x));
-		fragment.normal = cross(edge2, edge1);
-		fragment.waterNormal = cross(wedge2, wedge1);
-		//fragment.normal = vec3(0.0f, 0.0f, 0.0f);
-
+		fragment.normal = cross(wedge2, wedge1);
 	}
 	else 
 	{

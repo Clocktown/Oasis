@@ -50,7 +50,6 @@ struct Fragment
 {
 	vec3 position;
 	vec3 normal;
-	vec3 waterNormal;
 	vec2 uv;
 };
 
@@ -102,6 +101,7 @@ in Fragment fragment;
 
 // Output
 layout(location = 0) out vec4 fragmentColor;
+layout(location = 1) out vec4 fragmentDepth;
 
 // Functionality
 vec3 getAmbientColor()
@@ -110,17 +110,41 @@ vec3 getAmbientColor()
 	return ambientColor;
 }
 
+bool intersection(in vec3 b_min, in vec3 b_max, in vec3 r_o, in vec3 inv_r_dir, out vec2 t) {
+    vec3 t1 = (b_min - r_o) * inv_r_dir;
+    vec3 t2 = (b_max - r_o) * inv_r_dir;
+
+    vec3 vtmin = min(t1, t2);
+    vec3 vtmax = max(t1, t2);
+
+    t.x = max(vtmin.x, max(vtmin.y, vtmin.z));
+    t.y = min(vtmax.x, min(vtmax.y, vtmax.z));
+
+    return t.y >= t.x;// && t.x >= 0;
+}
+
 void main()
 {
+
+
+
 	const vec3 viewVector = t_inverseViewMatrix[3].xyz - fragment.position;
 	const float viewDistance = length(viewVector);
 	const vec3 viewDirection = viewVector / (viewDistance + EPSILON);
 
-	vec3 normal = normalize(fragment.normal);
-	vec3 waterNormal = normalize(fragment.waterNormal);
+	const vec4 bmin = t_modelMatrix * t_water.gridScale * vec4(0.f, -100000.f, 0.f, 1.f);
+	const vec4 bmax = t_modelMatrix * t_water.gridScale * vec4(t_water.gridSize.x, 100000.f, t_water.gridSize.y, 1.f);
+	vec2 t = vec2(0.f);
+	t = intersection(bmin.xyz, bmax.xyz, t_inverseViewMatrix[3].xyz, -1.f/viewDirection, t) ? t : vec2(0);
 
-	const vec3 ambientColor = getAmbientColor();
-	
+	fragmentDepth = vec4(viewDistance, t.y, 0.f, 0.f);
+
+	vec3 normal = normalize(fragment.normal);
+
+	const vec4 terrain = texture(t_heightMap, fragment.uv);
+
+	fragmentColor.rgb = vec3(0);
+
 	for (int i = 0; i < t_environment.lightCount; ++i)
 	{
 		vec3 lightDirection;
@@ -160,65 +184,22 @@ void main()
 					                 (t_environment.lights[i].spotInnerCutOff - t_environment.lights[i].spotOuterCutOff), 0.0f, 1.0f);
 			}
 		}
-		
+
 		const vec3 reflection = reflect(-lightDirection, normal);
-		const float cosPhi = max(dot(normal, lightDirection), 0.0f);
 		const float cosPsi = max(dot(reflection, viewDirection), 0.0f);
-		const vec3 lightColor = attenuation * t_environment.lights[i].intensity * t_environment.lights[i].color;
+		const float cosPsiN = pow(cosPsi, 1600.0f);
+
+		fragmentColor.rgb += attenuation * t_environment.lights[i].intensity * t_environment.lights[i].color * cosPsiN;
 
 
-		const vec4 terrain = texture(t_heightMap, fragment.uv);
-		const float moisture = texture(t_moistureMap, fragment.uv).r;
-		const vec4 resistances = texture(t_resistanceMap, fragment.uv);
-		const float sediment = texture(t_sedimentMap, fragment.uv).r;
-		const vec3 bedrockColor = mix(renderParameters.bedrockColor.rgb, vec3(0), 0.75 * resistances.z);
-		vec3 diffuseColor = mix(renderParameters.soilColor.rgb, bedrockColor, clamp((1.f - terrain.z) / (1.f), 0.f, 1.f));
-	    diffuseColor = mix(renderParameters.sandColor.rgb, diffuseColor, clamp((1.f - terrain.y) / (1.f), 0.f, 1.f));
-		diffuseColor = mix(diffuseColor, renderParameters.humusColor.rgb, renderParameters.humusColor.a * max(resistances.w, 0.f));
-		diffuseColor = mix(diffuseColor, renderParameters.vegetationColor.rgb, renderParameters.vegetationColor.a * max(resistances.y, 0.f));
-		//diffuseColor = mix(diffuseColor, renderParameters.objectColor.rgb, max(-resistances.y,0));
-		diffuseColor = mix(diffuseColor, renderParameters.wetColor.rgb, clamp(renderParameters.wetColor.a * moisture, 0, 1));
-			
-	    const vec3 specularColor = vec3(0);
-		const float cosPsiN = pow(cosPsi, 80.0f);
-		   
-		fragmentColor.rgb += ambientColor * diffuseColor;
-		const vec3 illuminatedColor = lightColor * (cosPhi * diffuseColor + cosPsiN * specularColor);
-		//if (resistances.w < 0.0f && renderParameters.erosionColor.a > 0.5f) 
-		//{
-		//    fragmentColor.rgb += mix(illuminatedColor, illuminatedColor * renderParameters.erosionColor.rgb, 0.5f);
-		//}
-		//else if (resistances.w > 0.0f && renderParameters.stickyColor.a > 0.5f) 
-		//{
-		//    fragmentColor.rgb += mix(illuminatedColor, illuminatedColor * renderParameters.stickyColor.rgb, 0.5f * resistances.w);
-		//} else 
-		{
-			fragmentColor.rgb += illuminatedColor;
-		}
-		if(renderParameters.waterColor.a > 0.5f) {
-			const vec3 waterColor = mix(renderParameters.waterColor.rgb, 0.5f * renderParameters.soilColor.rgb, min(10.f * sediment, 1.f));
-			fragmentColor.rgb = mix(fragmentColor.rgb, illuminatedColor * waterColor, min(0.1f * terrain.w, 1));
-			fragmentColor.rgb = mix(fragmentColor.rgb, vec3(0.2) * waterColor, clamp(0.1f * terrain.w - 1.f, 0, 1));
-
-			const float specularFactor = clamp(5.f * terrain.w, 0.f, 1.f);
-			const vec3 backgroundColor = 0.95f * vec3(0.7f, 0.9f, 1.0f);
-			const float cosTheta = max(dot(waterNormal, viewDirection), 0.0f);
-			const float cosTheta5 = pow(1 - cosTheta, 5.f);
-			const float rTheta = specularFactor * (0.04 + 0.96 * cosTheta5);
-
-			const vec3 reflection = reflect(-lightDirection, waterNormal);
-			const float cosPsi = max(dot(reflection, viewDirection), 0.0f);
-			const vec3 specularColor = specularFactor * vec3(1);
-			const float cosPsiN = pow(cosPsi, 1600.0f);
-
-			fragmentColor.rgb = mix(fragmentColor.rgb, backgroundColor, rTheta) + cosPsiN * specularColor;
-		}
-		if (resistances.x > 0.0f && renderParameters.windShadowColor.a > 0.5f)
-		{
-		    fragmentColor.rgb = mix(fragmentColor.rgb, fragmentColor.rgb * renderParameters.windShadowColor.rgb, max(1.f - terrain.w, 0.f) * 0.5f * resistances.x);
-		} 
-		//fragmentColor.rgb = vec3(resistances.w);
 	}
 
-	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);
+	const float specularFactor = clamp(5.f * terrain.w, 0.f, 1.f);
+	const vec3 backgroundColor = vec3(0.7f, 0.9f, 1.0f);
+	const float cosTheta = max(dot(normal, viewDirection), 0.0f);
+	const float cosTheta5 = pow(1 - cosTheta, 5.f);
+	const float rTheta = specularFactor * (0.04 + 0.96 * cosTheta5);
+
+	fragmentColor.rgb = fragmentColor.rgb / (rTheta + EPSILON) + backgroundColor;
+	fragmentColor.a = rTheta;
 }

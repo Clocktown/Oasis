@@ -3,6 +3,7 @@
 #include <dunes/components/water_renderer.hpp>
 #include <sthe/config/debug.hpp>
 #include <sthe/config/binding.hpp>
+#include <dunes/util/io.hpp>
 #include <sthe/util/io.hpp>
 #include <sthe/core/application.hpp>
 #include <sthe/core/scene.hpp>
@@ -16,6 +17,7 @@
 #include <sthe/components/light.hpp>
 #include <sthe/components/mesh_renderer.hpp>
 #include <sthe/components/terrain_renderer.hpp>
+#include <sthe/core/application.hpp>
 #include <sthe/gl/program.hpp>
 #include <sthe/gl/buffer.hpp>
 #include <glad/glad.h>
@@ -32,21 +34,60 @@ using namespace sthe;
 DunesPipeline::DunesPipeline() :
 	m_meshProgram{ std::make_shared<gl::Program>() },
 	m_terrainProgram{ std::make_shared<gl::Program>() },
-	m_pipelineBuffer{ std::make_shared<gl::Buffer>(static_cast<int>(sizeof(uniform::DunesPipeline)), 1) }
+	m_pipelineBuffer{ std::make_shared<gl::Buffer>(static_cast<int>(sizeof(uniform::DunesPipeline)), 1) },
+	m_terrainFrameBuffer{std::make_shared<gl::Framebuffer>(1, 1) },
+	m_waterFrameBuffer{std::make_shared<gl::Framebuffer>(1, 1) },
+	m_terrainDiffuseMap{ std::make_shared<sthe::gl::Texture2D>() },
+	m_terrainPositionMap{ std::make_shared<sthe::gl::Texture2D>() },
+	m_depthMap{ std::make_shared<sthe::gl::Texture2D>() },
+	m_waterPositionOffsetMap{ std::make_shared<sthe::gl::Texture2D>() },
+	m_waterDiffuseMap{ std::make_shared<sthe::gl::Texture2D>() },
+	m_screenMaterial{ std::make_shared<sthe::CustomMaterial>() },
+	m_screenProgram{ std::make_shared<sthe::gl::Program>() },
+	m_vertexArray{ std::make_shared<sthe::gl::VertexArray>() }
 {
-	m_meshProgram->attachShader(gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "mesh/phong.vert" });
-    m_meshProgram->attachShader(gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "mesh/phong.frag" });
+	setupFramebuffers(1, 1);
+
+	m_screenProgram->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, dunes::getShaderPath() + "screen/sfq.vert" });
+	m_screenProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, dunes::getShaderPath() + "screen/sfq.frag" });
+	m_screenProgram->link();
+
+	m_screenMaterial->setProgram(m_screenProgram);
+	m_screenMaterial->setTexture(0, m_terrainDiffuseMap);
+	m_screenMaterial->setTexture(1, m_terrainPositionMap);
+	m_screenMaterial->setTexture(4, m_waterDiffuseMap);
+	m_screenMaterial->setTexture(3, m_waterPositionOffsetMap);
+
+	m_meshProgram->attachShader(gl::Shader{ GL_VERTEX_SHADER, sthe::getShaderPath() + "mesh/phong.vert" });
+    m_meshProgram->attachShader(gl::Shader{ GL_FRAGMENT_SHADER, sthe::getShaderPath() + "mesh/phong.frag" });
     m_meshProgram->link();
 
 	m_terrainProgram->setPatchVertexCount(4);
-	m_terrainProgram->attachShader(gl::Shader{ GL_VERTEX_SHADER, getShaderPath() + "terrain/phong.vert" });
-	m_terrainProgram->attachShader(gl::Shader{ GL_TESS_CONTROL_SHADER, getShaderPath() + "terrain/phong.tesc" });
-	m_terrainProgram->attachShader(gl::Shader{ GL_TESS_EVALUATION_SHADER, getShaderPath() + "terrain/phong.tese" });
-	m_terrainProgram->attachShader(gl::Shader{ GL_FRAGMENT_SHADER, getShaderPath() + "terrain/phong.frag" });
+	m_terrainProgram->attachShader(gl::Shader{ GL_VERTEX_SHADER, sthe::getShaderPath() + "terrain/phong.vert" });
+	m_terrainProgram->attachShader(gl::Shader{ GL_TESS_CONTROL_SHADER, sthe::getShaderPath() + "terrain/phong.tesc" });
+	m_terrainProgram->attachShader(gl::Shader{ GL_TESS_EVALUATION_SHADER, sthe::getShaderPath() + "terrain/phong.tese" });
+	m_terrainProgram->attachShader(gl::Shader{ GL_FRAGMENT_SHADER, sthe::getShaderPath() + "terrain/phong.frag" });
 	m_terrainProgram->link();
 }
 
 // Functionality
+
+void DunesPipeline::setupFramebuffers(int width, int height) {
+	m_terrainFrameBuffer->resize(width, height);
+	m_waterFrameBuffer->resize(width, height);
+	m_terrainDiffuseMap->reinitialize(width, height, GL_RGBA8, false);
+	m_terrainPositionMap->reinitialize(width, height, GL_RGBA32F, false);
+	m_depthMap->reinitialize(width, height, GL_DEPTH_COMPONENT24, false);
+	m_waterDiffuseMap->reinitialize(width, height, GL_RGBA32F, false);
+	m_waterPositionOffsetMap->reinitialize(width, height, GL_RGBA32F, false);
+	m_terrainFrameBuffer->attachTexture(GL_COLOR_ATTACHMENT0, *m_terrainDiffuseMap);
+	m_terrainFrameBuffer->attachTexture(GL_COLOR_ATTACHMENT1, *m_terrainPositionMap);
+	m_terrainFrameBuffer->attachTexture(GL_DEPTH_ATTACHMENT, *m_depthMap);
+	m_waterFrameBuffer->attachTexture(GL_COLOR_ATTACHMENT0, *m_waterDiffuseMap);
+	m_waterFrameBuffer->attachTexture(GL_COLOR_ATTACHMENT1, *m_waterPositionOffsetMap);
+	m_waterFrameBuffer->attachTexture(GL_DEPTH_ATTACHMENT, *m_depthMap);
+}
+
 void DunesPipeline::use()
 {
 	GL_CHECK_ERROR(glEnable(GL_DEPTH_TEST));
@@ -63,33 +104,55 @@ void DunesPipeline::disuse()
 
 void DunesPipeline::render(const Scene& t_scene, const Camera& t_camera)
 {
+	use();
 	setup(t_scene, t_camera);
 
-	if (t_camera.hasFramebuffer())
-	{
-		t_camera.getFramebuffer()->bind();
-	}
-	else
-	{
-		gl::DefaultFramebuffer::bind();
-	}
+	m_terrainFrameBuffer->bind();
+
 
 	GL_CHECK_ERROR(glScissor(0, 0, m_data.resolution.x, m_data.resolution.y));
 	GL_CHECK_ERROR(glViewport(0, 0, m_data.resolution.x, m_data.resolution.y));
 
+	m_terrainFrameBuffer->enableDrawBuffer(GL_COLOR_ATTACHMENT0);
 	const glm::vec4& clearColor{ t_camera.getClearColor() };
-	GL_CHECK_ERROR(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
+	GL_CHECK_ERROR(glClearColor(clearColor.r, clearColor.g, clearColor.b, 0.f));
 	GL_CHECK_ERROR(glClear(t_camera.getClearMask()));
+	m_terrainFrameBuffer->enableDrawBuffer(GL_COLOR_ATTACHMENT1);
+	glClearColor(0.f, 0.f, 0.f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
 
+	m_terrainFrameBuffer->enableDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	meshRendererPass(t_scene);
 	terrainRendererPass(t_scene);
+	m_terrainFrameBuffer->disableDrawBuffers();
+
+	m_waterFrameBuffer->bind();
+	m_waterFrameBuffer->enableDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	glClear(GL_COLOR_BUFFER_BIT);
+
 	waterRendererPass(t_scene);
+
+	gl::DefaultFramebuffer::bind();
+	GL_CHECK_ERROR(glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a));
+	GL_CHECK_ERROR(glClear(t_camera.getClearMask()));
+	glDisable(GL_DEPTH_TEST);
+	m_screenMaterial->bind();
+	m_screenProgram->use();
+
+	m_vertexArray->bind();
+
+	GL_CHECK_ERROR(glDrawArrays(GL_TRIANGLES, 0, 3));
+	disuse();
 }
 
 void DunesPipeline::setup(const Scene& t_scene, const Camera& t_camera)
 {
 	const Application& application{ getApplication() };
 	const Environment& environment{ t_scene.getEnvironment() };
+
+	if (t_camera.getResolution().x != m_terrainFrameBuffer->getWidth() || t_camera.getResolution().y != m_terrainFrameBuffer->getHeight()) {
+		setupFramebuffers(t_camera.getResolution().x, t_camera.getResolution().y);
+	}
 
 	m_data.time = application.getTime();
 	m_data.deltaTime = application.getDeltaTime();

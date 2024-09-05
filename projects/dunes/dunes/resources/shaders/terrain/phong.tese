@@ -78,7 +78,6 @@ struct Fragment
 {
 	vec3 position;
 	vec3 normal;
-	//vec3 waterNormal;
 	vec2 uv;
 };
 
