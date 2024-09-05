@@ -109,7 +109,7 @@ void main() {
 
 	const float topDepthInterpolation = min(exp(- (10.f * sediment + 1.f) * texture(tex, fragment.uv).a * t), 1);
 	const vec3 waterSedimentColor = mix(renderParameters.waterColor.rgb, renderParameters.soilColor.rgb, min(sediment, 1.f));
-	terrainColor = mix(mix(vec3(0), waterSedimentColor, topDepthInterpolation), texture(tex, fragment.uv).rgb, topDepthInterpolation);
+	terrainColor = mix(mix(vec3(0), waterSedimentColor * terrainColor, topDepthInterpolation), terrainColor, topDepthInterpolation);
 	terrainColor = mix(mix(0.2f * renderParameters.waterColor.rgb, renderParameters.waterColor.rgb, viewDepthInterpolation), terrainColor, viewDepthInterpolation);
 
 	if(waterDepth.x > 0.f) {
