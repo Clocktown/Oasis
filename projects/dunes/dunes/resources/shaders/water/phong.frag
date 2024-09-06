@@ -1,5 +1,5 @@
 #version 460 core
-
+layout(early_fragment_tests) in;
 // Constants
 const int FOG_MODE_NONE = 0;
 const int FOG_MODE_LINEAR = 1;
@@ -200,6 +200,6 @@ void main()
 	const float cosTheta5 = pow(1 - cosTheta, 5.f);
 	const float rTheta = specularFactor * (0.04 + 0.96 * cosTheta5);
 
-	fragmentColor.rgb = fragmentColor.rgb / (rTheta + EPSILON) + backgroundColor;
+	fragmentColor.rgb = specularFactor * fragmentColor.rgb / (rTheta + EPSILON) + backgroundColor;
 	fragmentColor.a = rTheta;
 }

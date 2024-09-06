@@ -44,6 +44,7 @@ DunesPipeline::DunesPipeline() :
 	m_waterDiffuseMap{ std::make_shared<sthe::gl::Texture2D>() },
 	m_screenMaterial{ std::make_shared<sthe::CustomMaterial>() },
 	m_screenProgram{ std::make_shared<sthe::gl::Program>() },
+	m_zPassProgram{ std::make_shared<sthe::gl::Program>() },
 	m_vertexArray{ std::make_shared<sthe::gl::VertexArray>() }
 {
 	setupFramebuffers(1, 1);
@@ -51,6 +52,10 @@ DunesPipeline::DunesPipeline() :
 	m_screenProgram->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, dunes::getShaderPath() + "screen/sfq.vert" });
 	m_screenProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, dunes::getShaderPath() + "screen/sfq.frag" });
 	m_screenProgram->link();
+
+	m_zPassProgram->attachShader(sthe::gl::Shader{ GL_VERTEX_SHADER, dunes::getShaderPath() + "zpass/zpass.vert" });
+	m_zPassProgram->attachShader(sthe::gl::Shader{ GL_FRAGMENT_SHADER, dunes::getShaderPath() + "zpass/zpass.frag" });
+	m_zPassProgram->link();
 
 	m_screenMaterial->setProgram(m_screenProgram);
 	m_screenMaterial->setTexture(0, m_terrainDiffuseMap);
@@ -123,7 +128,12 @@ void DunesPipeline::render(const Scene& t_scene, const Camera& t_camera)
 
 	m_terrainFrameBuffer->enableDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	terrainRendererPass(t_scene);
+	//m_terrainFrameBuffer->disableDrawBuffers();
+	//meshRendererZPass(t_scene);
+	//m_terrainFrameBuffer->enableDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	//glDepthFunc(GL_LEQUAL);
 	meshRendererPass(t_scene);
+	//glDepthFunc(GL_LESS);
 	m_terrainFrameBuffer->disableDrawBuffers();
 
 	m_waterFrameBuffer->bind();
@@ -262,6 +272,46 @@ void DunesPipeline::meshRendererPass(const Scene& t_scene)
 		}
 	}
 }
+
+void DunesPipeline::meshRendererZPass(const Scene& t_scene)
+{
+	const gl::Program* activeProgram{ m_zPassProgram.get() };
+	activeProgram->use();
+	
+	const auto meshRenderers{ t_scene.getComponents<Transform, MeshRenderer>() };
+	
+	for (const entt::entity entity : meshRenderers)
+	{
+		const MeshRenderer& meshRenderer{ meshRenderers.get<const MeshRenderer>(entity) };
+
+		if (meshRenderer.hasMesh() && meshRenderer.getMaterialCount() > 0)
+		{
+			const Transform& transform{ meshRenderers.get<const Transform>(entity) };
+
+			m_data.modelMatrix = transform.getModelMatrix();
+			m_data.inverseModelMatrix = transform.getInverseModelMatrix();
+			m_data.modelViewMatrix = m_data.viewMatrix * m_data.modelMatrix;
+			m_data.inverseModelViewMatrix = m_data.inverseModelMatrix * m_data.inverseViewMatrix;
+			m_data.userID = meshRenderer.getUserID();
+			m_pipelineBuffer->upload(reinterpret_cast<char*>(&m_data.modelMatrix), static_cast<int>(offsetof(uniform::DunesPipeline, modelMatrix)), 4 * sizeof(glm::mat4) + sizeof(glm::ivec4));
+
+			const Mesh& mesh{ *meshRenderer.getMesh() };
+			mesh.bind();
+
+			const std::vector<std::shared_ptr<Material>>& materials{ meshRenderer.getMaterials() };
+
+			for (int i{ 0 }, j{ 0 }; i < mesh.getSubMeshCount(); ++i, j = std::min(j + 1, meshRenderer.getMaterialCount() - 1))
+			{
+				const SubMesh& subMesh{ mesh.getSubMesh(i) };
+				const long long int offset{ subMesh.getFirstIndex() * static_cast<long long int>(sizeof(int)) };
+
+				GL_CHECK_ERROR(glDrawElementsInstancedBaseInstance(subMesh.getDrawMode(), subMesh.getIndexCount(), GL_UNSIGNED_INT, reinterpret_cast<void*>(offset),
+							   meshRenderer.getInstanceCount(), static_cast<GLuint>(meshRenderer.getBaseInstance())));
+			}
+		}
+	}
+}
+
 
 void DunesPipeline::terrainRendererPass(const Scene& t_scene)
 {

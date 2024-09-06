@@ -1,5 +1,5 @@
 #version 460 core
-
+layout(early_fragment_tests) in;
 // Constants
 const int FOG_MODE_NONE = 0;
 const int FOG_MODE_LINEAR = 1;

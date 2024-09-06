@@ -67,6 +67,7 @@ public:
 private:
 	// Functionality
 	void setup(const Scene& t_scene, const Camera& t_camera);
+	void meshRendererZPass(const Scene& t_scene);
 	void meshRendererPass(const Scene& t_scene);
 	void terrainRendererPass(const Scene& t_scene);
 	void waterRendererPass(const Scene& t_scene);
@@ -85,6 +86,7 @@ private:
 	std::shared_ptr<sthe::gl::Texture2D> m_depthMap;
 	std::shared_ptr<sthe::CustomMaterial> m_screenMaterial;
 	std::shared_ptr<sthe::gl::Program> m_screenProgram;
+	std::shared_ptr<sthe::gl::Program> m_zPassProgram;
 
 	std::shared_ptr<sthe::gl::Texture2D> m_waterDiffuseMap;
 	std::shared_ptr<sthe::gl::Texture2D> m_waterPositionOffsetMap;
