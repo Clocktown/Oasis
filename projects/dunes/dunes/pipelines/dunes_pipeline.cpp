@@ -122,8 +122,8 @@ void DunesPipeline::render(const Scene& t_scene, const Camera& t_camera)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	m_terrainFrameBuffer->enableDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
-	meshRendererPass(t_scene);
 	terrainRendererPass(t_scene);
+	meshRendererPass(t_scene);
 	m_terrainFrameBuffer->disableDrawBuffers();
 
 	m_waterFrameBuffer->bind();

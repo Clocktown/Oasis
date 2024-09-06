@@ -206,6 +206,7 @@ namespace dunes
 		initializeWindWarping(m_launchParameters, m_simulationParameters);
 		initializeVegetation(m_launchParameters);
 		// TODO: slope Buffer not properly initialized when this runs
+		getVegetationCount(m_launchParameters);
 		vegetation(m_launchParameters, m_simulationParameters);
 		venturi(m_launchParameters);
 		windWarping(m_launchParameters);
@@ -395,6 +396,7 @@ namespace dunes
 
 	void Simulator::setupBuffers()
 	{
+		std::cout << "Setup Buffers\n" << std::endl;
 		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.slabBuffer = m_slabBuffer.getData<float>();
 
@@ -402,7 +404,7 @@ namespace dunes
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
 		const int maxCount = 100000;
-		const int counts[1 + c_numVegetationTypes]{};
+		const int counts[1 + c_numVegetationTypes]{0.f};
 		m_launchParameters.numVegetation = counts[0];
 		m_launchParameters.maxVegetation = maxCount;
 		m_launchParameters.vegetationGridSize1D = counts[0] == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(counts[0]) / static_cast<float>(m_launchParameters.blockSize1D)));
@@ -476,6 +478,11 @@ namespace dunes
 		std::filesystem::path models[c_numVegetationTypes]{ resourcePath / "models" / "sphere.obj",
 															resourcePath / "models" / "sphere.obj",
 			                                                resourcePath / "models" / "sphere.obj" };
+		for (int i = 0; i < c_numVegetationTypes; ++i) {
+			if (m_vegPrefabs.gameObjects[i]) {
+				getScene().removeGameObject(*m_vegPrefabs.gameObjects[i]);
+			}
+		}
 		for (int i{ 0 }; i < c_numVegetationTypes; ++i)
 		{
 			sthe::Importer importer{ models[i].string() };
