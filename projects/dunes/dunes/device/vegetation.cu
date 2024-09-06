@@ -396,7 +396,7 @@ namespace dunes {
 
 		const float2 heights{ vegetationHeightArray.read(cell) }; // .x is height without Veg, .y is height with Veg
 		float2 shadow{ 0.f, 0.f }; // .x is shadow at ground level, .y is shadow at top of vegetation
-		const float2 lightDirection = { -1.f, -1.f };
+		const float2 lightDirection = { -sqrtf(2.f), -sqrtf(2.f) };
 
 		const float2 position{ make_float2(cell) + 0.5f };
 
@@ -411,8 +411,8 @@ namespace dunes {
 				const float2 angle{ heightsDifference.x / distance, heightsDifference.y / distance };
 
 				shadow += float2{ 
-					clamp(expf(-5.f * angle.x * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f), 
-					clamp(expf(-5.f * angle.y * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f)
+					clamp(expf(-2.f * angle.x * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f), 
+					clamp(expf(-2.f * angle.y * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f)
 				};
 			}
 		}
