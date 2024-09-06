@@ -34,6 +34,8 @@ namespace dunes
 		m_sedimentMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_fluxMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_terrainMoistureMap{ std::make_shared<sthe::gl::Texture2D>() },
+		m_shadowMap{ std::make_shared<sthe::gl::Texture2D>() },
+		m_vegetationHeightMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_textureDescriptor{},
 		m_isAwake{ false },
 		m_isPaused{ false },
@@ -117,12 +119,16 @@ namespace dunes
 		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
 		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
 		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 3, m_sedimentMap);
+		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 4, m_shadowMap);
+		m_waterMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 5, m_vegetationHeightMap);
 
 		m_waterRimMaterial->setProgram(m_waterRimProgram);
 		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0, m_windMap);
 		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 1, m_resistanceMap);
 		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 2, m_terrainMoistureMap);
 		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 3, m_sedimentMap);
+		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 4, m_shadowMap);
+		m_waterRimMaterial->setTexture(STHE_TEXTURE_UNIT_TERRAIN_CUSTOM0 + 5, m_vegetationHeightMap);
 
 		m_textureDescriptor.addressMode[0] = cudaAddressModeWrap;
 		m_textureDescriptor.addressMode[1] = cudaAddressModeWrap;
@@ -381,6 +387,8 @@ namespace dunes
 		m_fluxMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
 		m_sedimentMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R32F, false);
 		m_terrainMoistureMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R32F, false);
+		m_shadowMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
+		m_vegetationHeightMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
 	}
 
 	void Simulator::setupArrays()
@@ -392,6 +400,8 @@ namespace dunes
 		m_fluxArray.reinitialize(*m_fluxMap);
 		m_sedimentArray.reinitialize(*m_sedimentMap);
 		m_terrainMoistureArray.reinitialize(*m_terrainMoistureMap);
+		m_vegetationHeightArray.reinitialize(*m_vegetationHeightMap);
+		m_shadowArray.reinitialize(*m_shadowMap);
 	}
 
 	void Simulator::setupBuffers()
@@ -476,8 +486,8 @@ namespace dunes
 	{
 		std::filesystem::path resourcePath{ getResourcePath() };
 		std::filesystem::path models[c_numVegetationTypes]{ resourcePath / "models" / "sphere.obj",
-															resourcePath / "models" / "sphere.obj",
-			                                                resourcePath / "models" / "sphere.obj" };
+															resourcePath / "models" / "cube.obj",
+			                                                resourcePath / "models" / "cube.obj" };
 		for (int i = 0; i < c_numVegetationTypes; ++i) {
 			if (m_vegPrefabs.gameObjects[i]) {
 				getScene().removeGameObject(*m_vegPrefabs.gameObjects[i]);
@@ -601,6 +611,14 @@ namespace dunes
 		m_launchParameters.terrainMoistureArray.surface = m_terrainMoistureArray.recreateSurface();
 		m_launchParameters.terrainMoistureArray.texture = m_terrainMoistureArray.recreateTexture(m_textureDescriptor);
 
+		m_shadowArray.map();
+		m_launchParameters.shadowArray.surface = m_shadowArray.recreateSurface();
+		m_launchParameters.shadowArray.texture = m_shadowArray.recreateTexture(m_textureDescriptor);
+
+		m_vegetationHeightArray.map();
+		m_launchParameters.vegetationHeightArray.surface = m_vegetationHeightArray.recreateSurface();
+		m_launchParameters.vegetationHeightArray.texture = m_vegetationHeightArray.recreateTexture(m_textureDescriptor);
+
 		m_vegBuffer.map(sizeof(Vegetation));
 		m_launchParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
 
@@ -617,6 +635,8 @@ namespace dunes
 		m_waterVelocityArray.unmap();
 		m_sedimentArray.unmap();
 		m_terrainMoistureArray.unmap();
+		m_shadowArray.unmap();
+		m_vegetationHeightArray.unmap();
 		m_vegBuffer.unmap();
 		m_vegMapBuffer.unmap();
 	}

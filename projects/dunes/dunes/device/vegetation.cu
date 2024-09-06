@@ -34,7 +34,7 @@ namespace dunes {
 
 	}
 
-	__global__ void rasterizeVegetation(const Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid, Buffer<int> vegCount, int maxVegCount, Buffer<uint4> seeds, const Array2D<float2> windArray, const Array2D<float> moistureArray, const Buffer<float> slopeBuffer)
+	__global__ void rasterizeVegetation(const Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid, Buffer<int> vegCount, int maxVegCount, Buffer<uint4> seeds, const Array2D<float2> windArray, const Array2D<float> moistureArray, const Buffer<float> slopeBuffer, Array2D<float2> vegetationHeightArray)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -70,16 +70,20 @@ namespace dunes {
 		wind = wind / (length(wind) + 1e-6f);
 		float typeProbabilities[c_numVegetationTypes] = { c_vegTypes[0].baseSpawnRate, c_vegTypes[1].baseSpawnRate, c_vegTypes[2].baseSpawnRate };
 
+		const float terrainHeight = pos.z;
+		float vegetationHeight = terrainHeight;
+
 		for (int i = xStart; i <= xEnd; ++i) {
 			for (int j = yStart; j <= yEnd; ++j) {
 				const uint2 indices = uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
-				for (unsigned int k = indices.x; k < indices.y && resistance.y < 1.f; ++k) {
+				for (unsigned int k = indices.x; k < indices.y; ++k) {
 					const Vegetation veg = vegBuffer[k];
 					const float density = getVegetationDensity(veg, pos);
 					const bool isAlive = veg.health > 0.f;
 					typeProbabilities[veg.type] += isAlive ? c_vegTypes[veg.type].baseSpawnRate * (c_vegTypes[veg.type].densitySpawnMultiplier * density + c_vegTypes[veg.type].windSpawnMultiplier * fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)) : 0.f;
 					resistance.y += isAlive ? density : 0.f;
 					resistance.w += isAlive ? c_vegTypes[veg.type].humusRate * c_parameters.deltaTime * density : density;
+					vegetationHeight = fmaxf(vegetationHeight, terrainHeight + (isAlive ? density * veg.radius * c_vegTypes[veg.type].height.x : 0.f));
 				}
 			}
 		}
@@ -134,6 +138,7 @@ namespace dunes {
 
 		resistance.y = fminf(resistance.y, 1.f);
 		t_resistanceArray.write(cell, resistance);
+		vegetationHeightArray.write(cell, float2{terrainHeight, vegetationHeight});
 	}
 
 	__global__ void growVegetation(Buffer<Vegetation> vegBuffer, int vegCount, const Array2D<float4> t_terrainArray, const Buffer<uint2> uniformGrid, const Buffer<float> slopeBuffer, const Array2D<float> moistureArray)
@@ -381,6 +386,42 @@ namespace dunes {
 		}
 	}
 
+	__global__ void calculateShadowMap(const Array2D<float2> vegetationHeightArray, Array2D<float2> shadowArray) {
+		const int2 cell{ getGlobalIndex2D() };
+
+		if (isOutside(cell))
+		{
+			return;
+		}
+
+		const float2 heights{ vegetationHeightArray.read(cell) }; // .x is height without Veg, .y is height with Veg
+		float2 shadow{ 0.f, 0.f }; // .x is shadow at ground level, .y is shadow at top of vegetation
+		const float2 lightDirection = { -1.f, -1.f };
+
+		const float2 position{ make_float2(cell) + 0.5f };
+
+		for (int i = -3; i <= 3; ++i) {
+			for (int j = -3; j <= 3; ++j) {
+				const float2 offset = make_float2(int2{ i, j });
+				const float distance = length(offset) * c_parameters.gridScale;
+				float2 nextPosition = position - offset;
+
+				const float nextHeight{ vegetationHeightArray.sample(nextPosition).y }; // .y is the height including Vegetation
+				const float2 heightsDifference{ nextHeight - heights.x, nextHeight - heights.y };
+				const float2 angle{ heightsDifference.x / distance, heightsDifference.y / distance };
+
+				shadow += float2{ 
+					clamp(expf(-5.f * angle.x * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f), 
+					clamp(expf(-5.f * angle.y * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f)
+				};
+			}
+		}
+
+		shadow *= (1.f / 49.f);
+
+		shadowArray.write(cell, clamp(2.f * (shadow - 0.5f), 0, 1)); // Rescaling shadow, because the dot product means that shadow can't be smaller than 0.5 (roughly)
+	}
+
 	void getVegetationCount(LaunchParameters& t_launchParameters) {
 		int counts[1 + c_numVegetationTypes];
 		cudaMemcpy(counts, t_launchParameters.vegetationCount, (1 + c_numVegetationTypes) * sizeof(int), cudaMemcpyDeviceToHost);
@@ -437,6 +478,7 @@ namespace dunes {
 
 		// Fix double humus generation
 		growVegetation<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, count, t_launchParameters.terrainArray, t_launchParameters.uniformGrid, slopeBuffer, t_launchParameters.terrainMoistureArray);
-		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid, t_launchParameters.vegetationCount, t_launchParameters.maxVegetation, t_launchParameters.seedBuffer, t_launchParameters.windArray, t_launchParameters.terrainMoistureArray, slopeBuffer);
+		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid, t_launchParameters.vegetationCount, t_launchParameters.maxVegetation, t_launchParameters.seedBuffer, t_launchParameters.windArray, t_launchParameters.terrainMoistureArray, slopeBuffer, t_launchParameters.vegetationHeightArray);
+		calculateShadowMap << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.vegetationHeightArray, t_launchParameters.shadowArray);
 	}
 }

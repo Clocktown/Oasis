@@ -79,6 +79,8 @@ layout(std140, binding = 4) uniform RenderParametersBuffer
 
 layout(binding = 2) uniform sampler2D t_heightMap;
 layout(binding = 11) uniform sampler2D t_sedimentMap;
+layout(binding = 12) uniform sampler2D t_shadowMap;
+layout(binding = 13) uniform sampler2D t_vegHeightMap;
 
 in Fragment fragment;
 
@@ -90,8 +92,8 @@ layout(binding = 3) uniform sampler2D waterDepthTex; // .r = water surface depth
 out vec4 fragCol;
 
 void main() {
-	vec3 terrainColor = texture(tex, fragment.uv).rgb;
-	fragCol.rgb = terrainColor;
+	vec4 terrainColor = texture(tex, fragment.uv).rgba;
+	fragCol.rgb = terrainColor.rgb;
 	if(renderParameters.waterColor.a < 0.5f) {
 		return;
 	}
@@ -100,6 +102,16 @@ void main() {
 	const vec2 terrainUV = ((1.f/t_water.gridSize) * (1.f/t_water.gridScale) * (t_inverseModelMatrix * vec4(terrainDepth.y, 0.f, terrainDepth.z, 1.f)).xz);
 	const float sediment = 10.f * texture(t_sedimentMap, terrainUV).r;
 	const float terrainHeight = terrainDepth.w;
+
+	const vec2 shadow = texture(t_shadowMap, terrainUV).rg;
+	const vec2 shadowHeights = texture(t_vegHeightMap, terrainUV).rg;
+	const float terrainShadowHeight = (t_inverseModelMatrix * vec4(0, terrainHeight, 0, 1)).y;
+	const float heightDiff = (shadowHeights.y - terrainShadowHeight);
+	const float shadow_t = (shadowHeights.y - shadowHeights.x) > 1e-6f ? clamp(heightDiff / (shadowHeights.y - shadowHeights.x), 0, 1) : 1.f;
+	const float shadowVal = mix(shadow.y, shadow.x, shadow_t);
+	//const float shadowVal = terrainColor.a == 0.f ? 1.f : clamp(exp(0.1f * terrainShadowHeight) * shadow, 0, 1);
+	terrainColor *= (shadowVal);
+
 	const float waterHeight = (t_modelMatrix * vec4(0, dot(texture(t_heightMap, terrainUV).xyzw, vec4(1)), 0, 1)).y;
 	const float t = max(waterHeight - terrainHeight, 0.f);
 	const vec4 waterHighlight = texture(waterTex, fragment.uv);
@@ -109,14 +121,15 @@ void main() {
 
 	const float topDepthInterpolation = min(exp(- (10.f * sediment + 1.f) * texture(tex, fragment.uv).a * t), 1);
 	const vec3 waterSedimentColor = mix(renderParameters.waterColor.rgb, renderParameters.soilColor.rgb, min(sediment, 1.f));
-	terrainColor = mix(mix(vec3(0), waterSedimentColor * terrainColor, topDepthInterpolation), terrainColor, topDepthInterpolation);
-	terrainColor = mix(mix(0.2f * renderParameters.waterColor.rgb, renderParameters.waterColor.rgb, viewDepthInterpolation), terrainColor, viewDepthInterpolation);
+	terrainColor.rgb = mix(mix(vec3(0), waterSedimentColor * terrainColor.rgb, topDepthInterpolation), terrainColor.rgb, topDepthInterpolation);
+	terrainColor.rgb = mix(mix(0.2f * renderParameters.waterColor.rgb, renderParameters.waterColor.rgb, viewDepthInterpolation), terrainColor.rgb, viewDepthInterpolation);
 
 	if(waterDepth.x > 0.f) {
-		fragCol.rgb = (1.f - waterHighlight.a) * terrainColor;//mix(mix(vec3(0,0,1), vec3(0.25,0.25,0), min(10.f * sediment, 1.f)), terrainColor.rgb, min(exp(-d), 1));
+		fragCol.rgb = (1.f - waterHighlight.a) * terrainColor.rgb;//mix(mix(vec3(0,0,1), vec3(0.25,0.25,0), min(10.f * sediment, 1.f)), terrainColor.rgb, min(exp(-d), 1));
 		fragCol.rgb += waterHighlight.a * waterHighlight.rgb;
 	} else {
 		fragCol.rgb = terrainColor.rgb;
 	}
+	//fragCol.rgb = vec3(shadowVal);
 
 }

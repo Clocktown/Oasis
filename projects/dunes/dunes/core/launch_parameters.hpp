@@ -81,6 +81,8 @@ struct LaunchParameters
 	Array2D<float2> waterVelocityArray;
 	Array2D<float>	sedimentArray;
 	Array2D<float> terrainMoistureArray;
+	Array2D<float2> shadowArray;
+	Array2D<float2> vegetationHeightArray;
 	Buffer<float> slabBuffer;
 	Buffer<float> tmpBuffer; // 5 * gridSize.x * gridSize.y
 	Buffer<Vegetation> vegBuffer;
@@ -93,6 +95,8 @@ struct LaunchParameters
 	Buffer<uint2> uniformGrid;
 	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
 	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
+	Buffer<cuComplex> shadowMapKernel;
+	Buffer<cuComplex> shadowMapSmoothed;
 	WindWarping windWarping;
 	Projection projection;
 
