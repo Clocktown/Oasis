@@ -248,8 +248,8 @@ namespace dunes
 			std::shared_ptr<sthe::gl::Program> program;
 			std::shared_ptr<sthe::gl::Buffer> buffer;
 			std::shared_ptr<sthe::gl::Buffer> mapBuffer;
-			std::array<sthe::GameObject*, c_numVegetationTypes> gameObjects{};
-			std::array<std::vector<sthe::MeshRenderer*>, c_numVegetationTypes> meshRenderers{};
+			std::array<sthe::GameObject*, c_maxVegTypeCount> gameObjects{};
+			std::array<std::vector<sthe::MeshRenderer*>, c_maxVegTypeCount> meshRenderers{};
 		} m_vegPrefabs;
 	};
 }

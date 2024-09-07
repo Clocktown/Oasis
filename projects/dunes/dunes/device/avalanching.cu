@@ -8,7 +8,7 @@
 namespace dunes
 {
 
-__global__ void setupAtomicInPlaceAvalanchingKernel(Array2D<float4> t_terrainArray, Buffer<float4> t_terrainBuffer)
+__global__ void setupAtomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -19,7 +19,7 @@ __global__ void setupAtomicInPlaceAvalanchingKernel(Array2D<float4> t_terrainArr
 
 	const int cellIndex{ getCellIndex(cell) };
 
-	t_terrainBuffer[cellIndex] = t_terrainArray.read(cell);
+	t_terrainBuffer[cellIndex] = c_parameters.terrainArray.read(cell);
 }
 
 __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, const Buffer<float> t_reptationBuffer)
@@ -74,7 +74,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, c
 	}
 }
 
-__global__ void finishAtomicInPlaceAvalanchingKernel(Array2D<float4> t_terrainArray, Buffer<float4> t_terrainBuffer)
+__global__ void finishAtomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -85,7 +85,7 @@ __global__ void finishAtomicInPlaceAvalanchingKernel(Array2D<float4> t_terrainAr
 
 	const int cellIndex{ getCellIndex(cell) };
 
-	t_terrainArray.write(cell, t_terrainBuffer[cellIndex]);
+	c_parameters.terrainArray.write(cell, t_terrainBuffer[cellIndex]);
 }
 
 void avalanching(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters)
@@ -93,14 +93,14 @@ void avalanching(const LaunchParameters& t_launchParameters, const SimulationPar
 	Buffer<float4> terrainBuffer{ reinterpret_cast<Buffer<float4>>(t_launchParameters.tmpBuffer) };
 	Buffer<float> reptationBuffer{ t_launchParameters.tmpBuffer + 4 * t_simulationParameters.cellCount };
 
-	setupAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, terrainBuffer);
+	setupAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(terrainBuffer);
 
 	for (int i = 0; i < t_launchParameters.avalancheIterations; ++i)
 	{
 		atomicInPlaceAvalanchingKernel<< <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (terrainBuffer, reptationBuffer);
 	}
 
-	finishAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, terrainBuffer);
+	finishAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(terrainBuffer);
 }
 
 }

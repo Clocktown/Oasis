@@ -16,7 +16,7 @@ __constant__ int2 c_offsets[8]{ int2{ 1, 0 }, int2{ 1, 1 }, int2{ 0, 1 }, int2{ 
 __constant__ float c_distances[8]{ 1.0f, SQRT2, 1.0f, SQRT2, 1.0f, SQRT2, 1.0f, SQRT2 };
 __constant__ float c_rDistances[8]{ 1.0f, RSQRT2, 1.0f, RSQRT2, 1.0f, RSQRT2, 1.0f, RSQRT2 };
 // TODO: Dominance/compatibility Matrix
-__constant__ float c_vegetationMatrix[c_numVegetationTypes][c_numVegetationTypes]{
+__constant__ float c_vegetationMatrix[c_maxVegTypeCount][c_maxVegTypeCount]{
     {1.f, 0.5f, 1.f},
     {2.0f, 1.f, 1.f},
     {1.f, 1.f, 1.f}
@@ -46,7 +46,7 @@ __constant__ float c_vegetationMatrix[c_numVegetationTypes][c_numVegetationTypes
 //	float humusRate;
 //};
 
-__constant__ VegetationType c_vegTypes[c_numVegetationTypes]{
+__constant__ VegetationType c_vegTypes[c_maxVegTypeCount]{
     {
         // Trees or something
         20.f,

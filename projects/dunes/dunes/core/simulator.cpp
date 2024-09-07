@@ -175,7 +175,7 @@ namespace dunes
 		m_simulationParameters.uniformGridScale = { uniformGridScale };
 		m_simulationParameters.rUniformGridScale = { 1.f / uniformGridScale };
 		m_simulationParameters.uniformGridCount = { uniformGridSize.x * uniformGridSize.y };
-		m_simulationParameters.maxVegetation = m_launchParameters.maxVegetation;
+		m_simulationParameters.maxVegCount = m_launchParameters.maxVegCount;
 
 		if (m_launchParameters.fftPlan != 0)
 		{
@@ -212,7 +212,7 @@ namespace dunes
 		initializeWindWarping(m_launchParameters, m_simulationParameters);
 		initializeVegetation(m_launchParameters);
 		// TODO: slope Buffer not properly initialized when this runs
-		getVegetationCount(m_launchParameters);
+		getVegetationCount(m_launchParameters, m_simulationParameters);
 		vegetation(m_launchParameters, m_simulationParameters);
 		venturi(m_launchParameters);
 		windWarping(m_launchParameters);
@@ -269,7 +269,7 @@ namespace dunes
 			}
 
 			m_watches[4].start();
-			getVegetationCount(m_launchParameters);
+			getVegetationCount(m_launchParameters, m_simulationParameters);
 			vegetation(m_launchParameters, m_simulationParameters);
 			m_watches[4].stop();
 			m_watches[0].start();
@@ -314,15 +314,15 @@ namespace dunes
 
 			int userID{ 0 };
 
-			for (int i{ 0 }; i < c_numVegetationTypes; ++i)
+			for (int i{ 0 }; i < c_maxVegTypeCount; ++i)
 			{
 				for (sthe::MeshRenderer* const meshRenderer : m_vegPrefabs.meshRenderers[i])
 				{
-					meshRenderer->setInstanceCount(m_launchParameters.numVegetationTypes[i]);
+					meshRenderer->setInstanceCount(m_launchParameters.vegCountsPerType[i]);
 					meshRenderer->setUserID({ userID, 0, 0, 0 });
 				}
 
-				userID += m_launchParameters.numVegetationTypes[i];
+				userID += m_launchParameters.vegCountsPerType[i];
 			}
 
 			for (int i = 0; i < m_watches.size(); ++i) {
@@ -414,9 +414,9 @@ namespace dunes
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
 		const int maxCount = 100000;
-		const int counts[1 + c_numVegetationTypes]{0.f};
-		m_launchParameters.numVegetation = counts[0];
-		m_launchParameters.maxVegetation = maxCount;
+		const int counts[1 + c_maxVegTypeCount]{0.f};
+		m_launchParameters.vegCount = counts[0];
+		m_launchParameters.maxVegCount = maxCount;
 		m_launchParameters.vegetationGridSize1D = counts[0] == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(counts[0]) / static_cast<float>(m_launchParameters.blockSize1D)));
 
 		m_vegPrefabs.buffer = std::make_shared<sthe::gl::Buffer>(maxCount, sizeof(Vegetation));
@@ -425,9 +425,9 @@ namespace dunes
 		m_vegBuffer.reinitialize(*m_vegPrefabs.buffer);
 		m_vegMapBuffer.reinitialize(*m_vegPrefabs.mapBuffer);
 
-		m_vegCountBuffer.reinitialize(1 + c_numVegetationTypes, sizeof(int));
-		m_vegCountBuffer.upload(counts, 1 + c_numVegetationTypes);
-		m_launchParameters.vegetationCount = m_vegCountBuffer.getData<int>();
+		m_vegCountBuffer.reinitialize(1 + c_maxVegTypeCount, sizeof(int));
+		m_vegCountBuffer.upload(counts, 1 + c_maxVegTypeCount);
+		m_simulationParameters.vegCountBuffer = m_vegCountBuffer.getData<int>();
 
 		std::random_device rd;
 		std::mt19937 gen(rd());
@@ -440,12 +440,12 @@ namespace dunes
 			s.w = gen();
 		}
 		m_seedBuffer.reinitialize(seeds);
-		m_launchParameters.seedBuffer = m_seedBuffer.getData<uint4>();
+		m_simulationParameters.seedBuffer = m_seedBuffer.getData<uint4>();
 
 		m_uniformGrid.reinitialize(m_simulationParameters.uniformGridCount, sizeof(uint2));
-		m_launchParameters.uniformGrid = m_uniformGrid.getData<uint2>();
+		m_simulationParameters.uniformGrid = m_uniformGrid.getData<uint2>();
 		m_keys.reinitialize(maxCount, sizeof(unsigned int));
-		m_launchParameters.keyBuffer = m_keys.getData<unsigned int>();
+		m_simulationParameters.keyBuffer = m_keys.getData<unsigned int>();
 	}
 
 	void Simulator::setUseBilinear(const bool t_useBilinear) {
@@ -485,15 +485,15 @@ namespace dunes
 	void Simulator::setupVegPrefabs()
 	{
 		std::filesystem::path resourcePath{ getResourcePath() };
-		std::filesystem::path models[c_numVegetationTypes]{ resourcePath / "models" / "sphere.obj",
+		std::filesystem::path models[c_maxVegTypeCount]{ resourcePath / "models" / "sphere.obj",
 															resourcePath / "models" / "cube.obj",
 			                                                resourcePath / "models" / "cube.obj" };
-		for (int i = 0; i < c_numVegetationTypes; ++i) {
+		for (int i = 0; i < c_maxVegTypeCount; ++i) {
 			if (m_vegPrefabs.gameObjects[i]) {
 				getScene().removeGameObject(*m_vegPrefabs.gameObjects[i]);
 			}
 		}
-		for (int i{ 0 }; i < c_numVegetationTypes; ++i)
+		for (int i{ 0 }; i < c_maxVegTypeCount; ++i)
 		{
 			sthe::Importer importer{ models[i].string() };
 
@@ -581,49 +581,49 @@ namespace dunes
 		m_simulationParameters.deltaTime = m_launchParameters.timeMode == TimeMode::DeltaTime ? sthe::getApplication().getDeltaTime() : m_fixedDeltaTime;
 		m_simulationParameters.deltaTime *= m_timeScale;
 
-		upload(m_simulationParameters);
-
 		m_terrainArray.map();
-		m_launchParameters.terrainArray.surface = m_terrainArray.recreateSurface();
-		m_launchParameters.terrainArray.texture = m_terrainArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.terrainArray.surface = m_terrainArray.recreateSurface();
+		m_simulationParameters.terrainArray.texture = m_terrainArray.recreateTexture(m_textureDescriptor);
 
 		m_windArray.map();
-		m_launchParameters.windArray.surface = m_windArray.recreateSurface();
-		m_launchParameters.windArray.texture = m_windArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.windArray.surface = m_windArray.recreateSurface();
+		m_simulationParameters.windArray.texture = m_windArray.recreateTexture(m_textureDescriptor);
 
 		m_resistanceArray.map();
-		m_launchParameters.resistanceArray.surface = m_resistanceArray.recreateSurface();
-		m_launchParameters.resistanceArray.texture = m_resistanceArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.resistanceArray.surface = m_resistanceArray.recreateSurface();
+		m_simulationParameters.resistanceArray.texture = m_resistanceArray.recreateTexture(m_textureDescriptor);
 
 		m_fluxArray.map();
-		m_launchParameters.fluxArray.surface = m_fluxArray.recreateSurface();
-		m_launchParameters.fluxArray.texture = m_fluxArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.fluxArray.surface = m_fluxArray.recreateSurface();
+		m_simulationParameters.fluxArray.texture = m_fluxArray.recreateTexture(m_textureDescriptor);
 
 		m_waterVelocityArray.map();
-		m_launchParameters.waterVelocityArray.surface = m_waterVelocityArray.recreateSurface();
-		m_launchParameters.waterVelocityArray.texture = m_waterVelocityArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.velocityArray.surface = m_waterVelocityArray.recreateSurface();
+		m_simulationParameters.velocityArray.texture = m_waterVelocityArray.recreateTexture(m_textureDescriptor);
 
 		m_sedimentArray.map();
-		m_launchParameters.sedimentArray.surface = m_sedimentArray.recreateSurface();
-		m_launchParameters.sedimentArray.texture = m_sedimentArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.sedimentArray.surface = m_sedimentArray.recreateSurface();
+		m_simulationParameters.sedimentArray.texture = m_sedimentArray.recreateTexture(m_textureDescriptor);
 
 		m_terrainMoistureArray.map();
-		m_launchParameters.terrainMoistureArray.surface = m_terrainMoistureArray.recreateSurface();
-		m_launchParameters.terrainMoistureArray.texture = m_terrainMoistureArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.moistureArray.surface = m_terrainMoistureArray.recreateSurface();
+		m_simulationParameters.moistureArray.texture = m_terrainMoistureArray.recreateTexture(m_textureDescriptor);
 
 		m_shadowArray.map();
-		m_launchParameters.shadowArray.surface = m_shadowArray.recreateSurface();
-		m_launchParameters.shadowArray.texture = m_shadowArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.shadowArray.surface = m_shadowArray.recreateSurface();
+		m_simulationParameters.shadowArray.texture = m_shadowArray.recreateTexture(m_textureDescriptor);
 
 		m_vegetationHeightArray.map();
-		m_launchParameters.vegetationHeightArray.surface = m_vegetationHeightArray.recreateSurface();
-		m_launchParameters.vegetationHeightArray.texture = m_vegetationHeightArray.recreateTexture(m_textureDescriptor);
+		m_simulationParameters.vegHeightArray.surface = m_vegetationHeightArray.recreateSurface();
+		m_simulationParameters.vegHeightArray.texture = m_vegetationHeightArray.recreateTexture(m_textureDescriptor);
 
 		m_vegBuffer.map(sizeof(Vegetation));
-		m_launchParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
+		m_simulationParameters.vegBuffer = m_vegBuffer.getData<Vegetation>();
 
 		m_vegMapBuffer.map(sizeof(int));
-		m_launchParameters.vegMapBuffer = m_vegMapBuffer.getData<int>();
+		m_simulationParameters.vegMapBuffer = m_vegMapBuffer.getData<int>();
+
+		upload(m_simulationParameters);
 	}
 
 	void Simulator::unmap()

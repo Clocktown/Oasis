@@ -34,7 +34,7 @@ namespace dunes {
 
 	}
 
-	__global__ void rasterizeVegetation(const Array2D<float4> t_terrainArray, Array2D<float4> t_resistanceArray, Buffer<Vegetation> vegBuffer, const Buffer<uint2> uniformGrid, Buffer<int> vegCount, int maxVegCount, Buffer<uint4> seeds, const Array2D<float2> windArray, const Array2D<float> moistureArray, const Buffer<float> slopeBuffer, Array2D<float2> vegetationHeightArray)
+	__global__ void rasterizeVegetation(const Buffer<float> slopeBuffer)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -43,7 +43,7 @@ namespace dunes {
 			return;
 		}
 
-		float4 resistance = t_resistanceArray.read(cell);
+		float4 resistance = c_parameters.resistanceArray.read(cell);
 		if (resistance.y < 0.f) {
 			return;
 		}
@@ -56,28 +56,28 @@ namespace dunes {
 		const int xEnd = int(gridPosition.x + 0.5f);
 		const int yStart = int(gridPosition.y - 0.5f);
 		const int yEnd = int(gridPosition.y + 0.5f);
-		const float4 terrain = t_terrainArray.read(cell);
+		const float4 terrain = c_parameters.terrainArray.read(cell);
 		const float3 pos{ position.x, position.y, terrain.x + terrain.y + terrain.z };
 		
 		const float terrainThickness = terrain.y + terrain.z;
 		const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 		const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-		const float moisture{ clamp(moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+		const float moisture{ clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 
 		const float slope = 2 * slopeBuffer[getCellIndex(cell)] - 1;
 
-		float2 wind = windArray.read(cell);
+		float2 wind = c_parameters.windArray.read(cell);
 		wind = wind / (length(wind) + 1e-6f);
-		float typeProbabilities[c_numVegetationTypes] = { c_vegTypes[0].baseSpawnRate, c_vegTypes[1].baseSpawnRate, c_vegTypes[2].baseSpawnRate };
+		float typeProbabilities[c_maxVegTypeCount] = { c_vegTypes[0].baseSpawnRate, c_vegTypes[1].baseSpawnRate, c_vegTypes[2].baseSpawnRate };
 
 		const float terrainHeight = pos.z;
 		float vegetationHeight = terrainHeight;
 
 		for (int i = xStart; i <= xEnd; ++i) {
 			for (int j = yStart; j <= yEnd; ++j) {
-				const uint2 indices = uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
+				const uint2 indices = c_parameters.uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
 				for (unsigned int k = indices.x; k < indices.y; ++k) {
-					const Vegetation veg = vegBuffer[k];
+					const Vegetation veg = c_parameters.vegBuffer[k];
 					const float density = getVegetationDensity(veg, pos);
 					const bool isAlive = veg.health > 0.f;
 					typeProbabilities[veg.type] += isAlive ? c_vegTypes[veg.type].baseSpawnRate * (c_vegTypes[veg.type].densitySpawnMultiplier * density + c_vegTypes[veg.type].windSpawnMultiplier * fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)) : 0.f;
@@ -89,7 +89,7 @@ namespace dunes {
 		}
 
 		float probabilitySum = 0.f;
-		for (int i = 0; i < c_numVegetationTypes; ++i) {
+		for (int i = 0; i < c_maxVegTypeCount; ++i) {
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_vegTypes[i].height.y, c_vegTypes[i].maxRadius);
 			const bool waterCompatible = c_vegTypes[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius : terrain.w * c_vegTypes[i].waterResistance <= 0.05f * maxRadius;
 			const bool moistureCompatible = moisture <= c_vegTypes[i].maxMoisture;
@@ -102,18 +102,18 @@ namespace dunes {
 		}
 
 		// TODO: Super simplistic algorithm.
-		if (resistance.y <= 0.25f && *vegCount < maxVegCount) {
+		if (resistance.y <= 0.25f && *c_parameters.vegCountBuffer < c_parameters.maxVegCount) {
 			int idx = getCellIndex(cell);
-			uint4 seed{ seeds[idx] };
+			uint4 seed{ c_parameters.seedBuffer[idx] };
 			random::pcg(seed);
-			seeds[idx] = seed;
+			c_parameters.seedBuffer[idx] = seed;
 			const float xi = random::uniform_float(seed.x);
 			const float baseProbability = c_parameters.deltaTime / c_parameters.cellCount; // TODO: Add a parameter to scale this
 			if (xi < baseProbability * fmaxf(probabilitySum, 1.f)) {
 				const float yi = random::uniform_float(seed.y) * fmaxf(probabilitySum, 1.f);
 				Vegetation veg;
 				veg.type = -1;
-				for (int i = 0; i < c_numVegetationTypes; ++i) {
+				for (int i = 0; i < c_maxVegTypeCount; ++i) {
 					if (yi < typeProbabilities[i]) {
 						veg.type = i;
 						break;
@@ -128,31 +128,31 @@ namespace dunes {
 					const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / c_vegTypes[veg.type].height.y, c_vegTypes[veg.type].maxRadius);
 
 					veg.radius = 0.05f * maxRadius;
-					int oldIndex = atomicAdd(vegCount, 1);
-					if (oldIndex < maxVegCount - 1) {
-						vegBuffer[oldIndex] = veg;
+					int oldIndex = atomicAdd(c_parameters.vegCountBuffer, 1);
+					if (oldIndex < c_parameters.maxVegCount - 1) {
+						c_parameters.vegBuffer[oldIndex] = veg;
 					}
 				}
 			}
 		}
 
 		resistance.y = fminf(resistance.y, 1.f);
-		t_resistanceArray.write(cell, resistance);
-		vegetationHeightArray.write(cell, float2{terrainHeight, vegetationHeight});
+		c_parameters.resistanceArray.write(cell, resistance);
+		c_parameters.vegHeightArray.write(cell, float2{terrainHeight, vegetationHeight});
 	}
 
-	__global__ void growVegetation(Buffer<Vegetation> vegBuffer, int vegCount, const Array2D<float4> t_terrainArray, const Buffer<uint2> uniformGrid, const Buffer<float> slopeBuffer, const Array2D<float> moistureArray)
+	__global__ void growVegetation(int vegCount, const Buffer<float> slopeBuffer)
 	{
 		const int idx = getGlobalIndex1D();
 		if (idx >= vegCount) {
 			return;
 		}
 
-		if (vegBuffer[idx].health <= 0.f || vegBuffer[idx].radius <= 1e-6f) {
-			vegBuffer[idx].health = -1.f;
+		if (c_parameters.vegBuffer[idx].health <= 0.f || c_parameters.vegBuffer[idx].radius <= 1e-6f) {
+			c_parameters.vegBuffer[idx].health = -1.f;
 		}
 		else {
-			Vegetation veg = vegBuffer[idx];
+			Vegetation veg = c_parameters.vegBuffer[idx];
 
 			const float2 gridPos = { veg.pos.x * c_parameters.rGridScale, veg.pos.y * c_parameters.rGridScale };
 			const float2 uniformGridPos = { veg.pos.x * c_parameters.rUniformGridScale, veg.pos.y * c_parameters.rUniformGridScale };
@@ -161,8 +161,8 @@ namespace dunes {
 			const int yStart = int(uniformGridPos.y - 0.5f);
 			const int yEnd = int(uniformGridPos.y + 0.5f);
 			const int2 cell = make_int2(gridPos); // for read from terrainArray if necessary
-			const float4 terrain = t_terrainArray.read(cell);
-			const float moisture = moistureArray.read(cell);
+			const float4 terrain = c_parameters.terrainArray.read(cell);
+			const float moisture = c_parameters.moistureArray.read(cell);
 			const float slope = 2 * slopeBuffer[getCellIndex(cell)] - 1;
 			const float bedrockHeight = terrain.x;
 			const float soilHeight = bedrockHeight + terrain.z;
@@ -177,12 +177,12 @@ namespace dunes {
 
 			for (int i = xStart; i <= xEnd; ++i) {
 				for (int j = yStart; j <= yEnd; ++j) {
-					const uint2 indices = uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
+					const uint2 indices = c_parameters.uniformGrid[getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.uniformGridSize), c_parameters.uniformGridSize)];
 					for (unsigned int k = indices.x; k < indices.y; ++k) {
 						if (k == idx) continue;
 						// TODO: Very adhoc formula. Doesn't really consider the volume. Read literature what they actually do.
-						const float incompatibility = c_vegetationMatrix[veg.type][vegBuffer[k].type];
-						float d = -0.5f * fminf(length(vegBuffer[k].pos - veg.pos) - (veg.radius + vegBuffer[k].radius), 0); // TODO: pos is not centered right now. Maybe have it centered and change height? or compute center here?
+						const float incompatibility = c_vegetationMatrix[veg.type][c_parameters.vegBuffer[k].type];
+						float d = -0.5f * fminf(length(c_parameters.vegBuffer[k].pos - veg.pos) - (veg.radius + c_parameters.vegBuffer[k].radius), 0); // TODO: pos is not centered right now. Maybe have it centered and change height? or compute center here?
 						d /= veg.radius;
 						overlap += incompatibility * d * d;
 					}
@@ -266,21 +266,21 @@ namespace dunes {
 				veg.health = 0.f;
 			}
 			veg.health = clamp(veg.health, 0.f, 1.f);
-			vegBuffer[idx] = veg;
+			c_parameters.vegBuffer[idx] = veg;
 		}
 	}
 
 
 	// temporary random fill
-	__global__ void initVegetation(Buffer<Vegetation> vegBuffer, Buffer<uint4> seeds, int vegCount, Array2D<float4> t_terrainArray) {
+	__global__ void initVegetation(int vegCount) {
 		const int idx = getGlobalIndex1D();
 		if (idx >= vegCount) {
 			return;
 		}
 
-		uint4 seed = seeds[idx];
+		uint4 seed = c_parameters.seedBuffer[idx];
 		random::pcg(seed);
-		seeds[idx] = seed;
+		c_parameters.seedBuffer[idx] = seed;
 
 		Vegetation veg;
 		veg.type = seed.w % 2;
@@ -288,105 +288,105 @@ namespace dunes {
 		veg.health = 1.f;
 		veg.water = 0.f;
 		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
-		const float4 terrain = t_terrainArray.read(vegCell);
+		const float4 terrain = c_parameters.terrainArray.read(vegCell);
 		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };
 		const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / c_vegTypes[veg.type].height.y, c_vegTypes[veg.type].maxRadius);
 
 		veg.radius = 0.05f * maxRadius + 0.95f * maxRadius * random::uniform_float(seed.z);
-		vegBuffer[idx] = veg;
+		c_parameters.vegBuffer[idx] = veg;
 	}
 
-	__global__ void initUniformGrid(Buffer<uint2> uniformGrid) {
+	__global__ void initUniformGrid() {
 		const int idx = getGlobalIndex1D();
 		if (idx >= c_parameters.uniformGridCount) {
 			return;
 		}
 
-		uniformGrid[idx] = { 0,0 };
+		c_parameters.uniformGrid[idx] = { 0,0 };
 	}
 
 	// Also handles deletion of vegetation
-	__global__ void fillKeys(const Buffer<Vegetation> vegBuffer, Buffer<unsigned int> keys, int count, Buffer<int> countBuffer) {
+	__global__ void fillKeys(int count) {
 		const int idx = getGlobalIndex1D();
 		if (idx >= count) {
 			return;
 		}
 
-		const auto pos = vegBuffer[idx].pos;
+		const auto pos = c_parameters.vegBuffer[idx].pos;
 		const int2 uniformCell = make_int2(float2{ pos.x * c_parameters.rUniformGridScale, pos.y * c_parameters.rUniformGridScale });
 		const int uniformIdx = getCellIndex(getWrappedCell(uniformCell, c_parameters.uniformGridSize), c_parameters.uniformGridSize);
 		constexpr unsigned int maxIndex = (unsigned int)-1;
 
-		if (vegBuffer[idx].health < 0.f) {
-			keys[idx] = maxIndex;
-			atomicAdd(countBuffer, -1);
+		if (c_parameters.vegBuffer[idx].health < 0.f) {
+			c_parameters.keyBuffer[idx] = maxIndex;
+			atomicAdd(c_parameters.vegCountBuffer, -1);
 		}
 		else {
-			keys[idx] = uniformIdx;
+			c_parameters.keyBuffer[idx] = uniformIdx;
 		}
 	}
 
-	__global__ void findGridStart(const Buffer<unsigned int> keys, Buffer<uint2> uniformGrid, int count) {
+	__global__ void findGridStart(int count) {
 		const int idx = getGlobalIndex1D();
 		if (idx >= count) {
 			return;
 		}
 
 		const bool isZero = idx == 0;
-		const unsigned int uniformIdxA = keys[idx];
-		const unsigned int uniformIdxB = isZero ? 0 : keys[idx - 1];
+		const unsigned int uniformIdxA = c_parameters.keyBuffer[idx];
+		const unsigned int uniformIdxB = isZero ? 0 : c_parameters.keyBuffer[idx - 1];
 
 		if (isZero || uniformIdxB != uniformIdxA) {
-			uniformGrid[uniformIdxA].x = idx;
+			c_parameters.uniformGrid[uniformIdxA].x = idx;
 		}
 	}
 
-	__global__ void findGridEnd(const Buffer<unsigned int> keys, Buffer<uint2> uniformGrid, int count) {
+	__global__ void findGridEnd(int count) {
 		const int idx = getGlobalIndex1D();
 		if (idx >= count) {
 			return;
 		}
 
 		const bool isLast = idx == (count - 1);
-		const unsigned int uniformIdxA = keys[idx];
-		const unsigned int uniformIdxB = isLast ? 0 : keys[idx + 1];
+		const unsigned int uniformIdxA = c_parameters.keyBuffer[idx];
+		const unsigned int uniformIdxB = isLast ? 0 : c_parameters.keyBuffer[idx + 1];
 
 		if (isLast || uniformIdxB != uniformIdxA) {
-			uniformGrid[uniformIdxA].y = idx + 1;
+			c_parameters.uniformGrid[uniformIdxA].y = idx + 1;
 		}
 	}
 
-	__global__ void prepareVegMapKernel(const Buffer<Vegetation> vegBuffer, Buffer<int> countBuffer, Buffer<int> relMapBuffer)
+	__global__ void prepareVegMapKernel(Buffer<int> relMapBuffer)
 	{
-		const int count{ min(*countBuffer, c_parameters.maxVegetation) };
+		const int count{ min(*c_parameters.vegCountBuffer, c_parameters.maxVegCount) };
 		const int stride{ getGridStride1D() };
 
 		for (int index{ getGlobalIndex1D() }; index < count; index += stride)
 		{
-			relMapBuffer[index] = atomicAdd(countBuffer + 1 + vegBuffer[index].type, 1);
+			relMapBuffer[index] = atomicAdd(c_parameters.vegCountBuffer + 1 + c_parameters.vegBuffer[index].type, 1);
 		}
 	}
 
-	__global__ void vegMapKernel(const Buffer<Vegetation> vegBuffer, Buffer<int> countBuffer, Buffer<int> relMapBuffer, Buffer<int> vegMapBuffer)
+	__global__ void vegMapKernel(Buffer<int> relMapBuffer)
 	{
-		const int count{ min(*countBuffer, c_parameters.maxVegetation) };
+		const int count{ min(*c_parameters.vegCountBuffer, c_parameters.maxVegCount) };
 		const int stride{ getGridStride1D() };
 
-		int offsets[c_numVegetationTypes];
+		int offsets[c_maxVegTypeCount];
 		offsets[0] = 0;
 
-		for (int i{ 1 }; i < c_numVegetationTypes; ++i)
+		for (int i{ 1 }; i < c_maxVegTypeCount; ++i)
 		{
-			offsets[i] = offsets[i - 1] + countBuffer[1 + (i - 1)];
+			offsets[i] = offsets[i - 1] + c_parameters.vegCountBuffer[1 + (i - 1)];
 		}
 
 		for (int index{ getGlobalIndex1D() }; index < count; index += stride)
 		{
-			vegMapBuffer[offsets[vegBuffer[index].type] + relMapBuffer[index]] = index;
+			c_parameters.vegMapBuffer[offsets[c_parameters.vegBuffer[index].type] + relMapBuffer[index]] = index;
 		}
 	}
 
-	__global__ void calculateShadowMap(const Array2D<float2> vegetationHeightArray, Array2D<float2> shadowArray) {
+	__global__ void calculateShadowMap() {
 		const int2 cell{ getGlobalIndex2D() };
 
 		if (isOutside(cell))
@@ -394,7 +394,7 @@ namespace dunes {
 			return;
 		}
 
-		const float2 heights{ vegetationHeightArray.read(cell) }; // .x is height without Veg, .y is height with Veg
+		const float2 heights{ c_parameters.vegHeightArray.read(cell) }; // .x is height without Veg, .y is height with Veg
 		float2 shadow{ 0.f, 0.f }; // .x is shadow at ground level, .y is shadow at top of vegetation
 		const float2 lightDirection = { -sqrtf(2.f), -sqrtf(2.f) };
 
@@ -406,7 +406,7 @@ namespace dunes {
 				const float distance = length(offset) * c_parameters.gridScale;
 				float2 nextPosition = position - offset;
 
-				const float nextHeight{ vegetationHeightArray.sample(nextPosition).y }; // .y is the height including Vegetation
+				const float nextHeight{ c_parameters.vegHeightArray.sample(nextPosition).y }; // .y is the height including Vegetation
 				const float2 heightsDifference{ nextHeight - heights.x, nextHeight - heights.y };
 				const float2 angle{ heightsDifference.x / distance, heightsDifference.y / distance };
 
@@ -419,66 +419,66 @@ namespace dunes {
 
 		shadow *= (1.f / 49.f);
 
-		shadowArray.write(cell, clamp(2.f * (shadow - 0.5f), 0, 1)); // Rescaling shadow, because the dot product means that shadow can't be smaller than 0.5 (roughly)
+		c_parameters.shadowArray.write(cell, clamp(2.f * (shadow - 0.5f), 0, 1)); // Rescaling shadow, because the dot product means that shadow can't be smaller than 0.5 (roughly)
 	}
 
-	void getVegetationCount(LaunchParameters& t_launchParameters) {
-		int counts[1 + c_numVegetationTypes];
-		cudaMemcpy(counts, t_launchParameters.vegetationCount, (1 + c_numVegetationTypes) * sizeof(int), cudaMemcpyDeviceToHost);
+	void getVegetationCount(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
+		int counts[1 + c_maxVegTypeCount];
+		cudaMemcpy(counts, t_simulationParameters.vegCountBuffer, (1 + c_maxVegTypeCount) * sizeof(int), cudaMemcpyDeviceToHost);
 
-		counts[0] = min(counts[0], t_launchParameters.maxVegetation);
+		counts[0] = min(counts[0], t_launchParameters.maxVegCount);
 		//std::cout << counts[0] << std::endl;
 
-		t_launchParameters.numVegetation = counts[0];
+		t_launchParameters.vegCount = counts[0];
 
-		for (int i{ 0 }; i < c_numVegetationTypes; ++i) 
+		for (int i{ 0 }; i < c_maxVegTypeCount; ++i) 
 		{
-			t_launchParameters.numVegetationTypes[i] = counts[1 + i];
+			t_launchParameters.vegCountsPerType[i] = counts[1 + i];
 		}
 
 		t_launchParameters.vegetationGridSize1D = counts[0] == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(counts[0]) / static_cast<float>(t_launchParameters.blockSize1D)));
 	}
 
 	void initializeVegetation(const LaunchParameters& t_launchParameters) {
-		int count = t_launchParameters.numVegetation;
-		initVegetation << < t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.seedBuffer, count, t_launchParameters.terrainArray);
+		int count = t_launchParameters.vegCount;
+		initVegetation << < t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
 	}
 
 	void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
-		int count = t_launchParameters.numVegetation;
-		initUniformGrid << <t_launchParameters.uniformGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.uniformGrid);
+		int count = t_launchParameters.vegCount;
+		initUniformGrid << <t_launchParameters.uniformGridSize1D, t_launchParameters.blockSize1D >> > ();
 		
 		Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
 		Buffer<int> relMapBuffer{ reinterpret_cast<Buffer<int>>(slopeBuffer + t_simulationParameters.cellCount) };
 
 		if (count > 0) {
-			fillKeys<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, t_launchParameters.keyBuffer, count, t_launchParameters.vegetationCount);
-			thrust::sort_by_key(thrust::device, t_launchParameters.keyBuffer, t_launchParameters.keyBuffer + count, t_launchParameters.vegBuffer);
+			fillKeys<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
+			thrust::sort_by_key(thrust::device, t_simulationParameters.keyBuffer, t_simulationParameters.keyBuffer + count, t_simulationParameters.vegBuffer);
 
 			// memset type counter 0
-			CU_CHECK_ERROR(cudaMemset(t_launchParameters.vegetationCount + 1, 0, c_numVegetationTypes * sizeof(int)));
+			CU_CHECK_ERROR(cudaMemset(t_simulationParameters.vegCountBuffer + 1, 0, c_maxVegTypeCount * sizeof(int)));
 
 			// atomic adds for type counter
 			// return of atomic in tmp buffer for veg id
-			prepareVegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(t_launchParameters.vegBuffer, t_launchParameters.vegetationCount, relMapBuffer);
+			prepareVegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(relMapBuffer);
 			
 			// second pass use relative offset in tmp buffer + global counter offset to write global id in map 
-			vegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(t_launchParameters.vegBuffer, t_launchParameters.vegetationCount, relMapBuffer, t_launchParameters.vegMapBuffer);
+			vegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(relMapBuffer);
 
-			getVegetationCount(t_launchParameters);
-			int diff = count - t_launchParameters.numVegetation;
+			getVegetationCount(t_launchParameters, t_simulationParameters);
+			int diff = count - t_launchParameters.vegCount;
 			if (diff > 0) {
 				//std::cout << "Deleted " << count - t_launchParameters.numVegetation << " plants." << std::endl;
 			}
-			count = t_launchParameters.numVegetation;
+			count = t_launchParameters.vegCount;
 
-			findGridStart<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
-			findGridEnd<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.keyBuffer, t_launchParameters.uniformGrid, count);
+			findGridStart<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
+			findGridEnd<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
 		}
 
 		// Fix double humus generation
-		growVegetation<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (t_launchParameters.vegBuffer, count, t_launchParameters.terrainArray, t_launchParameters.uniformGrid, slopeBuffer, t_launchParameters.terrainMoistureArray);
-		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.resistanceArray, t_launchParameters.vegBuffer, t_launchParameters.uniformGrid, t_launchParameters.vegetationCount, t_launchParameters.maxVegetation, t_launchParameters.seedBuffer, t_launchParameters.windArray, t_launchParameters.terrainMoistureArray, slopeBuffer, t_launchParameters.vegetationHeightArray);
-		calculateShadowMap << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.vegetationHeightArray, t_launchParameters.shadowArray);
+		growVegetation<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count, slopeBuffer);
+		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (slopeBuffer);
+		calculateShadowMap << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
 	}
 }

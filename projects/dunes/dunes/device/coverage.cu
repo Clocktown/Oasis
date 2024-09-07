@@ -10,7 +10,7 @@
 namespace dunes
 {
 
-__global__ void coverageKernel(Array2D<float4> t_terrainArray, unsigned int* coverageMap, float threshold)
+__global__ void coverageKernel(unsigned int* coverageMap, float threshold)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -19,14 +19,14 @@ __global__ void coverageKernel(Array2D<float4> t_terrainArray, unsigned int* cov
 		return;
 	}
 
-	const float4 terrain{ t_terrainArray.read(cell) };
+	const float4 terrain{ c_parameters.terrainArray.read(cell) };
 
 	coverageMap[getCellIndex(cell)] = terrain.y > threshold ? 1 : 0;
 }
 
 float coverage(const LaunchParameters& t_launchParameters, unsigned int* coverageMap, int num_cells, float threshold)
 {
-	coverageKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(t_launchParameters.terrainArray, coverageMap, threshold);
+	coverageKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(coverageMap, threshold);
 	unsigned int result = thrust::reduce(thrust::device, coverageMap, coverageMap + num_cells);
 	return float(result) / float(num_cells);
 }

@@ -9,7 +9,7 @@ namespace dunes
 {
 
 	template<WindShadowMode Mode, bool TUseBilinear>
-	__global__ void windShadowKernel(const Array2D<float4> t_terrainArray, const Array2D<float2> t_windArray, Array2D<float4> t_resistanceArray)
+	__global__ void windShadowKernel()
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -18,15 +18,15 @@ namespace dunes
 			return;
 		}
 
-		const float4 terrain{ t_terrainArray.read(cell) };
-		float4 resistance{ t_resistanceArray.read(cell) };
+		const float4 terrain{ c_parameters.terrainArray.read(cell) };
+		float4 resistance{ c_parameters.resistanceArray.read(cell) };
 		float2 windVelocity;
 		float windSpeed;
 		float2 windDirection;
 
 		if constexpr (Mode == WindShadowMode::Linear)
 		{
-			windVelocity = t_windArray.read(cell);
+			windVelocity = c_parameters.windArray.read(cell);
 			windSpeed = length(windVelocity);
 			windDirection = windVelocity / (windSpeed + 1e-06f);
 		}
@@ -40,14 +40,14 @@ namespace dunes
 		{
 			if constexpr (Mode == WindShadowMode::Curved)
 			{
-				windVelocity = sampleLinearOrNearest<TUseBilinear>(t_windArray, nextPosition);
+				windVelocity = sampleLinearOrNearest<TUseBilinear>(c_parameters.windArray, nextPosition);
 				windSpeed = length(windVelocity);
 				windDirection = windVelocity / (windSpeed + 1e-06f);
 			}
 
 			nextPosition -= windDirection;
 
-			const float4 nextTerrain{ sampleLinearOrNearest<TUseBilinear>(t_terrainArray, nextPosition) };
+			const float4 nextTerrain{ sampleLinearOrNearest<TUseBilinear>(c_parameters.terrainArray, nextPosition) };
 			const float nextHeight{ nextTerrain.x + nextTerrain.y + nextTerrain.z + nextTerrain.w };
 			const float heightDifference{ nextHeight - height };
 			const float angle{ heightDifference / distance };
@@ -63,7 +63,7 @@ namespace dunes
 		resistance.x = clamp((maxAngle - c_parameters.minWindShadowAngle) /
 			(c_parameters.maxWindShadowAngle - c_parameters.minWindShadowAngle), 0.0f, 1.0f);
 
-		t_resistanceArray.write(cell, resistance);
+		c_parameters.resistanceArray.write(cell, resistance);
 	}
 
 	void windShadow(const LaunchParameters& t_launchParameters)
@@ -71,16 +71,16 @@ namespace dunes
 		if (t_launchParameters.windShadowMode == WindShadowMode::Linear)
 		{
 			if (t_launchParameters.useBilinear)
-				windShadowKernel<WindShadowMode::Linear, true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.windArray, t_launchParameters.resistanceArray);
+				windShadowKernel<WindShadowMode::Linear, true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
 			else
-				windShadowKernel<WindShadowMode::Linear, false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.windArray, t_launchParameters.resistanceArray);
+				windShadowKernel<WindShadowMode::Linear, false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
 		}
 		else
 		{
 			if (t_launchParameters.useBilinear)
-				windShadowKernel<WindShadowMode::Curved, true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.windArray, t_launchParameters.resistanceArray);
+				windShadowKernel<WindShadowMode::Curved, true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
 			else
-				windShadowKernel<WindShadowMode::Curved, false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.terrainArray, t_launchParameters.windArray, t_launchParameters.resistanceArray);
+				windShadowKernel<WindShadowMode::Curved, false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
 		}
 	}
 

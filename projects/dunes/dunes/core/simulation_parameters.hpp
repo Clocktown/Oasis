@@ -127,10 +127,31 @@ struct SimulationParameters
 	float rainProbabilityMax{1.f};
 	float iRainProbabilityHeightRange{0.001f};
 
-	int maxVegetation{ 100000 };
+	int maxVegCount{ 100000 };
 
 	float deltaTime{ 1.0f };
 	int timestep = 0;
+
+	Array2D<float4> terrainArray;
+	Array2D<float2> windArray;
+	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = humus
+	Array2D<float4> fluxArray;
+	Array2D<float2> velocityArray;
+	Array2D<float>	sedimentArray;
+	Array2D<float> moistureArray;
+	Array2D<float2> shadowArray;
+	Array2D<float2> vegHeightArray;
+	Buffer<Vegetation> vegBuffer;
+	Buffer<int> vegMapBuffer;
+	Buffer<uint4> seedBuffer;
+	Buffer<int> vegCountBuffer;
+
+	Buffer<uint2> uniformGrid;
+	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
+	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
+
+	Buffer<cuComplex> shadowMapKernel;
+	Buffer<cuComplex> shadowMapSmoothed;
 };
 
 void upload(const SimulationParameters& t_simulationParameters);

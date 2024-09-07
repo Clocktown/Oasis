@@ -74,31 +74,14 @@ struct LaunchParameters
 	int soilAvalancheIterations{ 2 };
 	TimeMode timeMode{ TimeMode::DeltaTime };
 
-	Array2D<float4> terrainArray;
-	Array2D<float2> windArray;
-	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = humus
-	Array2D<float4> fluxArray;
-	Array2D<float2> waterVelocityArray;
-	Array2D<float>	sedimentArray;
-	Array2D<float> terrainMoistureArray;
-	Array2D<float2> shadowArray;
-	Array2D<float2> vegetationHeightArray;
-	Buffer<float> slabBuffer;
-	Buffer<float> tmpBuffer; // 5 * gridSize.x * gridSize.y
-	Buffer<Vegetation> vegBuffer;
-	Buffer<int> vegMapBuffer;
-	Buffer<uint4> seedBuffer;
-	Buffer<int> vegetationCount;
-	int numVegetation{ 0 };
-	int numVegetationTypes[c_numVegetationTypes]{};
-	int maxVegetation{ 100000 };
-	Buffer<uint2> uniformGrid;
-	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
-	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
-	Buffer<cuComplex> shadowMapKernel;
-	Buffer<cuComplex> shadowMapSmoothed;
+	int vegCount{ 0 };
+	int vegCountsPerType[c_maxVegTypeCount]{};
+	int maxVegCount{ 100000 };
+
 	WindWarping windWarping;
 	Projection projection;
+	Buffer<float> slabBuffer;
+	Buffer<float> tmpBuffer; // 5 * gridSize.x * gridSize.y
 
 	cufftHandle fftPlan{ 0 };
 };
