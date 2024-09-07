@@ -129,7 +129,7 @@ namespace dunes {
 
 					veg.radius = 0.05f * maxRadius;
 					int oldIndex = atomicAdd(c_parameters.vegCountBuffer, 1);
-					if (oldIndex < c_parameters.maxVegCount - 1) {
+					if (oldIndex < c_parameters.maxVegCount) {
 						c_parameters.vegBuffer[oldIndex] = veg;
 					}
 				}
@@ -358,7 +358,7 @@ namespace dunes {
 
 	__global__ void prepareVegMapKernel(Buffer<int> relMapBuffer)
 	{
-		const int count{ min(*c_parameters.vegCountBuffer, c_parameters.maxVegCount) };
+		const int count{ *c_parameters.vegCountBuffer };
 		const int stride{ getGridStride1D() };
 
 		for (int index{ getGlobalIndex1D() }; index < count; index += stride)
@@ -369,7 +369,7 @@ namespace dunes {
 
 	__global__ void vegMapKernel(Buffer<int> relMapBuffer)
 	{
-		const int count{ min(*c_parameters.vegCountBuffer, c_parameters.maxVegCount) };
+		const int count{ *c_parameters.vegCountBuffer };
 		const int stride{ getGridStride1D() };
 
 		int offsets[c_maxVegTypeCount];
@@ -425,9 +425,12 @@ namespace dunes {
 	void getVegetationCount(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
 		int counts[1 + c_maxVegTypeCount];
 		cudaMemcpy(counts, t_simulationParameters.vegCountBuffer, (1 + c_maxVegTypeCount) * sizeof(int), cudaMemcpyDeviceToHost);
-
-		counts[0] = min(counts[0], t_launchParameters.maxVegCount);
-		//std::cout << counts[0] << std::endl;
+		
+		if (counts[0] > t_launchParameters.maxVegCount)
+		{
+			counts[0] = t_launchParameters.maxVegCount;
+			cudaMemcpy(t_simulationParameters.vegCountBuffer, counts, sizeof(int), cudaMemcpyHostToDevice);
+		}
 
 		t_launchParameters.vegCount = counts[0];
 
