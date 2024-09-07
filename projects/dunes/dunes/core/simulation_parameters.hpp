@@ -128,6 +128,7 @@ struct SimulationParameters
 	float iRainProbabilityHeightRange{0.001f};
 
 	int maxVegCount{ 100000 };
+	int vegTypeCount{ 3 };
 
 	float deltaTime{ 1.0f };
 	int timestep = 0;
@@ -145,6 +146,8 @@ struct SimulationParameters
 	Buffer<int> vegMapBuffer;
 	Buffer<uint4> seedBuffer;
 	Buffer<int> vegCountBuffer;
+	Buffer<VegetationType> vegTypeBuffer;
+	Buffer<float> vegMatrixBuffer;
 
 	Buffer<uint2> uniformGrid;
 	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count

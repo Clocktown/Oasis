@@ -136,7 +136,6 @@ namespace dunes
 
 		bool queryTimeStepHappened();
 
-
 		// Getters
 		int getTimeStep() const;
 		bool isPaused() const;
@@ -227,6 +226,8 @@ namespace dunes
 		sthe::cu::Buffer m_vegBuffer;
 		sthe::cu::Buffer m_vegMapBuffer;
 		sthe::cu::Buffer m_vegCountBuffer;
+		sthe::cu::Buffer m_vegTypeBuffer;
+		sthe::cu::Buffer m_vegMatrixBuffer;
 		sthe::cu::Buffer m_seedBuffer;
 		sthe::cu::Buffer m_uniformGrid;
 		sthe::cu::Buffer m_keys;
@@ -251,5 +252,82 @@ namespace dunes
 			std::array<sthe::GameObject*, c_maxVegTypeCount> gameObjects{};
 			std::array<std::vector<sthe::MeshRenderer*>, c_maxVegTypeCount> meshRenderers{};
 		} m_vegPrefabs;
+
+		std::array<VegetationType, c_maxVegTypeCount> m_vegTypes
+		{
+			VegetationType
+			{
+				20.0f,
+				0.1f,
+				0.0001f,
+				0.02f,
+				0.0f,
+				100.f,
+				0.2f,
+				{ 1.f, 1.f },
+				0.1f,
+				1.f,
+				0.1f,
+				0.8f,
+				1.f,
+				0.2f,
+				{ 0.75f, 0.25f },
+				0.5f,
+				0.1f,
+				10.f,
+				100.f,
+				0.01f
+            },
+			VegetationType
+			{
+				2.f,
+				0.2f,
+				0.01f,
+				0.1f,
+				0.1f,
+				20.f,
+				0.2f,
+				{2.f, 0.5f},
+				0.05f,
+				2.f,
+				0.3f,
+				0.9f,
+				1.f,
+				0.4f,
+				{0.75f, 0.75f},
+				0.75f,
+				1.f,
+				1000000.f,
+				10.f,
+				0.01f
+        },
+	    VegetationType
+	    {
+				1.f,
+				0.3f,
+				0.01f,
+				0.1f,
+				1.f,
+				30.f,
+				0.1f,
+				{3.f, 1.f},
+				0.1f,
+				1.f,
+				1.0f,
+				1.f,
+				1.f,
+				0.2f,
+				{0.75f, 0.25f},
+				0.25f,
+				0.5f,
+				1.f,
+				0.1f,
+				0.001f
+		    }
+		};
+
+		std::array<std::array<float, c_maxVegTypeCount>, c_maxVegTypeCount> m_vegMatrix{ std::array<float, c_maxVegTypeCount>{ 1.0f, 0.5f, 1.0f }, 
+			                                                                             std::array<float, c_maxVegTypeCount>{ 2.0f, 1.0f, 1.0f }, 
+			                                                                             std::array<float, c_maxVegTypeCount>{ 1.0f, 1.0f, 1.0f } };
 	};
 }

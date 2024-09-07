@@ -406,7 +406,6 @@ namespace dunes
 
 	void Simulator::setupBuffers()
 	{
-		std::cout << "Setup Buffers\n" << std::endl;
 		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.slabBuffer = m_slabBuffer.getData<float>();
 
@@ -429,6 +428,14 @@ namespace dunes
 		m_vegCountBuffer.upload(counts, 1 + c_maxVegTypeCount);
 		m_simulationParameters.vegCountBuffer = m_vegCountBuffer.getData<int>();
 
+		m_vegTypeBuffer.reinitialize(c_maxVegTypeCount, sizeof(VegetationType));
+		m_vegTypeBuffer.upload(m_vegTypes.data(), c_maxVegTypeCount);
+		m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationType>();
+
+		m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(float));
+		m_vegMatrixBuffer.upload(&m_vegMatrix[0][0], c_maxVegTypeCount * c_maxVegTypeCount);
+		m_simulationParameters.vegMatrixBuffer = m_vegMatrixBuffer.getData<float>();
+
 		std::random_device rd;
 		std::mt19937 gen(rd());
 
@@ -439,6 +446,7 @@ namespace dunes
 			s.z = gen();
 			s.w = gen();
 		}
+
 		m_seedBuffer.reinitialize(seeds);
 		m_simulationParameters.seedBuffer = m_seedBuffer.getData<uint4>();
 

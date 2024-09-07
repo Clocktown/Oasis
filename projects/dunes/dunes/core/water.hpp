@@ -26,6 +26,7 @@ struct Water
 }
 
 using namespace sthe;
+
 class Water
 {
 public:
