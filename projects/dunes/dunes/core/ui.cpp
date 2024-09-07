@@ -117,6 +117,12 @@ namespace dunes
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
 
+		for (int i = 0; i < c_maxVegTypeCount; ++i)
+		{
+			m_simulator->setVegetationType(i, m_vegTypes[i]);
+			m_simulator->setVegetationTypeMesh(i, m_vegMeshes[i]);
+		}
+
 		m_simulator->reinitialize(m_gridSize, m_gridScale);
 
 		if (m_calcCoverage) {
@@ -984,6 +990,57 @@ namespace dunes
 				if (ImGui::DragFloat("Wave Depth Scale", &m_waveDepthScale, 0.01f)) {
 					m_simulator->setWaveDepthScale(m_waveDepthScale);
 				}
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Vegetation"))
+			{
+				for (int i = 0; i < c_maxVegTypeCount; ++i)
+				{
+					if (ImGui::TreeNode(("Type " + std::to_string(i)).c_str()))
+					{
+						if (ImGui::Button("Load Mesh"))
+						{
+							char const* filterPatterns[2] = { "*.obj", "*.gltf" };
+							auto input = tinyfd_openFileDialog("Load Mesh", m_vegMeshes[i].c_str(), 1, filterPatterns, nullptr, 0);
+							if (input != nullptr) {
+								m_simulator->setVegetationTypeMesh(i, std::filesystem::path{ input });
+								m_vegMeshes[i] = input;
+							}
+						}
+
+						ImGui::Text(m_vegMeshes[i].c_str());
+				
+						bool changed = ImGui::DragFloat("Max Radius", &m_vegTypes[i].maxRadius, 0.01f);
+						changed |= ImGui::DragFloat("Growth Rate", &m_vegTypes[i].growthRate, 0.01f);
+						changed |= ImGui::DragFloat("Position Adjust Rate", &m_vegTypes[i].positionAdjustRate, 0.01f);
+						changed |= ImGui::DragFloat("Damage Rate", &m_vegTypes[i].damageRate, 0.01f);
+						changed |= ImGui::DragFloat("Shrink Rate", &m_vegTypes[i].shrinkRate, 0.01f);
+						changed |= ImGui::DragFloat("Max Maturity Time", &m_vegTypes[i].maxMaturityTime, 0.01f);
+						changed |= ImGui::DragFloat("Maturity Percentage", &m_vegTypes[i].maturityPercentage, 0.01f);
+						changed |= ImGui::DragFloat2("Height", &m_vegTypes[i].height.x, 0.01f);
+						changed |= ImGui::DragFloat("Water Usage Rate", &m_vegTypes[i].waterUsageRate, 0.01f);
+						changed |= ImGui::DragFloat("Water Storage Capacity", &m_vegTypes[i].waterStorageCapacity, 0.01f);
+						changed |= ImGui::DragFloat("Water Resistance", &m_vegTypes[i].waterResistance, 0.01f);
+						changed |= ImGui::DragFloat("Max Moisture", &m_vegTypes[i].maxMoisture, 0.01f);
+						changed |= ImGui::DragFloat("Soil Compatability", &m_vegTypes[i].soilCompatibility, 0.01f);
+						changed |= ImGui::DragFloat("Sand Compatability", &m_vegTypes[i].sandCompatibility, 0.01f);
+						changed |= ImGui::DragFloat2("Terrain Coverage Resistance", &m_vegTypes[i].terrainCoverageResistance.x, 0.01f);
+						changed |= ImGui::DragFloat("Max Slope", &m_vegTypes[i].maxSlope, 0.01f);
+						changed |= ImGui::DragFloat("Base Spawn Rate", &m_vegTypes[i].baseSpawnRate, 0.01f);
+						changed |= ImGui::DragFloat("Density Spawn Multiplier", &m_vegTypes[i].densitySpawnMultiplier, 0.01f);
+						changed |= ImGui::DragFloat("Wind Spawn Multiplier", &m_vegTypes[i].windSpawnMultiplier, 0.01f);
+						changed |= ImGui::DragFloat("Humus Rate", &m_vegTypes[i].humusRate, 0.01f);
+
+						if (changed)
+						{
+							m_simulator->setVegetationType(i, m_vegTypes[i]);
+						}
+
+						ImGui::TreePop();
+					}
+				}
+
 				ImGui::TreePop();
 			}
 

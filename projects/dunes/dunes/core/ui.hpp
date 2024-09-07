@@ -1,6 +1,7 @@
 #pragma once
 
 #include "simulator.hpp"
+#include "../util/io.hpp"
 #include <sthe/sthe.hpp>
 
 namespace dunes
@@ -157,6 +158,83 @@ namespace dunes
 
 		InitializationParameters m_initializationParameters{};
 		RenderParameters m_renderParameters{};
+
+		std::array<VegetationType, c_maxVegTypeCount> m_vegTypes
+		{
+			VegetationType
+			{
+				20.0f,
+				0.1f,
+				0.0001f,
+				0.02f,
+				0.0f,
+				100.f,
+				0.2f,
+				{ 1.f, 1.f },
+				0.1f,
+				1.f,
+				0.1f,
+				0.8f,
+				1.f,
+				0.2f,
+				{ 0.75f, 0.25f },
+				0.5f,
+				0.1f,
+				10.f,
+				100.f,
+				0.01f
+            },
+			VegetationType
+			{
+				2.f,
+				0.2f,
+				0.01f,
+				0.1f,
+				0.1f,
+				20.f,
+				0.2f,
+				{2.f, 0.5f},
+				0.05f,
+				2.f,
+				0.3f,
+				0.9f,
+				1.f,
+				0.4f,
+				{0.75f, 0.75f},
+				0.75f,
+				1.f,
+				1000000.f,
+				10.f,
+				0.01f
+        },
+	    VegetationType
+	    {
+				1.f,
+				0.3f,
+				0.01f,
+				0.1f,
+				1.f,
+				30.f,
+				0.1f,
+				{3.f, 1.f},
+				0.1f,
+				1.f,
+				1.0f,
+				1.f,
+				1.f,
+				0.2f,
+				{0.75f, 0.25f},
+				0.25f,
+				0.5f,
+				1.f,
+				0.1f,
+				0.001f
+		    }
+		};
+
+		std::array<std::string, c_maxVegTypeCount> m_vegMeshes{ dunes::getResourcePath() + "models\\sphere.obj",
+			                                                    dunes::getResourcePath() + "models\\cube.obj",
+			                                                    dunes::getResourcePath() + "models\\cube.obj" };
 	};
 
 }

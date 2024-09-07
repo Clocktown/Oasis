@@ -141,6 +141,85 @@ namespace dunes
 		m_watches.resize(10);
 		m_watchTimings.resize(10);
 		m_meanWatchTimings.resize(10);
+
+		m_vegPrefabs.files = { dunes::getResourcePath() + "models\\sphere.obj",
+			                   dunes::getResourcePath() + "models\\cube.obj",
+			                   dunes::getResourcePath() + "models\\cube.obj" };
+
+		m_vegTypes = {
+			VegetationType
+			{
+				20.0f,
+				0.1f,
+				0.0001f,
+				0.02f,
+				0.0f,
+				100.f,
+				0.2f,
+				{ 1.f, 1.f },
+				0.1f,
+				1.f,
+				0.1f,
+				0.8f,
+				1.f,
+				0.2f,
+				{ 0.75f, 0.25f },
+				0.5f,
+				0.1f,
+				10.f,
+				100.f,
+				0.01f
+			},
+			VegetationType
+			{
+				2.f,
+				0.2f,
+				0.01f,
+				0.1f,
+				0.1f,
+				20.f,
+				0.2f,
+				{2.f, 0.5f},
+				0.05f,
+				2.f,
+				0.3f,
+				0.9f,
+				1.f,
+				0.4f,
+				{0.75f, 0.75f},
+				0.75f,
+				1.f,
+				1000000.f,
+				10.f,
+				0.01f
+		},
+		VegetationType
+		{
+				1.f,
+				0.3f,
+				0.01f,
+				0.1f,
+				1.f,
+				30.f,
+				0.1f,
+				{3.f, 1.f},
+				0.1f,
+				1.f,
+				1.0f,
+				1.f,
+				1.f,
+				0.2f,
+				{0.75f, 0.25f},
+				0.25f,
+				0.5f,
+				1.f,
+				0.1f,
+				0.001f
+		} };
+
+		m_vegMatrix = { std::array<float, c_maxVegTypeCount>{ 1.0f, 0.5f, 1.0f }, 
+			            std::array<float, c_maxVegTypeCount>{ 2.0f, 1.0f, 1.0f }, 
+			            std::array<float, c_maxVegTypeCount>{ 1.0f, 1.0f, 1.0f } };
 	}
 
 	// Destructor
@@ -492,18 +571,15 @@ namespace dunes
 
 	void Simulator::setupVegPrefabs()
 	{
-		std::filesystem::path resourcePath{ getResourcePath() };
-		std::filesystem::path models[c_maxVegTypeCount]{ resourcePath / "models" / "sphere.obj",
-															resourcePath / "models" / "cube.obj",
-			                                                resourcePath / "models" / "cube.obj" };
 		for (int i = 0; i < c_maxVegTypeCount; ++i) {
 			if (m_vegPrefabs.gameObjects[i]) {
 				getScene().removeGameObject(*m_vegPrefabs.gameObjects[i]);
 			}
 		}
+
 		for (int i{ 0 }; i < c_maxVegTypeCount; ++i)
 		{
-			sthe::Importer importer{ models[i].string() };
+			sthe::Importer importer{ m_vegPrefabs.files[i].string() };
 
 			sthe::GameObject& gameObject{ importer.importModel(getScene(), m_vegPrefabs.program) };
 			gameObject.getTransform().setParent(&getGameObject().getTransform(), false);
@@ -961,6 +1037,48 @@ namespace dunes
 
 	void Simulator::setStopIterations(const int t_stopIterations) {
 		m_stopIterations = t_stopIterations;
+	}
+
+	void Simulator::setVegetationType(const int t_index, const VegetationType& t_type)
+	{
+		m_vegTypes[t_index] = t_type;
+
+		if (m_isAwake)
+		{
+			m_vegTypeBuffer.upload(&t_type, t_index, 1);
+		}
+	}
+
+	void Simulator::setVegetationTypeMesh(const int t_index, const std::filesystem::path& file)
+	{
+		if (m_vegPrefabs.gameObjects[t_index] != nullptr)
+		{
+			getScene().removeGameObject(*m_vegPrefabs.gameObjects[t_index]);
+		}
+
+		m_vegPrefabs.files[t_index] = file;
+
+		if (m_isAwake)
+		{
+			sthe::Importer importer{ file.string() };
+
+			sthe::GameObject& gameObject{ importer.importModel(getScene(), m_vegPrefabs.program) };
+			gameObject.getTransform().setParent(&getGameObject().getTransform(), false);
+
+			m_vegPrefabs.gameObjects[t_index] = &gameObject;
+			m_vegPrefabs.meshRenderers[t_index] = gameObject.getComponentsInChildren<sthe::MeshRenderer>();
+
+			for (sthe::MeshRenderer* const meshRenderer : m_vegPrefabs.meshRenderers[t_index])
+			{
+				meshRenderer->setInstanceCount(m_launchParameters.vegCountsPerType[t_index]);
+			}
+
+			for (auto& material : importer.getMaterials())
+			{
+				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0, m_vegPrefabs.buffer);
+				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0 + 1, m_vegPrefabs.mapBuffer);
+			}
+		}
 	}
 
 	// Getters

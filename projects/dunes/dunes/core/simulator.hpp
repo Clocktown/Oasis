@@ -131,7 +131,9 @@ namespace dunes
 		void setBidirectionalR(const float t_R);
 
 		void setStopIterations(const int t_stopIterations);
-
+		void setVegetationType(const int t_index, const VegetationType& t_type);
+		void setVegetationTypeMesh(const int t_index, const std::filesystem::path& file);
+	
 		void updateWindShadow();
 
 		bool queryTimeStepHappened();
@@ -251,83 +253,10 @@ namespace dunes
 			std::shared_ptr<sthe::gl::Buffer> mapBuffer;
 			std::array<sthe::GameObject*, c_maxVegTypeCount> gameObjects{};
 			std::array<std::vector<sthe::MeshRenderer*>, c_maxVegTypeCount> meshRenderers{};
+			std::array<std::filesystem::path, c_maxVegTypeCount> files{};
 		} m_vegPrefabs;
 
-		std::array<VegetationType, c_maxVegTypeCount> m_vegTypes
-		{
-			VegetationType
-			{
-				20.0f,
-				0.1f,
-				0.0001f,
-				0.02f,
-				0.0f,
-				100.f,
-				0.2f,
-				{ 1.f, 1.f },
-				0.1f,
-				1.f,
-				0.1f,
-				0.8f,
-				1.f,
-				0.2f,
-				{ 0.75f, 0.25f },
-				0.5f,
-				0.1f,
-				10.f,
-				100.f,
-				0.01f
-            },
-			VegetationType
-			{
-				2.f,
-				0.2f,
-				0.01f,
-				0.1f,
-				0.1f,
-				20.f,
-				0.2f,
-				{2.f, 0.5f},
-				0.05f,
-				2.f,
-				0.3f,
-				0.9f,
-				1.f,
-				0.4f,
-				{0.75f, 0.75f},
-				0.75f,
-				1.f,
-				1000000.f,
-				10.f,
-				0.01f
-        },
-	    VegetationType
-	    {
-				1.f,
-				0.3f,
-				0.01f,
-				0.1f,
-				1.f,
-				30.f,
-				0.1f,
-				{3.f, 1.f},
-				0.1f,
-				1.f,
-				1.0f,
-				1.f,
-				1.f,
-				0.2f,
-				{0.75f, 0.25f},
-				0.25f,
-				0.5f,
-				1.f,
-				0.1f,
-				0.001f
-		    }
-		};
-
-		std::array<std::array<float, c_maxVegTypeCount>, c_maxVegTypeCount> m_vegMatrix{ std::array<float, c_maxVegTypeCount>{ 1.0f, 0.5f, 1.0f }, 
-			                                                                             std::array<float, c_maxVegTypeCount>{ 2.0f, 1.0f, 1.0f }, 
-			                                                                             std::array<float, c_maxVegTypeCount>{ 1.0f, 1.0f, 1.0f } };
+		std::array<VegetationType, c_maxVegTypeCount> m_vegTypes{};
+		std::array<std::array<float, c_maxVegTypeCount>, c_maxVegTypeCount> m_vegMatrix{};
 	};
 }
