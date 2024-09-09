@@ -139,7 +139,7 @@ namespace dunes
 		);
 	}
 
-	__global__ void initializeTerrainKernel(Buffer<float> t_slabBuffer, InitializationParameters t_initializationParameters)
+	__global__ void initializeTerrainKernel(InitializationParameters t_initializationParameters)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -191,7 +191,7 @@ namespace dunes
 		c_parameters.resistanceArray.write(cell, resistance);
 
 		const int idx = getCellIndex(cell);
-		t_slabBuffer[idx] = 0.0f;
+		c_parameters.slabBuffer[idx] = 0.0f;
 		c_parameters.moistureArray.write(cell, values[6]);
 		c_parameters.fluxArray.write(cell, { 0.f,0.f,0.f,0.f });
 		c_parameters.velocityArray.write(cell, { 0.f, 0.f });
@@ -278,7 +278,7 @@ namespace dunes
 
 	void initializeTerrain(const LaunchParameters& t_launchParameters, const InitializationParameters& t_initializationParameters)
 	{
-		initializeTerrainKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.slabBuffer, t_initializationParameters);
+		initializeTerrainKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_initializationParameters);
 	}
 
 	void addSandForCoverage(const LaunchParameters& t_launchParameters, int2 res, bool uniform, int radius, float amount) {

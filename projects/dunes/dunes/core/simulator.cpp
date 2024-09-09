@@ -486,7 +486,7 @@ namespace dunes
 	void Simulator::setupBuffers()
 	{
 		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
-		m_launchParameters.slabBuffer = m_slabBuffer.getData<float>();
+		m_simulationParameters.slabBuffer = m_slabBuffer.getData<float>();
 
 		m_tmpBuffer.reinitialize(5 * m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();

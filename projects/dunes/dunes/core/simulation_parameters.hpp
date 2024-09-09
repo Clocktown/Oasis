@@ -148,13 +148,11 @@ struct SimulationParameters
 	Buffer<int> vegCountBuffer;
 	Buffer<VegetationType> vegTypeBuffer;
 	Buffer<float> vegMatrixBuffer;
+	Buffer<float> slabBuffer;
 
 	Buffer<uint2> uniformGrid;
 	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
 	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
-
-	Buffer<cuComplex> shadowMapKernel;
-	Buffer<cuComplex> shadowMapSmoothed;
 };
 
 void upload(const SimulationParameters& t_simulationParameters);

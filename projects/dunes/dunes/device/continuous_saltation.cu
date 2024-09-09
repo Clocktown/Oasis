@@ -12,7 +12,7 @@
 namespace dunes
 {
 
-	__global__ void setupContinuousSaltationKernel(Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
+	__global__ void setupContinuousSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 index{ getGlobalIndex2D() };
 		const int2 stride{ getGridStride2D() };
@@ -48,14 +48,14 @@ namespace dunes
 				const int cellIndex{ getCellIndex(cell) };
 				const float slab{ saltation };
 
-				t_slabBuffer[cellIndex] += slab;
+				c_parameters.slabBuffer[cellIndex] += slab;
 				t_advectedSlabBuffer[cellIndex] = 0.0f;
 			}
 		}
 	}
 
 	template <bool TUseBilinear>
-	__global__ void continuousSaltationKernel(Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
+	__global__ void continuousSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -65,7 +65,7 @@ namespace dunes
 		}
 
 		const int cellIndex{ getCellIndex(cell) };
-		const float slab{ t_slabBuffer[cellIndex] };
+		const float slab{ c_parameters.slabBuffer[cellIndex] };
 
 		const float2 windVelocity{ c_parameters.windArray.read(cell) };
 
@@ -102,7 +102,7 @@ namespace dunes
 	}
 
 	template <bool TUseBilinear>
-	__global__ void continuousBackwardSaltationKernel(Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
+	__global__ void continuousBackwardSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -134,21 +134,21 @@ namespace dunes
 
 					if (weight > 0.0f)
 					{
-						slab += t_slabBuffer[getCellIndex(getWrappedCell(int2{ x,y }))] * weight;
+						slab += c_parameters.slabBuffer[getCellIndex(getWrappedCell(int2{ x,y }))] * weight;
 					}
 				}
 			}
 		}
 		else {
 			const int2 nextCell{ getNearestCell(nextPosition) };
-			slab += t_slabBuffer[getCellIndex(getWrappedCell(nextCell))];
+			slab += c_parameters.slabBuffer[getCellIndex(getWrappedCell(nextCell))];
 		}
 
 
 		t_advectedSlabBuffer[cellIndex] = slab;
 	}
 
-	__global__ void finishContinuousSaltationKernel(Buffer<float> t_slabBuffer, Buffer<float> t_advectedSlabBuffer)
+	__global__ void finishContinuousSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 index{ getGlobalIndex2D() };
 		const int2 stride{ getGridStride2D() };
@@ -195,7 +195,7 @@ namespace dunes
 				terrain.y += slab * depositionProbability;
 
 				c_parameters.terrainArray.write(cell, terrain);
-				t_slabBuffer[cellIndex] = slab * (1.f - depositionProbability); // write updated advectedSlabBuffer back to slabBuffer (ping-pong)
+				c_parameters.slabBuffer[cellIndex] = slab * (1.f - depositionProbability); // write updated advectedSlabBuffer back to slabBuffer (ping-pong)
 				t_advectedSlabBuffer[cellIndex] = waterFactor * slab * (1.f - vegetation) * abrasionMoistureFactor; // Used in Reptation as slabBuffer
 			}
 		}
@@ -203,25 +203,26 @@ namespace dunes
 
 	void continuousSaltation(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters)
 	{
-		setupContinuousSaltationKernel << <t_launchParameters.optimalGridSize2D, t_launchParameters.optimalBlockSize2D >> > (t_launchParameters.slabBuffer, t_launchParameters.tmpBuffer);
+		setupContinuousSaltationKernel << <t_launchParameters.optimalGridSize2D, t_launchParameters.optimalBlockSize2D >> > (t_launchParameters.tmpBuffer);
+
 		if (t_launchParameters.saltationMode == SaltationMode::Backward) {
 			if (t_launchParameters.useBilinear) {
-			continuousBackwardSaltationKernel<true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.slabBuffer, t_launchParameters.tmpBuffer);
+			continuousBackwardSaltationKernel<true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.tmpBuffer);
 			}
 			else {
-				continuousBackwardSaltationKernel<false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.slabBuffer, t_launchParameters.tmpBuffer);
+				continuousBackwardSaltationKernel<false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.tmpBuffer);
 			}
 		}
 		else {
 			if (t_launchParameters.useBilinear) {
-			continuousSaltationKernel<true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.slabBuffer, t_launchParameters.tmpBuffer);
+			continuousSaltationKernel<true> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.tmpBuffer);
 			}
 			else {
-				continuousSaltationKernel<false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.slabBuffer, t_launchParameters.tmpBuffer);
+				continuousSaltationKernel<false> << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (t_launchParameters.tmpBuffer);
 			}
 		}
 
-		finishContinuousSaltationKernel << <t_launchParameters.optimalGridSize2D, t_launchParameters.optimalBlockSize2D >> > (t_launchParameters.slabBuffer, t_launchParameters.tmpBuffer);
+		finishContinuousSaltationKernel << <t_launchParameters.optimalGridSize2D, t_launchParameters.optimalBlockSize2D >> > (t_launchParameters.tmpBuffer);
 	}
 
 }

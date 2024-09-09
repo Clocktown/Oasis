@@ -80,7 +80,6 @@ struct LaunchParameters
 
 	WindWarping windWarping;
 	Projection projection;
-	Buffer<float> slabBuffer;
 	Buffer<float> tmpBuffer; // 5 * gridSize.x * gridSize.y
 
 	cufftHandle fftPlan{ 0 };
