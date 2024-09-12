@@ -68,8 +68,14 @@ namespace dunes {
 
 		float2 wind = c_parameters.windArray.read(cell);
 		wind = wind / (length(wind) + 1e-6f);
-		float typeProbabilities[c_maxVegTypeCount] = { c_parameters.vegTypeBuffer[0].baseSpawnRate, c_parameters.vegTypeBuffer[1].baseSpawnRate, c_parameters.vegTypeBuffer[2].baseSpawnRate };
 
+		float typeProbabilities[c_maxVegTypeCount];
+		
+		for (int i = 0; i < c_parameters.vegTypeCount; ++i)
+		{
+			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate;
+		}
+		
 		const float terrainHeight = pos.z;
 		float vegetationHeight = terrainHeight;
 
@@ -89,7 +95,7 @@ namespace dunes {
 		}
 
 		float probabilitySum = 0.f;
-		for (int i = 0; i < c_maxVegTypeCount; ++i) {
+		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_parameters.vegTypeBuffer[i].height.y, c_parameters.vegTypeBuffer[i].maxRadius);
 			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius : terrain.w * c_parameters.vegTypeBuffer[i].waterResistance <= 0.05f * maxRadius;
 			const bool moistureCompatible = moisture <= c_parameters.vegTypeBuffer[i].maxMoisture;
@@ -113,7 +119,7 @@ namespace dunes {
 				const float yi = random::uniform_float(seed.y) * fmaxf(probabilitySum, 1.f);
 				Vegetation veg;
 				veg.type = -1;
-				for (int i = 0; i < c_maxVegTypeCount; ++i) {
+				for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
 					if (yi < typeProbabilities[i]) {
 						veg.type = i;
 						break;
@@ -375,7 +381,7 @@ namespace dunes {
 		int offsets[c_maxVegTypeCount];
 		offsets[0] = 0;
 
-		for (int i{ 1 }; i < c_maxVegTypeCount; ++i)
+		for (int i{ 1 }; i < c_parameters.vegTypeCount; ++i)
 		{
 			offsets[i] = offsets[i - 1] + c_parameters.vegCountBuffer[1 + (i - 1)];
 		}

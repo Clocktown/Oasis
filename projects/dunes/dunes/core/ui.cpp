@@ -117,6 +117,10 @@ namespace dunes
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
 
+		m_vegMatrix.resize(c_maxVegTypeCount* c_maxVegTypeCount, 1.0f);
+		m_vegMatrix[1 + 0 * c_maxVegTypeCount] = 0.5f;
+		m_vegMatrix[0 + 1 * c_maxVegTypeCount] = 2.0f;
+
 		for (int i = 0; i < c_maxVegTypeCount; ++i)
 		{
 			m_simulator->setVegetationType(i, m_vegTypes[i]);
@@ -995,7 +999,9 @@ namespace dunes
 
 			if (ImGui::TreeNode("Vegetation"))
 			{
-				for (int i = 0; i < c_maxVegTypeCount; ++i)
+				bool matrixUpdate = false;
+
+				for (int i = 0; i < m_vegTypeCount; ++i)
 				{
 					if (ImGui::TreeNode(("Type " + std::to_string(i)).c_str()))
 					{
@@ -1037,8 +1043,35 @@ namespace dunes
 							m_simulator->setVegetationType(i, m_vegTypes[i]);
 						}
 
+						if (ImGui::TreeNode("Dominance"))
+						{
+							for (int j = 0; j < m_vegTypeCount; ++j)
+							{
+								matrixUpdate |= ImGui::DragFloat(("Type " + std::to_string(j)).c_str(), & m_vegMatrix[i * c_maxVegTypeCount + j], 0.01f);
+							}
+
+							ImGui::TreePop();
+						}
+
 						ImGui::TreePop();
 					}
+				}
+
+				// Add
+				if (matrixUpdate)
+				{
+					m_simulator->setVegMatrix(m_vegMatrix);
+				}
+
+				if (ImGui::Button("Add") && m_vegTypeCount < c_maxVegTypeCount)
+				{
+					++m_vegTypeCount;
+					int i = m_simulator->addVegType();
+
+					m_vegMeshes[i] = std::string{};
+					m_vegTypes[i] = VegetationType{};
+
+					std::fill(m_vegMatrix.begin() + i * c_maxVegTypeCount, m_vegMatrix.begin() + (i + 1) * c_maxVegTypeCount, 1.0f);
 				}
 
 				ImGui::TreePop();

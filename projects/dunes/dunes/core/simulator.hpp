@@ -130,16 +130,19 @@ namespace dunes
 		void setBidirectionalBaseTime(const float t_time);
 		void setBidirectionalR(const float t_R);
 
+		int addVegType();
 		void setStopIterations(const int t_stopIterations);
 		void setVegetationType(const int t_index, const VegetationType& t_type);
 		void setVegetationTypeMesh(const int t_index, const std::filesystem::path& file);
-	
+		void setVegMatrix(const std::vector<float>& vegMatrix);
+
 		void updateWindShadow();
 
 		bool queryTimeStepHappened();
 
 		// Getters
 		int getTimeStep() const;
+		int getVegTypeCount() const;
 		bool isPaused() const;
 		std::shared_ptr<sthe::gl::Texture2D> getTerrainMap() const;
 		std::shared_ptr<sthe::gl::Texture2D> getResistanceMap() const;
@@ -257,6 +260,6 @@ namespace dunes
 		} m_vegPrefabs;
 
 		std::array<VegetationType, c_maxVegTypeCount> m_vegTypes{};
-		std::array<std::array<float, c_maxVegTypeCount>, c_maxVegTypeCount> m_vegMatrix{};
+		std::vector<float> m_vegMatrix;
 	};
 }

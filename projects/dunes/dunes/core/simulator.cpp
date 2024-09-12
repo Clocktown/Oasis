@@ -217,9 +217,9 @@ namespace dunes
 				0.001f
 		} };
 
-		m_vegMatrix = { std::array<float, c_maxVegTypeCount>{ 1.0f, 0.5f, 1.0f }, 
-			            std::array<float, c_maxVegTypeCount>{ 2.0f, 1.0f, 1.0f }, 
-			            std::array<float, c_maxVegTypeCount>{ 1.0f, 1.0f, 1.0f } };
+		m_vegMatrix.resize(c_maxVegTypeCount* c_maxVegTypeCount, 1.0f);
+		m_vegMatrix[1 + 0 * c_maxVegTypeCount] = 0.5f;
+		m_vegMatrix[0 + 1 * c_maxVegTypeCount] = 2.0f;
 	}
 
 	// Destructor
@@ -512,7 +512,7 @@ namespace dunes
 		m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationType>();
 
 		m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(float));
-		m_vegMatrixBuffer.upload(&m_vegMatrix[0][0], c_maxVegTypeCount * c_maxVegTypeCount);
+		m_vegMatrixBuffer.upload(m_vegMatrix.data(), c_parameters.vegTypeCount * c_parameters.vegTypeCount);
 		m_simulationParameters.vegMatrixBuffer = m_vegMatrixBuffer.getData<float>();
 
 		std::random_device rd;
@@ -571,13 +571,13 @@ namespace dunes
 
 	void Simulator::setupVegPrefabs()
 	{
-		for (int i = 0; i < c_maxVegTypeCount; ++i) {
+		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
 			if (m_vegPrefabs.gameObjects[i]) {
 				getScene().removeGameObject(*m_vegPrefabs.gameObjects[i]);
 			}
 		}
 
-		for (int i{ 0 }; i < c_maxVegTypeCount; ++i)
+		for (int i{ 0 }; i < c_parameters.vegTypeCount; ++i)
 		{
 			sthe::Importer importer{ m_vegPrefabs.files[i].string() };
 
@@ -1035,6 +1035,23 @@ namespace dunes
 		m_coverageThreshold = t_threshold;
 	}
 
+	int Simulator::addVegType()
+	{
+		int i{ m_simulationParameters.vegTypeCount++ };
+
+		m_vegPrefabs.files[i] = std::filesystem::path{};
+		m_vegTypes[i] = VegetationType{};
+		
+		std::fill(m_vegMatrix.begin() + i * c_maxVegTypeCount, m_vegMatrix.begin() + (i + 1) * c_maxVegTypeCount, 1.0f);
+
+		if (m_isAwake)
+		{
+			m_vegMatrixBuffer.upload(m_vegMatrix);
+		}
+
+		return i;
+	}
+
 	void Simulator::setStopIterations(const int t_stopIterations) {
 		m_stopIterations = t_stopIterations;
 	}
@@ -1081,9 +1098,24 @@ namespace dunes
 		}
 	}
 
+	void Simulator::setVegMatrix(const std::vector<float>& vegMatrix)
+	{
+		m_vegMatrix = vegMatrix;
+
+		if (m_isAwake)
+		{
+			m_vegMatrixBuffer.upload(vegMatrix);
+		}
+	}
+
 	// Getters
 	int Simulator::getTimeStep() const {
 		return m_timeStep;
+	}
+
+	int Simulator::getVegTypeCount() const
+	{
+		return m_simulationParameters.vegTypeCount;
 	}
 
 	bool Simulator::isPaused() const

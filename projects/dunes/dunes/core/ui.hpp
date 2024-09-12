@@ -232,9 +232,12 @@ namespace dunes
 		    }
 		};
 
+		int m_vegTypeCount{ 3 };
 		std::array<std::string, c_maxVegTypeCount> m_vegMeshes{ dunes::getResourcePath() + "models\\sphere.obj",
 			                                                    dunes::getResourcePath() + "models\\cube.obj",
 			                                                    dunes::getResourcePath() + "models\\cube.obj" };
+
+		std::vector<float> m_vegMatrix;
 	};
 
 }
