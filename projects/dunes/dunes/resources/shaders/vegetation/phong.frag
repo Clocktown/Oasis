@@ -1,5 +1,4 @@
 #version 460 core
-layout(early_fragment_tests) in;
 // Constants
 const int FOG_MODE_NONE = 0;
 const int FOG_MODE_LINEAR = 1;
@@ -77,7 +76,6 @@ layout(std140, binding = 0) uniform PipelineBuffer
 layout(binding = 2) uniform sampler2D t_diffuseMap;
 layout(binding = 3) uniform sampler2D t_normalMap;
 
-layout(early_fragment_tests) in;
 in Fragment fragment;
 flat in mat3 tbnMatrix;
 
@@ -115,14 +113,14 @@ float getFogIntensity(const float t_viewDistance)
 	return clamp(fogIntensity, 0.0f, 1.0f);
 }
 
-vec3 getDiffuseColor()
+vec4 getDiffuseColor()
 {
 	if (t_material.hasDiffuseMap)
 	{
-		return t_material.diffuseColor * texture(t_diffuseMap, fragment.uv).rgb;
+		return vec4(t_material.diffuseColor, 1.f) * texture(t_diffuseMap, fragment.uv).rgba;
 	}
 
-	return t_material.diffuseColor;
+	return vec4(t_material.diffuseColor, 1.f);
 }
 
 vec3 getSpecularColor()
@@ -143,13 +141,18 @@ vec3 getNormal()
 
 void main()
 {
-	const vec3 diffuseColor = getDiffuseColor();
+	const vec4 diffuseColorA = getDiffuseColor();
+	if(diffuseColorA.a < 0.5f) {
+		discard;
+	}
+	const vec3 diffuseColor = diffuseColorA.rgb;
 	const vec3 specularColor = getSpecularColor();
-	const vec3 normal = getNormal();
+	const vec3 oNormal = getNormal();
 
 	const vec3 viewVector = t_inverseViewMatrix[3].xyz - fragment.position;
 	const float viewDistance = length(viewVector);
 	const vec3 viewDirection = viewVector / (viewDistance + EPSILON);
+	const vec3 normal = dot(oNormal, viewVector) < 0.f ? -oNormal : oNormal;
 
 
 
@@ -198,6 +201,7 @@ void main()
 			}
 		}
 
+		const vec3 normal = dot(normal, lightDirection) < 0.f ? -normal : normal;
 		const vec3 reflection = reflect(-lightDirection, normal);
 		const float cosPhi = max(dot(normal, lightDirection), 0.0f);
 		const float cosPsiN = t_material.shininess > 0.0f ? pow(max(dot(reflection, viewDirection), 0.0f), t_material.shininess) : 0.0f;

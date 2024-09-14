@@ -1,4 +1,5 @@
 #include <dunes/core/water.hpp>
+#include <dunes/core/ui.hpp>
 #include "dunes_pipeline.hpp"
 #include <dunes/components/water_renderer.hpp>
 #include <sthe/config/debug.hpp>
@@ -127,12 +128,15 @@ void DunesPipeline::render(const Scene& t_scene, const Camera& t_camera)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	m_terrainFrameBuffer->enableDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
+	glDisable(GL_CULL_FACE);
+	meshRendererPass(t_scene);
+	glEnable(GL_CULL_FACE);
 	terrainRendererPass(t_scene);
 	//m_terrainFrameBuffer->disableDrawBuffers();
 	//meshRendererZPass(t_scene);
 	//m_terrainFrameBuffer->enableDrawBuffers({ GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 });
 	//glDepthFunc(GL_LEQUAL);
-	meshRendererPass(t_scene);
+
 	//glDepthFunc(GL_LESS);
 	m_terrainFrameBuffer->disableDrawBuffers();
 
@@ -210,6 +214,10 @@ void DunesPipeline::setup(const Scene& t_scene, const Camera& t_camera)
 
 void DunesPipeline::meshRendererPass(const Scene& t_scene)
 {
+	const dunes::UI& ui = t_scene.getComponents<dunes::UI>().get<const dunes::UI>(t_scene.getComponents<dunes::UI>().front());
+	if (!ui.render_vegetation) {
+		return;
+	}
 	const Material* activeMaterial{ nullptr };
 	const gl::Program* activeProgram{ nullptr };
 	

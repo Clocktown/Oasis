@@ -52,6 +52,7 @@ struct RenderParameters
 	vec4 waterColor;
 	vec4 humusColor;
 	vec4 wetColor;
+	float shadowStrength;
 };
 
 layout(std140, binding = 0) uniform PipelineBuffer
@@ -94,9 +95,7 @@ out vec4 fragCol;
 void main() {
 	vec4 terrainColor = texture(tex, fragment.uv).rgba;
 	fragCol.rgb = terrainColor.rgb;
-	if(renderParameters.waterColor.a < 0.5f) {
-		return;
-	}
+
 	const vec4 terrainDepth = texture(depthTex, fragment.uv);
 	const vec2 waterDepth = texture(waterDepthTex, fragment.uv).rg;
 	const vec2 terrainUV = ((1.f/t_water.gridSize) * (1.f/t_water.gridScale) * (t_inverseModelMatrix * vec4(terrainDepth.y, 0.f, terrainDepth.z, 1.f)).xz);
@@ -110,7 +109,9 @@ void main() {
 	const float shadow_t = (shadowHeights.y - shadowHeights.x) > 1e-6f ? clamp(heightDiff / (shadowHeights.y - shadowHeights.x), 0, 1) : 1.f;
 	const float shadowVal = mix(shadow.y, shadow.x, shadow_t);
 	//const float shadowVal = terrainColor.a == 0.f ? 1.f : clamp(exp(0.1f * terrainShadowHeight) * shadow, 0, 1);
-	terrainColor *= (shadowVal);
+	if(terrainColor.a > 0.5f) {
+		terrainColor *= pow(1.f - (renderParameters.shadowStrength * (1.f - shadowVal)), 2.2f);
+	}
 
 	const float waterHeight = (t_modelMatrix * vec4(0, dot(texture(t_heightMap, terrainUV).xyzw, vec4(1)), 0, 1)).y;
 	const float t = max(waterHeight - terrainHeight, 0.f);
@@ -124,7 +125,7 @@ void main() {
 	terrainColor.rgb = mix(mix(vec3(0), waterSedimentColor * terrainColor.rgb, topDepthInterpolation), terrainColor.rgb, topDepthInterpolation);
 	terrainColor.rgb = mix(mix(0.2f * renderParameters.waterColor.rgb, renderParameters.waterColor.rgb, viewDepthInterpolation), terrainColor.rgb, viewDepthInterpolation);
 
-	if(waterDepth.x > 0.f) {
+	if(waterDepth.x > 0.f && renderParameters.waterColor.a > 0.5f) {
 		fragCol.rgb = (1.f - waterHighlight.a) * terrainColor.rgb;//mix(mix(vec3(0,0,1), vec3(0.25,0.25,0), min(10.f * sediment, 1.f)), terrainColor.rgb, min(exp(-d), 1));
 		fragCol.rgb += waterHighlight.a * waterHighlight.rgb;
 	} else {

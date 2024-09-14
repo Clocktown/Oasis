@@ -247,6 +247,7 @@ namespace dunes
 		if (ImGui::TreeNode("Rendering"))
 		{
 			bool dirty = false;
+			ImGui::Checkbox("Render Vegetation", &render_vegetation);
 			dirty |= ImGui::ColorEdit4("Sand Color", glm::value_ptr(m_renderParameters.sandColor));
 			dirty |= ImGui::ColorEdit4("Soil Color", glm::value_ptr(m_renderParameters.soilColor));
 			dirty |= ImGui::ColorEdit4("Humus Color", glm::value_ptr(m_renderParameters.humusColor));
@@ -255,6 +256,7 @@ namespace dunes
 			dirty |= ImGui::ColorEdit4("Water Color", glm::value_ptr(m_renderParameters.waterColor));
 			dirty |= ImGui::ColorEdit4("Wind Shadow Color", glm::value_ptr(m_renderParameters.windShadowColor));
 			dirty |= ImGui::ColorEdit4("Wet Color", glm::value_ptr(m_renderParameters.wetColor));
+			dirty |= ImGui::DragFloat("Shadow/AO Strength", &m_renderParameters.shadowStrength, 0.01f, 0.f, 1.f);
 
 			if (dirty) {
 				m_simulator->setRenderParameters(m_renderParameters);
@@ -513,6 +515,8 @@ namespace dunes
 			m_renderParameters.humusColor = { json["humusColor"][0], json["humusColor"][1], json["humusColor"][2], json["humusColor"][3] };
 			m_renderParameters.waterColor = { json["waterColor"][0], json["waterColor"][1], json["waterColor"][2], json["waterColor"][3] };
 			m_renderParameters.wetColor = { json["wetColor"][0], json["wetColor"][1], json["wetColor"][2], json["wetColor"][3] };
+			m_renderParameters.shadowStrength = { json["shadowStrength"] };
+			render_vegetation = json["renderVegetation"];
 		}
 
 		initializeAll();
@@ -700,6 +704,8 @@ namespace dunes
 			m_renderParameters.wetColor.z,
 			m_renderParameters.wetColor.w
 		};
+		json["shadowStrength"] = m_renderParameters.shadowStrength;
+		json["renderVegetation"] = render_vegetation;
 
 		json["exportMaps"] = m_exportMaps;
 		if (m_exportMaps) {
@@ -1028,6 +1034,7 @@ namespace dunes
 						changed |= ImGui::DragFloat("Water Usage Rate", &m_vegTypes[i].waterUsageRate, 0.01f);
 						changed |= ImGui::DragFloat("Water Storage Capacity", &m_vegTypes[i].waterStorageCapacity, 0.01f);
 						changed |= ImGui::DragFloat("Water Resistance", &m_vegTypes[i].waterResistance, 0.01f);
+						changed |= ImGui::DragFloat("Min Moisture", &m_vegTypes[i].minMoisture, 0.01f);
 						changed |= ImGui::DragFloat("Max Moisture", &m_vegTypes[i].maxMoisture, 0.01f);
 						changed |= ImGui::DragFloat("Soil Compatability", &m_vegTypes[i].soilCompatibility, 0.01f);
 						changed |= ImGui::DragFloat("Sand Compatability", &m_vegTypes[i].sandCompatibility, 0.01f);

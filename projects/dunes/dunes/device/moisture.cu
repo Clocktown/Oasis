@@ -27,7 +27,7 @@ namespace dunes
 		const float moistureRate = lerp(sandMoistureRate, soilMoistureRate, sandFactor);
 
 		const float vegetation = c_parameters.resistanceArray.read(cell).y;
-		const float moistureEvaporationFactor = (1.f - clamp(terrain.w * 10.f, 0.f, 1.f)) * (1.f - 0.75f * vegetation);
+		const float moistureEvaporationFactor = (1.f - clamp(terrain.w * 10.f, 0.f, 1.f)) * (1.f - 0.75f * clamp(vegetation, 0.f, 1.f));
 		terrain.w = terrain.w * exp(- c_parameters.evaporationRate * c_parameters.deltaTime);
 		moisture = moisture * exp(-c_parameters.moistureEvaporationScale * moistureRate * moistureEvaporationFactor * c_parameters.deltaTime);
 

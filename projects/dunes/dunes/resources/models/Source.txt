@@ -1,0 +1,36 @@
+License: https://creativecommons.org/licenses/by/4.0/
+Associated .mtl files and textures linked therein are from the author of the respective .obj file.
+
+Cactus - Aksedeus
+	Cactus2.obj
+https://sketchfab.com/3d-models/lowpoly-cactus-bcb5e7e2e4ab4795a9d43ea06b8d1301#download
+
+Trees - EFX
+	MapleFall.obj
+	PineBillboard.obj
+	Crabapple.obj
+https://sketchfab.com/3d-models/lodbillboard-summer-trees-pack-d88d67f701c1438cbf5098ff27d4e1f2
+
+Trees and bush Pack - EFX
+	TreeSmall.obj
+	tree2.obj
+	pine2.obj
+	pine1.obj
+	MushBig.obj
+	BushSmall2.obj
+	BushSmall.obj
+	BushMed2.obj
+	BushMed.obj
+	BushFlowerSmall.obj
+	BushBig2.obj
+https://sketchfab.com/3d-models/trees-and-bush-pack-lowpoly-f2a25ee70df440c9ab03d57aba2dc3f2#download
+
+Palm Tree - EFX
+	Palmlow.obj
+	Palmlow2.obj
+	Palmlow3.obj
+https://sketchfab.com/3d-models/palm-tree-pack-lowpoly-fd439b0f82c34497aabb21c68ad2fb34
+
+Seaweed - OwenCalingasan
+	seaweed.obj
+https://sketchfab.com/3d-models/seaweed-dec5b256a37f40acb63b0bf30b45d756

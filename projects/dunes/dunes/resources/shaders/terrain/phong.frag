@@ -76,6 +76,7 @@ struct RenderParameters
 	vec4 waterColor;
 	vec4 humusColor;
 	vec4 wetColor;
+	float shadowStrength;
 };
 
 layout(std140, binding = 0) uniform PipelineBuffer

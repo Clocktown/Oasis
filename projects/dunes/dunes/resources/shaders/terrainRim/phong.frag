@@ -77,6 +77,7 @@ struct RenderParameters
 	vec4 waterColor;
 	vec4 humusColor;
 	vec4 wetColor;
+	float shadowStrength;
 };
 
 layout(std140, binding = 0) uniform PipelineBuffer
@@ -204,5 +205,5 @@ void main()
 	}
 
 	fragmentColor.rgb = clamp(fragmentColor.rgb, 0.0f, 1.0f);
-	fragmentColor.a = 1.f;
+	fragmentColor.a = 0.f;
 }

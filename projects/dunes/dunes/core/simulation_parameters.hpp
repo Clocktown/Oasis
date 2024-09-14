@@ -45,6 +45,7 @@ struct VegetationType
 	float waterUsageRate;
 	float waterStorageCapacity;
 	float waterResistance; // How well the plant can handle standing water. >= 1 is a water plant, which follows different rules
+	float minMoisture; // Only used to check if a plant can spawn
 	float maxMoisture; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
 	float soilCompatibility; // controls growth in soil
 	float sandCompatibility; // controls growth in sand

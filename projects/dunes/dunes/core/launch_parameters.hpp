@@ -76,7 +76,7 @@ struct LaunchParameters
 
 	int vegCount{ 0 };
 	int vegCountsPerType[c_maxVegTypeCount]{};
-	int maxVegCount{ 100000 };
+	int maxVegCount{ 1000000 };
 
 	WindWarping windWarping;
 	Projection projection;

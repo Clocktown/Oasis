@@ -98,7 +98,7 @@ namespace dunes {
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_parameters.vegTypeBuffer[i].height.y, c_parameters.vegTypeBuffer[i].maxRadius);
 			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius : terrain.w * c_parameters.vegTypeBuffer[i].waterResistance <= 0.05f * maxRadius;
-			const bool moistureCompatible = moisture <= c_parameters.vegTypeBuffer[i].maxMoisture;
+			const bool moistureCompatible = (moisture <= c_parameters.vegTypeBuffer[i].maxMoisture) && (moisture >= c_parameters.vegTypeBuffer[i].minMoisture);
 			const bool slopeCompatible = slope <= c_parameters.vegTypeBuffer[i].maxSlope;
 			const float soilCompatibility = terrain.y > 0.1f ? c_parameters.vegTypeBuffer[i].sandCompatibility * terrain.y : c_parameters.vegTypeBuffer[i].soilCompatibility * terrain.z;
 			const bool soilCompatible = soilCompatibility > 0.1f;

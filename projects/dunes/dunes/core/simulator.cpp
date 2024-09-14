@@ -142,9 +142,9 @@ namespace dunes
 		m_watchTimings.resize(10);
 		m_meanWatchTimings.resize(10);
 
-		m_vegPrefabs.files = { dunes::getResourcePath() + "models\\sphere.obj",
-			                   dunes::getResourcePath() + "models\\cube.obj",
-			                   dunes::getResourcePath() + "models\\cube.obj" };
+		m_vegPrefabs.files = { dunes::getResourcePath() + "models\\MapleFall.obj",
+			                   dunes::getResourcePath() + "models\\BushFlowerSmall.obj",
+			                   dunes::getResourcePath() + "models\\seaweed.obj" };
 
 		m_vegTypes = {
 			VegetationType
@@ -160,6 +160,7 @@ namespace dunes
 				0.1f,
 				1.f,
 				0.1f,
+				0.2f,
 				0.8f,
 				1.f,
 				0.2f,
@@ -183,6 +184,7 @@ namespace dunes
 				0.05f,
 				2.f,
 				0.3f,
+				0.2f,
 				0.9f,
 				1.f,
 				0.4f,
@@ -206,6 +208,7 @@ namespace dunes
 				0.1f,
 				1.f,
 				1.0f,
+				0.0f,
 				1.f,
 				1.f,
 				0.2f,
@@ -491,7 +494,7 @@ namespace dunes
 		m_tmpBuffer.reinitialize(5 * m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
-		const int maxCount = 100000;
+		const int maxCount = 1000000;
 		const int counts[1 + c_maxVegTypeCount]{0.f};
 		m_launchParameters.vegCount = counts[0];
 		m_launchParameters.maxVegCount = maxCount;

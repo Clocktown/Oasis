@@ -25,6 +25,8 @@ namespace dunes
 		// Functionality
 		void awake();
 		void onGUI();
+
+		bool render_vegetation{ true };
 	private:
 		// Static
 		static inline const char* saltationModes[2]{ "Backward", "Forward" };
@@ -174,6 +176,7 @@ namespace dunes
 				0.1f,
 				1.f,
 				0.1f,
+				0.2f,
 				0.8f,
 				1.f,
 				0.2f,
@@ -197,6 +200,7 @@ namespace dunes
 				0.05f,
 				2.f,
 				0.3f,
+				0.2f,
 				0.9f,
 				1.f,
 				0.4f,
@@ -220,6 +224,7 @@ namespace dunes
 				0.1f,
 				1.f,
 				1.0f,
+				0.f,
 				1.f,
 				1.f,
 				0.2f,
@@ -233,9 +238,9 @@ namespace dunes
 		};
 
 		int m_vegTypeCount{ 3 };
-		std::array<std::string, c_maxVegTypeCount> m_vegMeshes{ dunes::getResourcePath() + "models\\sphere.obj",
-			                                                    dunes::getResourcePath() + "models\\cube.obj",
-			                                                    dunes::getResourcePath() + "models\\cube.obj" };
+		std::array<std::string, c_maxVegTypeCount> m_vegMeshes{ dunes::getResourcePath() + "models\\MapleFall.obj",
+			                                                    dunes::getResourcePath() + "models\\BushFlowerSmall.obj",
+			                                                    dunes::getResourcePath() + "models\\seaweed.obj" };
 
 		std::vector<float> m_vegMatrix;
 	};
