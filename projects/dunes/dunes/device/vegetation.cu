@@ -185,6 +185,8 @@ namespace dunes {
 			const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 			const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
 			const float relativeMoisture{ clamp(moisture / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+			const float2 shadowHeights = c_parameters.vegHeightArray.read(cell);
+			const float2 shadow = c_parameters.shadowArray.read(cell);
 
 			float overlap = 0.f;
 
@@ -251,8 +253,16 @@ namespace dunes {
 			const float waterDamage = isWaterPlant ? 0.f : waterRate / (1.f - c_parameters.vegTypeBuffer[veg.type].waterResistance);
 			const float waterGrowth = isWaterPlant ? 1.f : fmaxf(-waterRate / c_parameters.vegTypeBuffer[veg.type].waterResistance, 0.f);
 
+			// Light conditions
+			const float plantShadowHeight = shadowHeights.x + plantHeight;
+			const float heightDiff = (shadowHeights.y - plantShadowHeight);
+			const float shadow_t = (shadowHeights.y - shadowHeights.x) > 1e-6f ? clamp(heightDiff / (shadowHeights.y - shadowHeights.x), 0.f, 1.f) : 1.f;
+			const float shadowVal = lerp(shadow.y, shadow.x, shadow_t) * (isWaterPlant ? expf(-0.1f*terrain.w) : 1.f);
+			const float lightIntervalMax = 0.5f * (c_parameters.vegTypeBuffer[veg.type].lightConditions.x + c_parameters.vegTypeBuffer[veg.type].lightConditions.y);
+			const float shadowGrowth = 1.f - 2.f * abs(shadowVal - lightIntervalMax) / (c_parameters.vegTypeBuffer[veg.type].lightConditions.y - c_parameters.vegTypeBuffer[veg.type].lightConditions.x);
+
 			// Max radius based on neighborhood and terrain
-			const float baseMaxRadius = fmaxf(1.f - overlap, 0.f) * fminf(fmaxf(veg.pos.z - bedrockHeight, 0.f) / c_parameters.vegTypeBuffer[veg.type].height.y, c_parameters.vegTypeBuffer[veg.type].maxRadius);
+			const float baseMaxRadius = fmaxf(1.f - overlap, 0.f) * fmaxf(shadowGrowth, 0.f) * fminf(fmaxf(veg.pos.z - bedrockHeight, 0.f) / c_parameters.vegTypeBuffer[veg.type].height.y, c_parameters.vegTypeBuffer[veg.type].maxRadius);
 			const float waterMaxRadius = fminf(baseMaxRadius, fmaxf((waterLevel - veg.pos.z) / c_parameters.vegTypeBuffer[veg.type].height.x, 0.f));
 			const float maxRadius = isWaterPlant ? waterMaxRadius : baseMaxRadius;
 
@@ -265,8 +275,8 @@ namespace dunes {
 			const float radiusRate = radiusDamage > 0.f ? 0.f : 1.f;
 
 			// Calculate growth and health
-			const float growthRate = radiusRate * slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_parameters.vegTypeBuffer[veg.type].growthRate;
-			veg.health -= c_parameters.vegTypeBuffer[veg.type].damageRate * c_parameters.deltaTime * (fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage + radiusDamage);
+			const float growthRate = fmaxf(shadowGrowth, 0.f) * radiusRate * slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * c_parameters.vegTypeBuffer[veg.type].growthRate;
+			veg.health -= c_parameters.vegTypeBuffer[veg.type].damageRate * c_parameters.deltaTime * (fmaxf(-shadowGrowth, 0.f) + fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage + radiusDamage);
 			// TODO: maybe also a constant rate?
 			veg.health += growthRate;
 

@@ -170,7 +170,7 @@ namespace dunes
 				10.f,
 				100.f,
 				0.01f,
-				{0.3f, 0.0f}
+				{0.3f, 1.7f}
             },
 			VegetationType
 			{
@@ -195,7 +195,7 @@ namespace dunes
 				1000000.f,
 				10.f,
 				0.01f,
-				{0.1f, 0.8f}
+				{0.0f, 0.75f}
         },
 	    VegetationType
 	    {
@@ -206,21 +206,21 @@ namespace dunes
 				1.f,
 				30.f,
 				0.1f,
-				{3.f, 1.f},
+				{0.5f, 1.f},
 				0.1f,
 				1.f,
 				1.0f,
 				0.f,
 				1.f,
 				1.f,
-				0.2f,
+				1.0f,
 				{0.75f, 0.25f},
 				0.25f,
 				0.5f,
 				1.f,
 				0.1f,
 				0.001f,
-				{0.3f, 1.0f}
+				{0.1f, 0.4f}
 		    } };
 
 		m_vegMatrix.resize(c_maxVegTypeCount * c_maxVegTypeCount, 1.0f);
