@@ -169,8 +169,9 @@ namespace dunes
 				0.1f,
 				10.f,
 				100.f,
-				0.01f
-			},
+				0.01f,
+				{0.3f, 0.0f}
+            },
 			VegetationType
 			{
 				2.f,
@@ -193,10 +194,11 @@ namespace dunes
 				1.f,
 				1000000.f,
 				10.f,
-				0.01f
-		},
-		VegetationType
-		{
+				0.01f,
+				{0.1f, 0.8f}
+        },
+	    VegetationType
+	    {
 				1.f,
 				0.3f,
 				0.01f,
@@ -208,7 +210,7 @@ namespace dunes
 				0.1f,
 				1.f,
 				1.0f,
-				0.0f,
+				0.f,
 				1.f,
 				1.f,
 				0.2f,
@@ -217,10 +219,11 @@ namespace dunes
 				0.5f,
 				1.f,
 				0.1f,
-				0.001f
-		} };
+				0.001f,
+				{0.3f, 1.0f}
+		    } };
 
-		m_vegMatrix.resize(c_maxVegTypeCount* c_maxVegTypeCount, 1.0f);
+		m_vegMatrix.resize(c_maxVegTypeCount * c_maxVegTypeCount, 1.0f);
 		m_vegMatrix[1 + 0 * c_maxVegTypeCount] = 0.5f;
 		m_vegMatrix[0 + 1 * c_maxVegTypeCount] = 2.0f;
 	}
@@ -515,7 +518,7 @@ namespace dunes
 		m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationType>();
 
 		m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(float));
-		m_vegMatrixBuffer.upload(m_vegMatrix.data(), c_parameters.vegTypeCount * c_parameters.vegTypeCount);
+		m_vegMatrixBuffer.upload(m_vegMatrix);
 		m_simulationParameters.vegMatrixBuffer = m_vegMatrixBuffer.getData<float>();
 
 		std::random_device rd;

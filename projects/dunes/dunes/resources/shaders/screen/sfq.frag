@@ -110,7 +110,7 @@ void main() {
 	const float shadowVal = mix(shadow.y, shadow.x, shadow_t);
 	//const float shadowVal = terrainColor.a == 0.f ? 1.f : clamp(exp(0.1f * terrainShadowHeight) * shadow, 0, 1);
 	if(terrainColor.a > 0.5f) {
-		terrainColor *= pow(1.f - (renderParameters.shadowStrength * (1.f - shadowVal)), 2.2f);
+		terrainColor *= pow(1.f - (renderParameters.shadowStrength * (1.f - shadowVal)), 1.f);
 	}
 
 	const float waterHeight = (t_modelMatrix * vec4(0, dot(texture(t_heightMap, terrainUV).xyzw, vec4(1)), 0, 1)).y;

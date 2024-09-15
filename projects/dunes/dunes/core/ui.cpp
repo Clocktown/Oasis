@@ -117,7 +117,7 @@ namespace dunes
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
 
-		m_vegMatrix.resize(c_maxVegTypeCount* c_maxVegTypeCount, 1.0f);
+		m_vegMatrix.resize(c_maxVegTypeCount * c_maxVegTypeCount, 1.0f);
 		m_vegMatrix[1 + 0 * c_maxVegTypeCount] = 0.5f;
 		m_vegMatrix[0 + 1 * c_maxVegTypeCount] = 2.0f;
 
@@ -132,6 +132,7 @@ namespace dunes
 		if (m_calcCoverage) {
 			m_simulator->setupCoverageCalculation();
 		}
+		m_simulator->setVegMatrix(m_vegMatrix);
 	}
 
 	// Functionality

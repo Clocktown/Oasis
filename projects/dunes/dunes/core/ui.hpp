@@ -185,7 +185,8 @@ namespace dunes
 				0.1f,
 				10.f,
 				100.f,
-				0.01f
+				0.01f,
+				{0.3f, 0.0f}
             },
 			VegetationType
 			{
@@ -209,7 +210,8 @@ namespace dunes
 				1.f,
 				1000000.f,
 				10.f,
-				0.01f
+				0.01f,
+				{0.1f, 0.8f}
         },
 	    VegetationType
 	    {
@@ -233,7 +235,8 @@ namespace dunes
 				0.5f,
 				1.f,
 				0.1f,
-				0.001f
+				0.001f,
+				{0.3f, 1.0f}
 		    }
 		};
 

@@ -30,7 +30,7 @@ namespace dunes {
 
 		const float scale = 1.f; // peak vegetation density
 		// gaussian distribution faded toward 0 at veg.radius
-		return  fmaxf(scale * expf(-0.5f * dot(d, covar * d)) -  (length(float2{pos.x - veg.pos.x, pos.y - veg.pos.y}) / c_maxVegetationRadius) * expf(-2.f), 0.f); // interpolate to 0 at global max radius for uniform grid
+		return  fmaxf(scale * expf(-0.5f * dot(d, covar * d)) - (length(float2{pos.x - veg.pos.x, pos.y - veg.pos.y}) / c_maxVegetationRadius) * expf(-2.f), 0.f); // interpolate to 0 at global max radius for uniform grid
 
 	}
 
@@ -70,10 +70,14 @@ namespace dunes {
 		wind = wind / (length(wind) + 1e-6f);
 
 		float typeProbabilities[c_maxVegTypeCount];
+		float typeDensities[c_maxVegTypeCount];
+		float windFactor[c_maxVegTypeCount];
 		
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i)
 		{
 			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate;
+			typeDensities[i] = 0.f;
+			windFactor[i] = 0.f;
 		}
 		
 		const float terrainHeight = pos.z;
@@ -86,7 +90,9 @@ namespace dunes {
 					const Vegetation veg = c_parameters.vegBuffer[k];
 					const float density = getVegetationDensity(veg, pos);
 					const bool isAlive = veg.health > 0.f;
-					typeProbabilities[veg.type] += isAlive ? c_parameters.vegTypeBuffer[veg.type].baseSpawnRate * (c_parameters.vegTypeBuffer[veg.type].densitySpawnMultiplier * density + c_parameters.vegTypeBuffer[veg.type].windSpawnMultiplier * fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)) : 0.f;
+					const bool canReproduce = isAlive && (veg.age > c_parameters.vegTypeBuffer[veg.type].maxMaturityTime);
+					typeDensities[veg.type] += canReproduce ? density : 0.f;
+					windFactor[veg.type] += canReproduce ? fmaxf(1.f - expf(-dot(wind, position - float2{ veg.pos.x, veg.pos.y })), 0.f) : 0.f;
 					resistance.y += isAlive ? density : 0.f;
 					resistance.w += isAlive ? c_parameters.vegTypeBuffer[veg.type].humusRate * c_parameters.deltaTime * density : density;
 					vegetationHeight = fmaxf(vegetationHeight, terrainHeight + (isAlive ? density * veg.radius * c_parameters.vegTypeBuffer[veg.type].height.x : 0.f));
@@ -96,19 +102,20 @@ namespace dunes {
 
 		float probabilitySum = 0.f;
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
+			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate * (1 + c_parameters.vegTypeBuffer[i].densitySpawnMultiplier * fminf(4.f * typeDensities[i], 1.f) + c_parameters.vegTypeBuffer[i].windSpawnMultiplier * fminf(windFactor[i], 1.f));
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_parameters.vegTypeBuffer[i].height.y, c_parameters.vegTypeBuffer[i].maxRadius);
 			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius : terrain.w * c_parameters.vegTypeBuffer[i].waterResistance <= 0.05f * maxRadius;
 			const bool moistureCompatible = (moisture <= c_parameters.vegTypeBuffer[i].maxMoisture) && (moisture >= c_parameters.vegTypeBuffer[i].minMoisture);
 			const bool slopeCompatible = slope <= c_parameters.vegTypeBuffer[i].maxSlope;
 			const float soilCompatibility = terrain.y > 0.1f ? c_parameters.vegTypeBuffer[i].sandCompatibility * terrain.y : c_parameters.vegTypeBuffer[i].soilCompatibility * terrain.z;
 			const bool soilCompatible = soilCompatibility > 0.1f;
-			const float probability = waterCompatible && moistureCompatible && slopeCompatible && soilCompatible ? typeProbabilities[i] : 0.f;
+			const float probability = (typeDensities[i] < 0.25f) && waterCompatible && moistureCompatible && slopeCompatible && soilCompatible ? typeProbabilities[i] : 0.f;
 			typeProbabilities[i] = probabilitySum + probability;
 			probabilitySum += probability;
 		}
 
 		// TODO: Super simplistic algorithm.
-		if (resistance.y <= 0.25f && *c_parameters.vegCountBuffer < c_parameters.maxVegCount) {
+		if (*c_parameters.vegCountBuffer < c_parameters.maxVegCount) {
 			int idx = getCellIndex(cell);
 			uint4 seed{ c_parameters.seedBuffer[idx] };
 			random::pcg(seed);
@@ -416,9 +423,11 @@ namespace dunes {
 				const float2 heightsDifference{ nextHeight - heights.x, nextHeight - heights.y };
 				const float2 angle{ heightsDifference.x / distance, heightsDifference.y / distance };
 
+				const float d = -2.f * fmaxf(dot(offset, lightDirection) * c_parameters.gridScale, 0.f) * pow(distance, -2.f);
+
 				shadow += float2{ 
-					clamp(expf(-2.f * angle.x * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f), 
-					clamp(expf(-2.f * angle.y * fmaxf(dot(offset, lightDirection), 0.f)), 0.f, 1.f)
+					clamp(expf(d * angle.x), 0.f, 1.f),
+					clamp(expf(d * angle.y), 0.f, 1.f)
 				};
 			}
 		}

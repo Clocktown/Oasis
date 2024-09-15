@@ -55,6 +55,7 @@ struct VegetationType
 	float densitySpawnMultiplier;
 	float windSpawnMultiplier;
 	float humusRate;
+	float2 lightConditions; // .x minimum, .y maximum light. Use minimum > maximum  if 0 light should be optimal, use maximum < minimum if full light should be optimal. Otherwise the mean is optimal. Uses the shadow map for regular plants and water height for water plants.
 };
 
 struct Vegetation // needs to be aligned for gl
