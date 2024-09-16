@@ -123,7 +123,7 @@ namespace dunes
 		m_vegMatrix[1 + 0 * c_maxVegTypeCount] = 0.5f;
 		m_vegMatrix[0 + 1 * c_maxVegTypeCount] = 2.0f;
 
-		for (int i = 0; i < c_maxVegTypeCount; ++i)
+		for (int i = 0; i < m_vegTypeCount; ++i)
 		{
 			m_simulator->setVegetationType(i, m_vegTypes[i]);
 			m_simulator->setVegetationTypeMesh(i, m_vegMeshes[i]);
@@ -494,6 +494,26 @@ namespace dunes
 			m_rainProbabilityHeightRange = json["rainProbabilityHeightRange"];
 		}
 
+		std::filesystem::path basePath = std::filesystem::absolute(path).remove_filename();
+
+		if (json.contains("vegTypeCount")) {
+			m_vegTypeCount = json["vegTypeCount"];
+
+			for (int i = 0; i < m_vegTypeCount; ++i) {
+				float* vegTypeF = (float*) & m_vegTypes[i];
+				const auto& js = json["vegTypes"][i];
+				std::filesystem::path meshPath = basePath / js["mesh"];
+				m_vegMeshes[i] = meshPath.string();
+				vegetationNames[i] = js["name"];
+				for (int j = 0; j < js["arr"].size(); ++j) {
+					vegTypeF[j] = js["arr"][j];
+				}
+				for (int j = 0; j < js["dominance"].size(); ++j) {
+					m_vegMatrix[i * c_maxVegTypeCount + j] = js["dominance"][j];
+				}
+			}
+		}
+
 		m_timeMode = getIndexFromNamedArray(timeModes, IM_ARRAYSIZE(timeModes), json["timeMode"], 1); //
 		m_timeScale = json["timeScale"]; //
 		m_fixedDeltaTime = json["fixedDeltaTime"]; //
@@ -739,6 +759,31 @@ namespace dunes
 				GL_FLOAT,
 				0);
 			SaveEXR(data.data(), width, height, resistanceMapPath.c_str(), TINYEXR_PIXELTYPE_HALF);
+		}
+
+		json["vegTypeCount"] = m_vegTypeCount;
+		json["vegTypes"] = nlohmann::json::array();
+		VegetationType vegType{};
+
+		std::filesystem::path basePath = std::filesystem::absolute(path).remove_filename();
+		
+		for (int i = 0; i < m_vegTypeCount; ++i) {
+			float* vegTypeF = (float*) &m_vegTypes[i];
+			const int numParameters = sizeof(VegetationType) / sizeof(float);
+			auto js = nlohmann::json::object();
+			js["name"] = vegetationNames[i];
+			js["arr"] = nlohmann::json::array();
+			js["dominance"] = nlohmann::json::array();
+			std::filesystem::path meshPath = m_vegMeshes[i];
+			meshPath = std::filesystem::relative(meshPath, basePath);
+			js["mesh"] = meshPath.string();
+			for (int j = 0; j < numParameters; ++j) {
+				js["arr"][j] = vegTypeF[j];
+			}
+			for (int j = 0; j < m_vegTypeCount; ++j) {
+				js["dominance"][j] = m_vegMatrix[i * c_maxVegTypeCount + j];
+			}
+			json["vegTypes"][i] = js;
 		}
 
 		auto str = json.dump(1);
