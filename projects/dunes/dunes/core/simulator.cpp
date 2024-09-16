@@ -353,11 +353,11 @@ namespace dunes
 				addSandForCoverage(m_launchParameters, m_simulationParameters.gridSize, true, m_coverageRadius, -m_coverageSubtractAmount);
 			}
 
+			m_watches[0].start();
 			m_watches[4].start();
 			getVegetationCount(m_launchParameters, m_simulationParameters);
 			vegetation(m_launchParameters, m_simulationParameters);
 			m_watches[4].stop();
-			m_watches[0].start();
 			m_watches[1].start();
 			venturi(m_launchParameters);
 			m_watches[1].stop();
@@ -1102,6 +1102,15 @@ namespace dunes
 				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0 + 1, m_vegPrefabs.mapBuffer);
 			}
 		}
+	}
+
+	std::vector<int> Simulator::getVegCount() {
+		std::vector<int> vegCount(1 + c_maxVegTypeCount);
+		vegCount[0] = m_launchParameters.vegCount;
+		for (int i = 0; i < c_maxVegTypeCount; ++i) {
+			vegCount[i + 1] = m_launchParameters.vegCountsPerType[i];
+		}
+		return vegCount;
 	}
 
 	void Simulator::setVegMatrix(const std::vector<float>& vegMatrix)

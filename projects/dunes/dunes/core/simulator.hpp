@@ -136,6 +136,8 @@ namespace dunes
 		void setVegetationTypeMesh(const int t_index, const std::filesystem::path& file);
 		void setVegMatrix(const std::vector<float>& vegMatrix);
 
+		std::vector<int> getVegCount();
+
 		void updateWindShadow();
 
 		bool queryTimeStepHappened();

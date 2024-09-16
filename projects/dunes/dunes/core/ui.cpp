@@ -13,6 +13,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+#include <imgui_stdlib.h>
+
 namespace dunes
 {
 
@@ -203,6 +205,14 @@ namespace dunes
 	}
 
 	void UI::createPerformanceNode() {
+		const auto numVegetation = m_simulator->getVegCount();
+		ImGui::LabelText("Plants", "%i", numVegetation[0]);
+		if (ImGui::TreeNode("Count per Type")) {
+			for (int i = 1; i < m_vegTypeCount + 1; ++i) {
+				ImGui::LabelText((vegetationNames[i - 1] + "##" + std::to_string(i)).c_str(), "%i", numVegetation[i]);
+			}
+			ImGui::TreePop();
+		}
 		if (ImGui::TreeNode("Performance")) {
 			ImGui::LabelText("Frametime [ms]", "%f", 1000.f * sthe::getApplication().getUnscaledDeltaTime());
 			const auto& times = m_simulator->getWatchTimings();
@@ -1010,8 +1020,13 @@ namespace dunes
 
 				for (int i = 0; i < m_vegTypeCount; ++i)
 				{
-					if (ImGui::TreeNode(("Type " + std::to_string(i)).c_str()))
+					bool was_opened = false;
+					std::string hidden_label = "##" + std::to_string(i);
+					if (ImGui::TreeNode((hidden_label + "type").c_str()))
 					{
+						was_opened = true;
+						ImGui::SameLine();
+						ImGui::InputText((hidden_label + "text").c_str(), &vegetationNames[i]);
 						if (ImGui::Button("Load Mesh"))
 						{
 							char const* filterPatterns[2] = { "*.obj", "*.gltf" };
@@ -1063,6 +1078,10 @@ namespace dunes
 						}
 
 						ImGui::TreePop();
+					}
+					if (!was_opened) {
+						ImGui::SameLine();
+						ImGui::InputText((hidden_label + "text").c_str(), &vegetationNames[i]);
 					}
 				}
 
