@@ -123,7 +123,6 @@ namespace dunes
 		const std::vector<float>& getWatchTimings();
 		const std::vector<float>& getMeanWatchTimings();
 
-
 		void setSecondWindAngle(const float t_windAngle);
 		void enableBidirectional(const bool t_enable);
 		void setBidirectionalStrengthBased(const bool t_sBased);
@@ -136,13 +135,12 @@ namespace dunes
 		void setVegetationTypeMesh(const int t_index, const std::filesystem::path& file);
 		void setVegMatrix(const std::vector<float>& vegMatrix);
 
-		std::vector<int> getVegCount();
-
 		void updateWindShadow();
 
 		bool queryTimeStepHappened();
 
 		// Getters
+		std::vector<int> getVegCount() const;
 		int getTimeStep() const;
 		int getVegTypeCount() const;
 		bool isPaused() const;
@@ -157,6 +155,7 @@ namespace dunes
 		void setupWindWarping();
 		void setupProjection();
 		void setupVegPrefabs();
+		void setupAdaptiveGrid();
 		void map();
 		void unmap();
 
@@ -263,5 +262,12 @@ namespace dunes
 
 		std::array<VegetationType, c_maxVegTypeCount> m_vegTypes{};
 		std::vector<float> m_vegMatrix;
+
+		struct AdaptiveGrid
+		{
+			sthe::cu::Buffer gridBuffer;
+			sthe::cu::Buffer keyBuffer;
+			sthe::cu::Buffer indexBuffer;
+		} m_adaptiveGrid;
 	};
 }

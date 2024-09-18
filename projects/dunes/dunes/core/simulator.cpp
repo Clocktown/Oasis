@@ -290,6 +290,7 @@ namespace dunes
 		setupWindWarping();
 		setupProjection();
 		setupVegPrefabs();
+		setupAdaptiveGrid();
 
 		map();
 
@@ -604,13 +605,41 @@ namespace dunes
 			{
 				meshRenderer->setInstanceCount(0);
 			}
-			
+
 			for (auto& material : importer.getMaterials())
 			{
 				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0, m_vegPrefabs.buffer);
 				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0 + 1, m_vegPrefabs.mapBuffer);
 			}
 		}
+	}
+
+	void Simulator::setupAdaptiveGrid()
+	{
+		int cellCount{ 0 };
+
+		for (int i{ 0 }; i < m_simulationParameters.adaptiveGrid.layerCount; ++i)
+		{
+			m_simulationParameters.adaptiveGrid.gridSizes[i] = make_int2(ceilf(make_float2(m_simulationParameters.gridSize * m_simulationParameters.gridScale) / m_simulationParameters.adaptiveGrid.gridScales[i]));
+			m_simulationParameters.adaptiveGrid.cellCounts[i] = m_simulationParameters.adaptiveGrid.gridSizes[i].x * m_simulationParameters.adaptiveGrid.gridSizes[i].y;
+			
+			cellCount += m_simulationParameters.adaptiveGrid.cellCounts[i];
+		}
+
+		m_adaptiveGrid.gridBuffer.reinitialize(cellCount, sizeof(uint2));
+		cellCount = 0;
+
+		for (int i{ 0 }; i < m_simulationParameters.adaptiveGrid.layerCount; ++i)
+		{
+			m_simulationParameters.adaptiveGrid.gridBuffer[i] = m_adaptiveGrid.gridBuffer.getData<uint2>() + cellCount;
+			cellCount += m_simulationParameters.adaptiveGrid.cellCounts[i];
+		}
+
+		m_adaptiveGrid.keyBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(unsigned int));
+		m_simulationParameters.adaptiveGrid.keyBuffer = m_adaptiveGrid.keyBuffer.getData<unsigned int>();
+
+		m_adaptiveGrid.indexBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(unsigned int));
+		m_simulationParameters.adaptiveGrid.indexBuffer = m_adaptiveGrid.indexBuffer.getData<unsigned int>();
 	}
 
 	void Simulator::setupCoverageCalculation() {
@@ -1111,7 +1140,7 @@ namespace dunes
 		}
 	}
 
-	std::vector<int> Simulator::getVegCount() {
+	std::vector<int> Simulator::getVegCount() const {
 		std::vector<int> vegCount(1 + c_maxVegTypeCount);
 		vegCount[0] = m_launchParameters.vegCount;
 		for (int i = 0; i < c_maxVegTypeCount; ++i) {

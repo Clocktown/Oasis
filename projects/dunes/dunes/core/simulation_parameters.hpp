@@ -15,6 +15,9 @@
 namespace dunes
 {
 
+constexpr int c_maxVegTypeCount{ 8 };
+constexpr float c_maxVegetationRadius{ 20.f };
+
 template<typename T>
 using Array2D = sthe::device::Array2D<T>;
 
@@ -66,6 +69,21 @@ struct Vegetation // needs to be aligned for gl
 	float water{ 0.f };
 	float age{ 0.f };
 	float radius{ 0.f };
+};
+
+struct AdaptiveGrid
+{
+	static constexpr unsigned int layerBits{ 2 };
+	static constexpr unsigned int layerCount{ 1 << layerBits };
+	static constexpr unsigned int layerMask{ (layerCount - 1) << (32 - layerBits) };
+	static constexpr unsigned int indexMask{ ~layerMask };
+	
+	int2 gridSizes[layerCount];
+	float gridScales[layerCount]{ 0.25f * c_maxVegetationRadius, 0.5f * c_maxVegetationRadius, c_maxVegetationRadius, 2.0f * c_maxVegetationRadius };
+	unsigned int cellCounts[layerCount];
+	Buffer<uint2> gridBuffer[layerCount];
+	Buffer<unsigned int> keyBuffer;
+	Buffer<unsigned int> indexBuffer;
 };
 
 struct SimulationParameters
@@ -155,6 +173,8 @@ struct SimulationParameters
 	Buffer<uint2> uniformGrid;
 	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
 	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
+
+	AdaptiveGrid adaptiveGrid;
 };
 
 void upload(const SimulationParameters& t_simulationParameters);
