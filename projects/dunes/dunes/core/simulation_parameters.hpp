@@ -81,18 +81,13 @@ struct AdaptiveGrid
 	int2 gridSizes[layerCount];
 	float gridScales[layerCount]{ 0.25f * c_maxVegetationRadius, 0.5f * c_maxVegetationRadius, c_maxVegetationRadius, 2.0f * c_maxVegetationRadius };
 	unsigned int cellCounts[layerCount];
-	Buffer<uint2> gridBuffer[layerCount];
+	Buffer<unsigned int> gridBuffer[layerCount];
 	Buffer<unsigned int> keyBuffer;
-	Buffer<unsigned int> indexBuffer;
 };
 
 struct SimulationParameters
 {
 	int2 gridSize{ 2048, 2048 };
-	int2 uniformGridSize{ 204, 204 };
-	float uniformGridScale{ 2048.f / 204.f };
-	float rUniformGridScale{ 1.f / (2048.f / 204.f) };
-	int uniformGridCount{ uniformGridSize.x * uniformGridSize.y };
 	float gridScale{ 1.0f };
 	float rGridScale{ 1.0f / gridScale };
 	int cellCount{ gridSize.x * gridSize.y };
@@ -169,10 +164,6 @@ struct SimulationParameters
 	Buffer<VegetationType> vegTypeBuffer;
 	Buffer<float> vegMatrixBuffer;
 	Buffer<float> slabBuffer;
-
-	Buffer<uint2> uniformGrid;
-	Buffer<unsigned int> keyBuffer; // 1 * max vegetation count
-	//Buffer<unsigned int> indexBuffer; // 1 * max vegetation count
 
 	AdaptiveGrid adaptiveGrid;
 };

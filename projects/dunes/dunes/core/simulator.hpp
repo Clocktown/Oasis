@@ -235,8 +235,6 @@ namespace dunes
 		sthe::cu::Buffer m_vegTypeBuffer;
 		sthe::cu::Buffer m_vegMatrixBuffer;
 		sthe::cu::Buffer m_seedBuffer;
-		sthe::cu::Buffer m_uniformGrid;
-		sthe::cu::Buffer m_keys;
 		std::array<sthe::cu::Buffer, 4> m_windWarpingBuffers;
 		std::unique_ptr<sthe::cu::Buffer> m_coverageMap;
 		sthe::cu::Buffer m_velocityBuffer;
@@ -267,7 +265,6 @@ namespace dunes
 		{
 			sthe::cu::Buffer gridBuffer;
 			sthe::cu::Buffer keyBuffer;
-			sthe::cu::Buffer indexBuffer;
 		} m_adaptiveGrid;
 	};
 }

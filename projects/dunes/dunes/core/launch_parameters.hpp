@@ -56,7 +56,6 @@ struct LaunchParameters
 	unsigned int gridSize1D;
 	dim3 gridSize2D;
 
-	unsigned int uniformGridSize1D;
 	unsigned int vegetationGridSize1D;
 
 	unsigned int optimalBlockSize1D;

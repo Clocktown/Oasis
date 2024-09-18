@@ -256,10 +256,6 @@ namespace dunes
 		const float uniformGridScale = 2.f * c_maxVegetationRadius;
 		const glm::vec2 gridDim = glm::vec2(t_gridSize) * t_gridScale;
 		const glm::ivec2 uniformGridSize = glm::ivec2(glm::ceil(gridDim / uniformGridScale)); // 20.f max radius
-		m_simulationParameters.uniformGridSize = { uniformGridSize.x, uniformGridSize.y };
-		m_simulationParameters.uniformGridScale = { uniformGridScale };
-		m_simulationParameters.rUniformGridScale = { 1.f / uniformGridScale };
-		m_simulationParameters.uniformGridCount = { uniformGridSize.x * uniformGridSize.y };
 		m_simulationParameters.maxVegCount = m_launchParameters.maxVegCount;
 
 		if (m_launchParameters.fftPlan != 0)
@@ -450,7 +446,6 @@ namespace dunes
 	void Simulator::setupLaunchParameters()
 	{
 		m_launchParameters.gridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.cellCount) / static_cast<float>(m_launchParameters.blockSize1D)));
-		m_launchParameters.uniformGridSize1D = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.uniformGridCount) / static_cast<float>(m_launchParameters.blockSize1D)));
 		m_launchParameters.gridSize2D.x = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.gridSize.x) / static_cast<float>(m_launchParameters.blockSize2D.x)));
 		m_launchParameters.gridSize2D.y = static_cast<unsigned int>(glm::ceil(static_cast<float>(m_simulationParameters.gridSize.y) / static_cast<float>(m_launchParameters.blockSize2D.y)));
 	}
@@ -542,11 +537,6 @@ namespace dunes
 
 		m_seedBuffer.reinitialize(seeds);
 		m_simulationParameters.seedBuffer = m_seedBuffer.getData<uint4>();
-
-		m_uniformGrid.reinitialize(m_simulationParameters.uniformGridCount, sizeof(uint2));
-		m_simulationParameters.uniformGrid = m_uniformGrid.getData<uint2>();
-		m_keys.reinitialize(maxCount, sizeof(unsigned int));
-		m_simulationParameters.keyBuffer = m_keys.getData<unsigned int>();
 	}
 
 	void Simulator::setUseBilinear(const bool t_useBilinear) {
@@ -620,26 +610,23 @@ namespace dunes
 
 		for (int i{ 0 }; i < m_simulationParameters.adaptiveGrid.layerCount; ++i)
 		{
-			m_simulationParameters.adaptiveGrid.gridSizes[i] = make_int2(ceilf(make_float2(m_simulationParameters.gridSize * m_simulationParameters.gridScale) / m_simulationParameters.adaptiveGrid.gridScales[i]));
+			m_simulationParameters.adaptiveGrid.gridSizes[i] = make_int2(ceilf(make_float2(m_simulationParameters.gridSize) * m_simulationParameters.gridScale / m_simulationParameters.adaptiveGrid.gridScales[i]));
 			m_simulationParameters.adaptiveGrid.cellCounts[i] = m_simulationParameters.adaptiveGrid.gridSizes[i].x * m_simulationParameters.adaptiveGrid.gridSizes[i].y;
 			
 			cellCount += m_simulationParameters.adaptiveGrid.cellCounts[i];
 		}
 
-		m_adaptiveGrid.gridBuffer.reinitialize(cellCount, sizeof(uint2));
+		m_adaptiveGrid.gridBuffer.reinitialize(cellCount + int(m_simulationParameters.adaptiveGrid.layerCount), sizeof(unsigned int));
 		cellCount = 0;
 
 		for (int i{ 0 }; i < m_simulationParameters.adaptiveGrid.layerCount; ++i)
 		{
-			m_simulationParameters.adaptiveGrid.gridBuffer[i] = m_adaptiveGrid.gridBuffer.getData<uint2>() + cellCount;
+			m_simulationParameters.adaptiveGrid.gridBuffer[i] = m_adaptiveGrid.gridBuffer.getData<unsigned int>() + cellCount + i;
 			cellCount += m_simulationParameters.adaptiveGrid.cellCounts[i];
 		}
 
 		m_adaptiveGrid.keyBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(unsigned int));
 		m_simulationParameters.adaptiveGrid.keyBuffer = m_adaptiveGrid.keyBuffer.getData<unsigned int>();
-
-		m_adaptiveGrid.indexBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(unsigned int));
-		m_simulationParameters.adaptiveGrid.indexBuffer = m_adaptiveGrid.indexBuffer.getData<unsigned int>();
 	}
 
 	void Simulator::setupCoverageCalculation() {
