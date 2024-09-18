@@ -138,9 +138,9 @@ namespace dunes
 		m_renderParameterBuffer->bind(GL_UNIFORM_BUFFER, STHE_UNIFORM_BUFFER_CUSTOM0);
 		m_renderParameterBuffer->upload(reinterpret_cast<char*>(&m_renderParameters), sizeof(RenderParameters));
 
-		m_watches.resize(10);
-		m_watchTimings.resize(10);
-		m_meanWatchTimings.resize(10);
+		m_watches.resize(18);
+		m_watchTimings.resize(18);
+		m_meanWatchTimings.resize(18);
 
 		m_vegPrefabs.files = { dunes::getResourcePath() + "models\\MapleFall.obj",
 			                   dunes::getResourcePath() + "models\\BushFlowerSmall.obj",
@@ -298,7 +298,7 @@ namespace dunes
 		initializeVegetation(m_launchParameters);
 		// TODO: slope Buffer not properly initialized when this runs
 		getVegetationCount(m_launchParameters, m_simulationParameters);
-		vegetation(m_launchParameters, m_simulationParameters);
+		vegetation(m_launchParameters, m_simulationParameters, m_watches);
 		venturi(m_launchParameters);
 		windWarping(m_launchParameters);
 		pressureProjection(m_launchParameters, m_simulationParameters);
@@ -354,38 +354,45 @@ namespace dunes
 			}
 
 			m_watches[0].start();
-			m_watches[4].start();
-			getVegetationCount(m_launchParameters, m_simulationParameters);
-			vegetation(m_launchParameters, m_simulationParameters);
-			m_watches[4].stop();
 			m_watches[1].start();
-			venturi(m_launchParameters);
+			vegetation(m_launchParameters, m_simulationParameters, m_watches);
 			m_watches[1].stop();
-			m_watches[2].start();
-			windWarping(m_launchParameters);
-			m_watches[2].stop();
-			m_watches[9].start();
-			pressureProjection(m_launchParameters, m_simulationParameters);
-			m_watches[9].stop();
-			m_watches[3].start();
-			windShadow(m_launchParameters);
-			m_watches[3].stop();
-			m_watches[5].start();
-			continuousSaltation(m_launchParameters, m_simulationParameters);
-			m_watches[5].stop();
 			m_watches[6].start();
-			continuousReptation(m_launchParameters, m_simulationParameters);
+			venturi(m_launchParameters);
 			m_watches[6].stop();
 			m_watches[7].start();
-			avalanching(m_launchParameters, m_simulationParameters);
+			windWarping(m_launchParameters);
 			m_watches[7].stop();
 			m_watches[8].start();
-			bedrockAvalanching(m_launchParameters);
+			pressureProjection(m_launchParameters, m_simulationParameters);
 			m_watches[8].stop();
+			m_watches[9].start();
+			windShadow(m_launchParameters);
+			m_watches[9].stop();
+			m_watches[10].start();
+			continuousSaltation(m_launchParameters, m_simulationParameters);
+			m_watches[10].stop();
+			m_watches[11].start();
+			continuousReptation(m_launchParameters, m_simulationParameters);
+			m_watches[11].stop();
+			m_watches[12].start();
+			avalanching(m_launchParameters, m_simulationParameters);
+			m_watches[12].stop();
+			m_watches[13].start();
+			bedrockAvalanching(m_launchParameters);
+			m_watches[13].stop();
+			m_watches[14].start();
 			rain(m_launchParameters);
+			m_watches[14].stop();
+			m_watches[15].start();
 			transport(m_launchParameters, m_simulationParameters);
+			m_watches[15].stop();
+			m_watches[16].start();
 			moisture(m_launchParameters, m_simulationParameters);
+			m_watches[16].stop();
+			m_watches[17].start();
 			sediment(m_launchParameters, m_simulationParameters);
+			m_watches[17].stop();
 			m_watches[0].stop();
 
 			if (m_coverageMap) {

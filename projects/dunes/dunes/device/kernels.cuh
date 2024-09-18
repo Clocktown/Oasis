@@ -1,6 +1,7 @@
 #pragma once
 
 #include <dunes/core/launch_parameters.hpp>
+#include <sthe/cu/stopwatch.hpp>
 #include <cuda_runtime.h>
 
 namespace dunes
@@ -16,7 +17,7 @@ void moisture(const LaunchParameters& t_launchParameters, const SimulationParame
 void transport(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void sediment(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void getVegetationCount(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
-void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
+void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters, std::vector<sthe::cu::Stopwatch>& watches);
 void venturi(const LaunchParameters& t_launchParameters);
 void windWarping(const LaunchParameters& t_launchParameters);
 void windShadow(const LaunchParameters& t_launchParameters);

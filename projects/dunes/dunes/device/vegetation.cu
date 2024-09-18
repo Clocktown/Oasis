@@ -8,6 +8,9 @@
 #include <thrust/sort.h>
 #include <thrust/execution_policy.h>
 #include <sthe/config/debug.hpp>
+#include <sthe/cu/stopwatch.hpp>
+
+#include <cuda_fp16.h>
 
 #include "random.cuh"
 
@@ -75,7 +78,6 @@ namespace dunes {
 		
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i)
 		{
-			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate;
 			typeDensities[i] = 0.f;
 			windFactor[i] = 0.f;
 		}
@@ -472,7 +474,9 @@ namespace dunes {
 		initVegetation << < t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
 	}
 
-	void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
+	void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters, std::vector<sthe::cu::Stopwatch>& watches) {
+		watches[2].start();
+		getVegetationCount(t_launchParameters, t_simulationParameters);
 		int count = t_launchParameters.vegCount;
 		initUniformGrid << <t_launchParameters.uniformGridSize1D, t_launchParameters.blockSize1D >> > ();
 		
@@ -494,19 +498,22 @@ namespace dunes {
 			vegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(relMapBuffer);
 
 			getVegetationCount(t_launchParameters, t_simulationParameters);
-			int diff = count - t_launchParameters.vegCount;
-			if (diff > 0) {
-				//std::cout << "Deleted " << count - t_launchParameters.numVegetation << " plants." << std::endl;
-			}
 			count = t_launchParameters.vegCount;
 
 			findGridStart<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
 			findGridEnd<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
 		}
+		watches[2].stop();
 
 		// Fix double humus generation
+		watches[3].start();
 		growVegetation<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count, slopeBuffer);
+		watches[3].stop();
+		watches[4].start();
 		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (slopeBuffer);
+		watches[4].stop();
+		watches[5].start();
 		calculateShadowMap << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
+		watches[5].stop();
 	}
 }

@@ -1116,7 +1116,7 @@ namespace dunes
 						{
 							for (int j = 0; j < m_vegTypeCount; ++j)
 							{
-								matrixUpdate |= ImGui::DragFloat(("Type " + std::to_string(j)).c_str(), & m_vegMatrix[i * c_maxVegTypeCount + j], 0.01f);
+								matrixUpdate |= ImGui::DragFloat((vegetationNames[j] + "##Type " + std::to_string(j)).c_str(), & m_vegMatrix[i * c_maxVegTypeCount + j], 0.01f);
 							}
 
 							ImGui::TreePop();
