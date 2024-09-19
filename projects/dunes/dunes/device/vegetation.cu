@@ -16,7 +16,7 @@
 namespace dunes {
 
 	__forceinline__ __device__ float getVegetationDensity(const Vegetation& veg, const float3& pos) {
-		const float r2 = 0.25 * veg.radius * veg.radius;
+		const float r2 = 0.25f * veg.radius * veg.radius;
 		const float2 height = c_parameters.vegTypeBuffer[veg.type].height;
 		const float stem2 = height.x * height.x * r2;
 		const float root2 = height.y * height.y * r2;
@@ -63,7 +63,7 @@ namespace dunes {
 		const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
 		const float moisture{ clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 
-		const float slope = 2 * slopeBuffer[getCellIndex(cell)] - 1;
+		const float slope = 2.f * slopeBuffer[getCellIndex(cell)] - 1.f;
 
 		float2 wind = c_parameters.windArray.read(cell);
 		wind = wind / (length(wind) + 1e-6f);
@@ -184,7 +184,7 @@ namespace dunes {
 			const int2 cell = make_int2(gridPos); // for read from terrainArray if necessary
 			const float4 terrain = c_parameters.terrainArray.read(cell);
 			const float moisture = c_parameters.moistureArray.read(cell);
-			const float slope = 2 * slopeBuffer[getCellIndex(cell)] - 1;
+			const float slope = 2.f * slopeBuffer[getCellIndex(cell)] - 1.f;
 			const float bedrockHeight = terrain.x;
 			const float soilHeight = bedrockHeight + terrain.z;
 			const float sandHeight = soilHeight + terrain.y;
@@ -214,7 +214,7 @@ namespace dunes {
 						for (unsigned int k = idxStart; k < idxEnd; ++k) {
 							if (k == idx) continue;
 							const float incompatibility = c_parameters.vegMatrixBuffer[getCellIndex(int2{ c_parameters.vegBuffer[k].type, veg.type }, int2{ c_maxVegTypeCount })];
-							float d = -0.5f * fminf(length(c_parameters.vegBuffer[k].pos - veg.pos) - (veg.radius + c_parameters.vegBuffer[k].radius), 0);
+							float d = -0.5f * fminf(length(c_parameters.vegBuffer[k].pos - veg.pos) - (veg.radius + c_parameters.vegBuffer[k].radius), 0.f);
 							d /= veg.radius;
 							overlap += incompatibility * d * d;
 						}
@@ -240,7 +240,7 @@ namespace dunes {
 			const float rootCoverage = clamp((fminf(sandHeight, veg.pos.z) - fmaxf(plantBottom, bedrockHeight)) / plantDepth, 0.f, 1.f);
 			const float stemCoverage = clamp((fminf(sandHeight, plantTop) - fmaxf(veg.pos.z, bedrockHeight)) / plantHeight, 0.f, 1.f);
 			const float rootDamage = -(rootCoverage - c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.x) / c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.x;
-			const float stemDamage = (stemCoverage - c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.y) / (1 - c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.y);
+			const float stemDamage = (stemCoverage - c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.y) / (1.f - c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.y);
 
 			// Water usage
 			const float waterCapacity = 4.1888f * (plantDepth + plantHeight) * veg.radius * veg.radius * c_parameters.vegTypeBuffer[veg.type].waterStorageCapacity;
@@ -286,10 +286,10 @@ namespace dunes {
 
 			// 1.1 * maxRadius serves as a Buffer and prevents oscillations
 			// Shrink, if possible
-			veg.radius -= clamp(c_parameters.vegTypeBuffer[veg.type].shrinkRate * c_parameters.deltaTime * (veg.radius > 1.1*maxRadius ? 1.f : 0.f), 0.f, veg.radius - maxRadius);
+			veg.radius -= clamp(c_parameters.vegTypeBuffer[veg.type].shrinkRate * c_parameters.deltaTime * (veg.radius > 1.1f*maxRadius ? 1.f : 0.f), 0.f, veg.radius - maxRadius);
 
 			// Damage plant if it is still too large given the current conditions
-			const float radiusDamage = fmaxf((veg.radius - 1.1*maxRadius) / veg.radius, 0.f);
+			const float radiusDamage = fmaxf((veg.radius - 1.1f*maxRadius) / veg.radius, 0.f);
 			const float radiusRate = radiusDamage > 0.f ? 0.f : 1.f;
 
 			// Calculate growth and health
@@ -476,7 +476,7 @@ namespace dunes {
 
 		shadow *= (1.f / 49.f);
 
-		c_parameters.shadowArray.write(cell, clamp(2.f * (shadow - 0.5f), 0, 1)); // Rescaling shadow, because the dot product means that shadow can't be smaller than 0.5 (roughly)
+		c_parameters.shadowArray.write(cell, clamp(2.f * (shadow - 0.5f), 0.f, 1.f)); // Rescaling shadow, because the dot product means that shadow can't be smaller 0.5 than 0.5 (roughly)
 	}
 
 	void getVegetationCount(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {

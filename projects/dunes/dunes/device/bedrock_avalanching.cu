@@ -99,7 +99,7 @@ __global__ void soilAvalancheKernel(Buffer<float4> t_terrainBuffer)
 	const float terrainThickness = terrain.y + terrain.z;
 	const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 	const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-	const float moisture{ 2 * clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1  };
+	const float moisture{ 2.f * clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1.f  };
 
 	const float moistureFactor = moisture > 0.f ?
 		1.5f - 1.4f * moisture :

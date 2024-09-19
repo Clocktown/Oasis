@@ -39,7 +39,7 @@ __global__ void continuousAngularReptationKernel(const Buffer<float> t_slabBuffe
 	const float terrainThickness = terrain.y + terrain.z;
 	const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 	const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-	const float moisture{ 2 * clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1  };
+	const float moisture{ 2.f * clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1.f  };
 
 	const float moistureFactor = moisture > 0.f ?
 		1.5f - 1.35f * moisture :
@@ -74,7 +74,7 @@ __global__ void noReptationKernel(Buffer<float> t_reptationBuffer)
 	const float terrainThickness = terrain.y + terrain.z;
 	const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 	const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-	const float moisture{ 2 * clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1  };
+	const float moisture{ 2.f * clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1.f  };
 
 	const float moistureFactor = moisture > 0.f ?
 		1.5f - 1.35f * moisture :
@@ -123,7 +123,7 @@ __global__ void continuousReptationKernel(Buffer<float> t_slabBuffer, Buffer<flo
         change += signbit(heightDifference) ? -fminf(step, terrain.y) : fminf(step, nextTerrain.y);
 	}
 
-	t_reptationBuffer[cellIndex] = change * 0.125;
+	t_reptationBuffer[cellIndex] = change * 0.125f;
 }
 
 __global__ void finishContinuousReptationKernel(Buffer<float> t_reptationBuffer)

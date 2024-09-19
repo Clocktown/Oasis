@@ -35,13 +35,14 @@ namespace dunes
 		static inline const char* bedrockAvalancheModes[2]{ "To Sand", "To Bedrock" };
 		static inline const char* timeModes[2]{ "Delta Time", "Fixed Delta Time" };
 		static inline const char* initializationTargets[NumNoiseGenerationTargets]{ "Bedrock", "Sand", "Vegetation", "Abrasion Resistance", "Soil", "Water", "Moisture"};
-		static inline const char* watchTimingNames[18]{ 
+		static inline const char* watchTimingNames[20]{ 
 			"All CUDA", 
 			"All Vegetation",
 			"Veg. Datastructure",
 			"Veg. Growth",
 			"Veg. Raster",
 			"Veg. ShadowMap",
+			"All Terrain & Wind",
 			"Venturi", 
 			"Wind Warping", 
 			"Pressure Projection",
@@ -50,6 +51,7 @@ namespace dunes
 			"Reptation", 
 			"Sand Avalanching", 
 			"Bedrock & Soil Avalanching", 
+			"All Water & Sediment",
 			"Rain",
 			"Water Transport",
 			"Moisture",
