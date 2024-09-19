@@ -627,6 +627,10 @@ namespace dunes
 
 		m_adaptiveGrid.keyBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(unsigned int));
 		m_simulationParameters.adaptiveGrid.keyBuffer = m_adaptiveGrid.keyBuffer.getData<unsigned int>();
+		m_adaptiveGrid.indexBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(unsigned int));
+		m_simulationParameters.adaptiveGrid.indexBuffer = m_adaptiveGrid.indexBuffer.getData<unsigned int>();
+		m_adaptiveGrid.vegBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(Vegetation));
+		m_simulationParameters.adaptiveGrid.vegBuffer = m_adaptiveGrid.vegBuffer.getData<Vegetation>();
 	}
 
 	void Simulator::setupCoverageCalculation() {

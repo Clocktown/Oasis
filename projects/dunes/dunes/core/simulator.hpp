@@ -265,6 +265,8 @@ namespace dunes
 		{
 			sthe::cu::Buffer gridBuffer;
 			sthe::cu::Buffer keyBuffer;
+			sthe::cu::Buffer indexBuffer;
+			sthe::cu::Buffer vegBuffer;
 		} m_adaptiveGrid;
 	};
 }

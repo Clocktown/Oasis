@@ -102,7 +102,9 @@ namespace dunes {
 						const bool isAlive = veg.health > 0.f;
 						const bool canReproduce = isAlive && (veg.age > c_parameters.vegTypeBuffer[veg.type].maxMaturityTime);
 						typeDensities[veg.type] += canReproduce ? density : 0.f;
-						windFactor[veg.type] += canReproduce ? fmaxf(1.f - expf(-dot(wind, position - float2{ veg.pos.x, veg.pos.y })), 0.f) : 0.f;
+						const float2 off = position - make_float2(veg.pos);
+						const float dist = length(off) + 1e-6f;
+						windFactor[veg.type] += canReproduce ? lerp(fmaxf(dot(wind, off/dist), 0.f), 0.f, fminf(dist / c_maxVegetationRadius, 1.f))/*fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)*/ : 0.f;
 						resistance.y += isAlive ? density : 0.f;
 						resistance.w += isAlive ? c_parameters.vegTypeBuffer[veg.type].humusRate * c_parameters.deltaTime * density : density;
 						vegetationHeight = fmaxf(vegetationHeight, terrainHeight + (isAlive ? density * veg.radius * c_parameters.vegTypeBuffer[veg.type].height.x : 0.f));
@@ -113,14 +115,14 @@ namespace dunes {
 
 		float probabilitySum = 0.f;
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
-			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate * (1 + c_parameters.vegTypeBuffer[i].densitySpawnMultiplier * fminf(4.f * typeDensities[i], 1.f) + c_parameters.vegTypeBuffer[i].windSpawnMultiplier * fminf(windFactor[i], 1.f));
+			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate * (1 + c_parameters.vegTypeBuffer[i].densitySpawnMultiplier * fminf(typeDensities[i], 1.f) + c_parameters.vegTypeBuffer[i].windSpawnMultiplier * fminf(windFactor[i], 1.f));
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_parameters.vegTypeBuffer[i].height.y, c_parameters.vegTypeBuffer[i].maxRadius);
 			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius : terrain.w * c_parameters.vegTypeBuffer[i].waterResistance <= 0.05f * maxRadius;
 			const bool moistureCompatible = (moisture <= c_parameters.vegTypeBuffer[i].maxMoisture) && (moisture >= c_parameters.vegTypeBuffer[i].minMoisture);
 			const bool slopeCompatible = slope <= c_parameters.vegTypeBuffer[i].maxSlope;
 			const float soilCompatibility = terrain.y > 0.1f ? c_parameters.vegTypeBuffer[i].sandCompatibility * terrain.y : c_parameters.vegTypeBuffer[i].soilCompatibility * terrain.z;
 			const bool soilCompatible = soilCompatibility > 0.1f;
-			const float probability = (typeDensities[i] < 0.25f) && waterCompatible && moistureCompatible && slopeCompatible && soilCompatible ? typeProbabilities[i] : 0.f;
+			const float probability = (typeDensities[i] < c_parameters.vegTypeBuffer[i].separation) && waterCompatible && moistureCompatible && slopeCompatible && soilCompatible ? typeProbabilities[i] : 0.f;
 			typeProbabilities[i] = probabilitySum + probability;
 			probabilitySum += probability;
 		}
@@ -335,17 +337,17 @@ namespace dunes {
 		c_parameters.vegBuffer[idx] = veg;
 	}
 
-	__global__ void finishSort(int count, Buffer<unsigned int> indexBuffer, Buffer<Vegetation> vegCopyBuffer)
+	__global__ void finishSort(int count)
 	{
 		const int idx = getGlobalIndex1D();
 
 		if (idx >= count) {
 			return;
 		}
-		c_parameters.vegBuffer[idx] = vegCopyBuffer[indexBuffer[idx]];
+		c_parameters.vegBuffer[idx] = c_parameters.adaptiveGrid.vegBuffer[c_parameters.adaptiveGrid.indexBuffer[idx]];
 	}
 
-	__global__ void fillAdaptiveKeys(int count, Buffer<unsigned int> indexBuffer, Buffer<Vegetation> vegCopyBuffer) 
+	__global__ void fillAdaptiveKeys(int count) 
 	{
 		const int idx = getGlobalIndex1D();
 
@@ -354,8 +356,8 @@ namespace dunes {
 		}
 
 		const Vegetation veg = c_parameters.vegBuffer[idx];
-		vegCopyBuffer[idx] = veg;
-		indexBuffer[idx] = idx;
+		c_parameters.adaptiveGrid.vegBuffer[idx] = veg;
+		c_parameters.adaptiveGrid.indexBuffer[idx] = idx;
 
 		const float3 pos = veg.pos;
 		const float radius{ veg.radius };
@@ -524,17 +526,12 @@ namespace dunes {
 		Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
 		Buffer<int> relMapBuffer{ reinterpret_cast<Buffer<int>>(slopeBuffer + t_simulationParameters.cellCount) };
 
-
-		// TODO: ACTUALLY ALLOCATE THESE IN SIMULATOR
-		Buffer<unsigned int> indexBuffer{ reinterpret_cast<Buffer<unsigned int>>(t_launchParameters.tmpBuffer) };
-		Buffer<Vegetation> vegCopyBuffer{ reinterpret_cast<Buffer<Vegetation>>(slopeBuffer + t_simulationParameters.cellCount) };
-
 		if (count > 0) {
-			fillAdaptiveKeys<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count, indexBuffer, vegCopyBuffer);
+			fillAdaptiveKeys<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
 
-			thrust::sort_by_key(thrust::device, t_simulationParameters.adaptiveGrid.keyBuffer, t_simulationParameters.adaptiveGrid.keyBuffer + count, indexBuffer);
+			thrust::sort_by_key(thrust::device, t_simulationParameters.adaptiveGrid.keyBuffer, t_simulationParameters.adaptiveGrid.keyBuffer + count, t_simulationParameters.adaptiveGrid.indexBuffer);
 
-			finishSort<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D>>>(count, indexBuffer, vegCopyBuffer);
+			finishSort<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D>>>(count);
 
 			// memset type counter 0
 			CU_CHECK_ERROR(cudaMemset(t_simulationParameters.vegCountBuffer + 1, 0, c_maxVegTypeCount * sizeof(int)));

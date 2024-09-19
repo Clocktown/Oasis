@@ -59,6 +59,7 @@ struct VegetationType
 	float windSpawnMultiplier;
 	float humusRate;
 	float2 lightConditions; // .x minimum, .y maximum light. Use minimum > maximum  if 0 light should be optimal, use maximum < minimum if full light should be optimal. Otherwise the mean is optimal. Uses the shadow map for regular plants and water height for water plants.
+	float separation = 0.25; // New Vegetation can only spawn if the density of its type is lower than this value
 };
 
 struct Vegetation // needs to be aligned for gl
@@ -83,6 +84,8 @@ struct AdaptiveGrid
 	unsigned int cellCounts[layerCount];
 	Buffer<unsigned int> gridBuffer[layerCount];
 	Buffer<unsigned int> keyBuffer;
+	Buffer<unsigned int> indexBuffer;
+	Buffer<Vegetation> vegBuffer;
 };
 
 struct SimulationParameters

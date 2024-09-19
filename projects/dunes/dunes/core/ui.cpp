@@ -1106,6 +1106,7 @@ namespace dunes
 						changed |= ImGui::DragFloat("Wind Spawn Multiplier", &m_vegTypes[i].windSpawnMultiplier, 0.01f);
 						changed |= ImGui::DragFloat("Humus Rate", &m_vegTypes[i].humusRate, 0.01f);
 						changed |= ImGui::DragFloat2("Light Interval", &m_vegTypes[i].lightConditions.x, 0.01f);
+						changed |= ImGui::DragFloat("Separation", &m_vegTypes[i].separation, 0.01f);
 
 						if (changed)
 						{
