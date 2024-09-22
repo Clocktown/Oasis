@@ -63,6 +63,14 @@ namespace dunes
 					 static_cast<int>(threadIdx.y + blockIdx.y * blockDim.y) };
 	}
 
+	__forceinline__ __device__ int2 getGlobalIndex2DReversed()
+	{
+		unsigned int xBlockId = gridDim.x - blockIdx.x - 1;
+		unsigned int yBlockId = gridDim.y - blockIdx.y - 1;
+		return int2{ static_cast<int>(threadIdx.x + xBlockId * blockDim.x),
+					 static_cast<int>(threadIdx.y + yBlockId * blockDim.y) };
+	}
+
 	__forceinline__ __device__ int2 getWrappedCell(const int2& t_cell, const int2& t_gridSize = c_parameters.gridSize)
 	{
 		return int2{ (t_cell.x + t_gridSize.x) % t_gridSize.x,

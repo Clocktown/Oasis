@@ -104,7 +104,7 @@ namespace dunes {
 						typeDensities[veg.type] += canReproduce ? density : 0.f;
 						const float2 off = position - make_float2(veg.pos);
 						const float dist = length(off) + 1e-6f;
-						windFactor[veg.type] += canReproduce ? lerp(fmaxf(dot(wind, off/dist), 0.f), 0.f, fminf(dist / c_maxVegetationRadius, 1.f))/*fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)*/ : 0.f;
+						windFactor[veg.type] += canReproduce ? lerp(fmaxf(dot(wind, off/dist), 0.f), 0.f, fminf(dist / c_parameters.vegTypeBuffer[veg.type].maxRadius, 1.f))/*fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)*/ : 0.f;
 						resistance.y += isAlive ? density : 0.f;
 						resistance.w += isAlive ? c_parameters.vegTypeBuffer[veg.type].humusRate * c_parameters.deltaTime * density : density;
 						vegetationHeight = fmaxf(vegetationHeight, terrainHeight + (isAlive ? density * veg.radius * c_parameters.vegTypeBuffer[veg.type].height.x : 0.f));
@@ -117,7 +117,7 @@ namespace dunes {
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
 			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate * (1 + c_parameters.vegTypeBuffer[i].densitySpawnMultiplier * fminf(typeDensities[i], 1.f) + c_parameters.vegTypeBuffer[i].windSpawnMultiplier * fminf(windFactor[i], 1.f));
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_parameters.vegTypeBuffer[i].height.y, c_parameters.vegTypeBuffer[i].maxRadius);
-			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius : terrain.w * c_parameters.vegTypeBuffer[i].waterResistance <= 0.05f * maxRadius;
+			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius * c_parameters.vegTypeBuffer[i].height.x : terrain.w <= c_parameters.vegTypeBuffer[i].waterResistance * 0.05f * maxRadius * c_parameters.vegTypeBuffer[i].height.x;
 			const bool moistureCompatible = (moisture <= c_parameters.vegTypeBuffer[i].maxMoisture) && (moisture >= c_parameters.vegTypeBuffer[i].minMoisture);
 			const bool slopeCompatible = slope <= c_parameters.vegTypeBuffer[i].maxSlope;
 			const float soilCompatibility = terrain.y > 0.1f ? c_parameters.vegTypeBuffer[i].sandCompatibility * terrain.y : c_parameters.vegTypeBuffer[i].soilCompatibility * terrain.z;
