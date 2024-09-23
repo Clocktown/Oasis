@@ -243,9 +243,9 @@ namespace dunes {
 			const float stemDamage = (stemCoverage - c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.y) / (1.f - c_parameters.vegTypeBuffer[veg.type].terrainCoverageResistance.y);
 
 			// Water usage
-			const float waterCapacity = 4.1888f * (plantDepth + plantHeight) * veg.radius * veg.radius * c_parameters.vegTypeBuffer[veg.type].waterStorageCapacity;
-			const float availableGroundWater = c_parameters.deltaTime * 4.1888f * plantDepth * veg.radius * veg.radius * moisture;
-			const float requiredWater = c_parameters.vegTypeBuffer[veg.type].waterUsageRate * c_parameters.deltaTime * 4.1888f * plantHeight * veg.radius * veg.radius;
+			const float waterCapacity = 2.094f * (plantDepth + plantHeight) * veg.radius * veg.radius * c_parameters.vegTypeBuffer[veg.type].waterStorageCapacity;
+			const float availableGroundWater = c_parameters.deltaTime * 2.094f * plantDepth * veg.radius * veg.radius * moisture;
+			const float requiredWater = c_parameters.vegTypeBuffer[veg.type].waterUsageRate * c_parameters.deltaTime * 2.094f * plantHeight * veg.radius * veg.radius;
 			const float waterDifference = availableGroundWater - requiredWater;
 			const float missingWater = clamp(((availableGroundWater + veg.water) - requiredWater) / requiredWater, -1.f, 1.f);
 			if (waterDifference > 0.f) {
