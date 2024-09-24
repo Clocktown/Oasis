@@ -136,14 +136,15 @@ __global__ void sedimentExchangeKernel(const Buffer<float> advectedSedimentBuffe
 
 	float sediment = advectedSedimentBuffer[idx];
 	float4 terrain = c_parameters.terrainArray.read(cell);
-	const float moisture = c_parameters.moistureArray.read(cell);
+	const float moistureCapacity = c_parameters.moistureCapacityConstant * clamp((terrain.y + terrain.z) * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
+	const float moisture{ clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 	// Humus conversion TODO: UI parameter
-	const float humusConversion = fminf(0.01f * c_parameters.deltaTime * (0.01f + 0.99f * resistance.y) * moisture, fminf(terrain.y, resistance.w));
+	const float humusConversion = fminf(0.01f * c_parameters.deltaTime * resistance.y * moisture, fminf(terrain.y, resistance.w));
 	terrain.y -= humusConversion;
 	terrain.z += humusConversion;
 	resistance.w -= humusConversion;
 	// Soil drying out TODO: UI parameter
-	const float drying = fminf(0.01f * c_parameters.deltaTime * (1.f - 0.99f * resistance.y) * fmaxf(1.f - 50.f * moisture, 0.f) * expf(-10.f * terrain.y), terrain.z);
+	const float drying = fminf(0.01f * c_parameters.deltaTime * (1.f - resistance.y) * fmaxf(1.f - 50.f * moisture, 0.f) * expf(-10.f * terrain.y), terrain.z);
 	resistance.w -= fminf(drying, resistance.w);
 	terrain.z -= drying;
 	terrain.y += drying;
