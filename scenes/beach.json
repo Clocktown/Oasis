@@ -1,0 +1,418 @@
+{
+ "abrasionStrength": 0.0,
+ "abrasionThreshold": 0.02500000037252903,
+ "avalancheAngle": 33.0,
+ "avalancheIterations": 50,
+ "bedrockAngle": 68.0,
+ "bedrockAvalancheIterations": 1,
+ "bedrockAvalancheMode": "To Sand",
+ "bedrockColor": [
+  0.5,
+  0.5,
+  0.5,
+  1.0
+ ],
+ "bedrockDissolutionConstant": 0.009999999776482582,
+ "bidirectionalStrengthBased": true,
+ "bilinear": true,
+ "calcCoverage": false,
+ "constantCoverage": false,
+ "constantCoverageAllowRemove": false,
+ "coverageRadius": 100,
+ "coverageSpawnAmount": 1.0,
+ "coverageSpawnUniform": false,
+ "coverageSubtractAmount": 1.0,
+ "coverageThreshold": 0.10000000149011612,
+ "enableBidirectional": false,
+ "evaporationRate": 0.009999999776482582,
+ "exportMaps": false,
+ "fixedDeltaTime": 0.5,
+ "gridScale": 1.0,
+ "gridSize": [
+  2048,
+  2048
+ ],
+ "humusColor": [
+  0.3499999940395355,
+  0.30000001192092896,
+  0.15000000596046448,
+  0.0
+ ],
+ "initializationParameters": {
+  "Abrasion Resistance": {
+   "bias": 0.0,
+   "border": [
+    0.10000000149011612,
+    0.10000000149011612
+   ],
+   "enable": true,
+   "flat": true,
+   "iterations": 0,
+   "offset": [
+    0.0,
+    0.0
+   ],
+   "scale": 1.0,
+   "stretch": [
+    1.0,
+    1.0
+   ],
+   "uniform_random": false
+  },
+  "Bedrock": {
+   "bias": 0.0,
+   "border": [
+    0.10000000149011612,
+    0.10000000149011612
+   ],
+   "enable": true,
+   "flat": false,
+   "iterations": 0,
+   "offset": [
+    0.0,
+    0.0
+   ],
+   "scale": 100.0,
+   "stretch": [
+    1.0,
+    1.0
+   ],
+   "uniform_random": false
+  },
+  "Moisture": {
+   "bias": 0.30000001192092896,
+   "border": [
+    0.10000000149011612,
+    0.10000000149011612
+   ],
+   "enable": true,
+   "flat": true,
+   "iterations": 0,
+   "offset": [
+    0.0,
+    0.0
+   ],
+   "scale": 100.0,
+   "stretch": [
+    1.0,
+    1.0
+   ],
+   "uniform_random": false
+  },
+  "Sand": {
+   "bias": 0.0,
+   "border": [
+    0.10000000149011612,
+    0.10000000149011612
+   ],
+   "enable": true,
+   "flat": true,
+   "iterations": 0,
+   "offset": [
+    0.0,
+    0.0
+   ],
+   "scale": 100.0,
+   "stretch": [
+    1.0,
+    1.0
+   ],
+   "uniform_random": false
+  },
+  "Soil": {
+   "bias": 11.0,
+   "border": [
+    0.10000000149011612,
+    0.10000000149011612
+   ],
+   "enable": true,
+   "flat": true,
+   "iterations": 0,
+   "offset": [
+    0.0,
+    0.0
+   ],
+   "scale": 100.0,
+   "stretch": [
+    1.0,
+    1.0
+   ],
+   "uniform_random": false
+  },
+  "Vegetation": {
+   "bias": 0.0,
+   "border": [
+    0.10000000149011612,
+    0.10000000149011612
+   ],
+   "enable": true,
+   "flat": true,
+   "iterations": 0,
+   "offset": [
+    0.0,
+    0.0
+   ],
+   "scale": 1.0,
+   "stretch": [
+    1.0,
+    1.0
+   ],
+   "uniform_random": false
+  },
+  "Water": {
+   "bias": 20.0,
+   "border": [
+    0.10000000149011612,
+    0.10000000149011612
+   ],
+   "enable": true,
+   "flat": true,
+   "iterations": 0,
+   "offset": [
+    0.0,
+    0.0
+   ],
+   "scale": 100.0,
+   "stretch": [
+    1.0,
+    1.0
+   ],
+   "uniform_random": false
+  }
+ },
+ "maxVegCount": 1000000,
+ "maxWindShadowAngle": 15.0,
+ "minWindShadowAngle": 10.0,
+ "moistureCapacityConstant": 1.0,
+ "moistureEvaporationScale": 0.05000000074505806,
+ "pressureProjectionIterations": 50,
+ "projectionMode": 2,
+ "rainPeriod": 0.20000000298023224,
+ "rainProbabilityHeightRange": 1000.0,
+ "rainProbabilityMax": 1.0,
+ "rainProbabilityMin": 0.5,
+ "rainScale": 30.0,
+ "rainStrength": 0.0002500000118743628,
+ "renderVegetation": true,
+ "reptationSmoothingStrength": 0.0,
+ "reptationStrength": 0.0,
+ "reptationUseWindShadow": false,
+ "saltationMode": "Forward",
+ "saltationStrength": 1.0,
+ "sandColor": [
+  0.8999999761581421,
+  0.800000011920929,
+  0.6000000238418579,
+  1.0
+ ],
+ "sandDissolutionConstant": 0.20000000298023224,
+ "sandMoistureRate": 0.10000000149011612,
+ "secondWindAngle": 45.0,
+ "sedimentCapacityConstant": 0.012500000186264515,
+ "sedimentDepositionConstant": 0.012500000186264515,
+ "shadowStrength": 0.5,
+ "soilAbrasionStrength": 0.0,
+ "soilAngle": 45.0,
+ "soilAvalancheIterations": 1,
+ "soilColor": [
+  0.550000011920929,
+  0.3499999940395355,
+  0.20000000298023224,
+  1.0
+ ],
+ "soilDissolutionConstant": 0.05000000074505806,
+ "soilMoistureRate": 0.019999999552965164,
+ "spawnSteps": 10,
+ "stopIterations": 0,
+ "targetCoverage": 1.0,
+ "targetFrameRate": 0,
+ "terrainThicknessMoistureThreshold": 1.0,
+ "timeMode": "Fixed Delta Time",
+ "timeScale": 1.0,
+ "vSync": false,
+ "vegTypeCount": 3,
+ "vegTypes": [
+  {
+   "arr": [
+    20.0,
+    0.10000000149011612,
+    9.999999747378752e-05,
+    0.019999999552965164,
+    0.0,
+    100.0,
+    0.20000000298023224,
+    0.0,
+    1.0,
+    1.0,
+    0.10000000149011612,
+    1.0,
+    0.10000000149011612,
+    0.20000000298023224,
+    0.800000011920929,
+    1.0,
+    0.20000000298023224,
+    0.0,
+    0.75,
+    0.25,
+    0.5,
+    0.10000000149011612,
+    10.0,
+    100.0,
+    0.009999999776482582,
+    0.0,
+    0.30000001192092896,
+    1.7000000476837158,
+    0.25,
+    0.0
+   ],
+   "dominance": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "mesh": "..\\projects\\dunes\\dunes\\resources\\models\\MapleFall.obj",
+   "name": "Type 0"
+  },
+  {
+   "arr": [
+    2.0,
+    0.20000000298023224,
+    0.009999999776482582,
+    0.10000000149011612,
+    0.10000000149011612,
+    20.0,
+    0.20000000298023224,
+    0.0,
+    2.0,
+    0.5,
+    0.05000000074505806,
+    2.0,
+    0.30000001192092896,
+    0.20000000298023224,
+    0.8999999761581421,
+    1.0,
+    0.4000000059604645,
+    0.0,
+    0.75,
+    0.75,
+    0.75,
+    1.0,
+    1000000.0,
+    10.0,
+    0.009999999776482582,
+    0.0,
+    0.0,
+    0.75,
+    0.25,
+    0.0
+   ],
+   "dominance": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "mesh": "..\\projects\\dunes\\dunes\\resources\\models\\BushFlowerSmall.obj",
+   "name": "Type 1"
+  },
+  {
+   "arr": [
+    3.0,
+    0.30000001192092896,
+    0.009999999776482582,
+    0.10000000149011612,
+    1.0,
+    30.0,
+    0.10000000149011612,
+    0.0,
+    0.5,
+    1.0,
+    0.10000000149011612,
+    1.0,
+    1.0,
+    0.0,
+    1.0,
+    1.0,
+    1.0,
+    0.0,
+    0.75,
+    0.25,
+    0.25,
+    0.5,
+    1.0,
+    0.10000000149011612,
+    0.0010000000474974513,
+    0.0,
+    0.10000000149011612,
+    0.4000000059604645,
+    0.25,
+    0.0
+   ],
+   "dominance": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "mesh": "..\\projects\\dunes\\dunes\\resources\\models\\seaweed.obj",
+   "name": "Type 2"
+  }
+ ],
+ "vegetationAngle": 45.0,
+ "vegetationColor": [
+  0.25,
+  0.75,
+  0.25,
+  0.0
+ ],
+ "vegetationSoilAngle": 68.0,
+ "venturiStrength": 0.004999999888241291,
+ "waterBorderLevel": 20.0,
+ "waterColor": [
+  0.10000000149011612,
+  0.4000000059604645,
+  1.0,
+  1.0
+ ],
+ "waterLevel": 0.0,
+ "waveDepthScale": 0.10000000149011612,
+ "wavePeriod": 0.019999999552965164,
+ "waveStrength": 0.05000000074505806,
+ "wetColor": [
+  0.0,
+  0.0,
+  0.0,
+  0.10000000149011612
+ ],
+ "windAngle": 0.0,
+ "windBidirectionalBaseTime": 15.0,
+ "windBidirectionalR": 2.0,
+ "windShadowColor": [
+  1.0,
+  0.25,
+  0.25,
+  0.0
+ ],
+ "windShadowDistance": 10.0,
+ "windShadowMode": "Linear",
+ "windSpeed": 10.0,
+ "windWarpingCount": 2,
+ "windWarpingDivisor": 1.0,
+ "windWarpingGradientStrengths": [
+  30.0,
+  5.0,
+  0.0,
+  0.0
+ ],
+ "windWarpingMode": "None",
+ "windWarpingRadii": [
+  200.0,
+  50.0,
+  0.0,
+  0.0
+ ],
+ "windWarpingStrengths": [
+  0.800000011920929,
+  0.20000000298023224,
+  0.0,
+  0.0
+ ]
+}
