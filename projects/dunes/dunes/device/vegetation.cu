@@ -117,7 +117,7 @@ namespace dunes {
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
 			typeProbabilities[i] = c_parameters.vegTypeBuffer[i].baseSpawnRate * (1 + c_parameters.vegTypeBuffer[i].densitySpawnMultiplier * fminf(typeDensities[i], 1.f) + c_parameters.vegTypeBuffer[i].windSpawnMultiplier * fminf(windFactor[i], 1.f));
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / c_parameters.vegTypeBuffer[i].height.y, c_parameters.vegTypeBuffer[i].maxRadius);
-			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? terrain.w >= 0.05f * maxRadius * c_parameters.vegTypeBuffer[i].height.x : terrain.w <= c_parameters.vegTypeBuffer[i].waterResistance * 0.05f * maxRadius * c_parameters.vegTypeBuffer[i].height.x;
+			const bool waterCompatible = c_parameters.vegTypeBuffer[i].waterResistance >= 1.f ? (terrain.w >= 0.05f * maxRadius * c_parameters.vegTypeBuffer[i].height.x) : (terrain.w <= c_parameters.vegTypeBuffer[i].waterResistance * 0.05f * maxRadius * c_parameters.vegTypeBuffer[i].height.x);
 			const bool moistureCompatible = (moisture <= c_parameters.vegTypeBuffer[i].maxMoisture) && (moisture >= c_parameters.vegTypeBuffer[i].minMoisture);
 			const bool slopeCompatible = slope <= c_parameters.vegTypeBuffer[i].maxSlope;
 			const float soilCompatibility = terrain.y > 0.1f ? c_parameters.vegTypeBuffer[i].sandCompatibility * terrain.y : c_parameters.vegTypeBuffer[i].soilCompatibility * terrain.z;
@@ -280,7 +280,7 @@ namespace dunes {
 			const float shadowGrowth = 1.f - 2.f * abs(shadowVal - lightIntervalMax) / (c_parameters.vegTypeBuffer[veg.type].lightConditions.y - c_parameters.vegTypeBuffer[veg.type].lightConditions.x);
 
 			// Max radius based on neighborhood and terrain
-			const float baseMaxRadius = fmaxf(1.f - overlap, 0.f) * fmaxf(shadowGrowth, 0.f) * fminf(fmaxf(veg.pos.z - bedrockHeight, 0.f) / c_parameters.vegTypeBuffer[veg.type].height.y, c_parameters.vegTypeBuffer[veg.type].maxRadius);
+			const float baseMaxRadius = fminf(fmaxf(veg.pos.z - bedrockHeight, 0.f) / c_parameters.vegTypeBuffer[veg.type].height.y, fmaxf(1.f - overlap, 0.f) * fmaxf(shadowGrowth, 0.f) * c_parameters.vegTypeBuffer[veg.type].maxRadius);
 			const float waterMaxRadius = fminf(baseMaxRadius, fmaxf((waterLevel - veg.pos.z) / c_parameters.vegTypeBuffer[veg.type].height.x, 0.f));
 			const float maxRadius = isWaterPlant ? waterMaxRadius : baseMaxRadius;
 

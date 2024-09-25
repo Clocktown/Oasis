@@ -126,7 +126,7 @@ namespace dunes
 		for (int i = 0; i < m_vegTypeCount; ++i)
 		{
 			m_simulator->setVegetationType(i, m_vegTypes[i]);
-			m_simulator->setVegetationTypeMesh(i, m_vegMeshes[i]);
+			m_simulator->setVegetationTypeMesh(i, std::filesystem::path{ m_vegMeshes[i] });
 		}
 
 		m_simulator->reinitialize(m_gridSize, m_gridScale);

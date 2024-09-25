@@ -590,13 +590,13 @@ namespace dunes
 
 	void Simulator::setupVegPrefabs()
 	{
-		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
+		for (int i = 0; i < m_simulationParameters.vegTypeCount; ++i) {
 			if (m_vegPrefabs.gameObjects[i]) {
 				getScene().removeGameObject(*m_vegPrefabs.gameObjects[i]);
 			}
 		}
 
-		for (int i{ 0 }; i < c_parameters.vegTypeCount; ++i)
+		for (int i{ 0 }; i < m_simulationParameters.vegTypeCount; ++i)
 		{
 			sthe::Importer importer{ m_vegPrefabs.files[i].string() };
 
@@ -1106,6 +1106,9 @@ namespace dunes
 
 	void Simulator::setVegetationType(const int t_index, const VegetationType& t_type)
 	{
+		while (t_index >= m_simulationParameters.vegTypeCount) {
+			addVegType();
+		}
 		m_vegTypes[t_index] = t_type;
 
 		if (m_isAwake)
@@ -1125,6 +1128,7 @@ namespace dunes
 
 		if (m_isAwake)
 		{
+			std::cout << "Loading" << file.string() << std::endl;
 			sthe::Importer importer{ file.string() };
 
 			sthe::GameObject& gameObject{ importer.importModel(getScene(), m_vegPrefabs.program) };
