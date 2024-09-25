@@ -141,6 +141,7 @@ namespace dunes
 		m_watches.resize(20);
 		m_watchTimings.resize(20);
 		m_meanWatchTimings.resize(20);
+		resetPerformanceAverages();
 
 		m_vegPrefabs.files = { dunes::getResourcePath() + "models\\MapleFall.obj",
 			                   dunes::getResourcePath() + "models\\BushFlowerSmall.obj",
@@ -228,6 +229,12 @@ namespace dunes
 		m_vegMatrix[0 + 1 * c_maxVegTypeCount] = 2.0f;
 	}
 
+	void Simulator::resetPerformanceAverages() {
+		m_perfStep = 0;
+		std::fill(m_watchTimings.begin(), m_watchTimings.end(), 0.f);
+		std::fill(m_meanWatchTimings.begin(), m_meanWatchTimings.end(), 0.f);
+	}
+
 	// Destructor
 	Simulator::~Simulator()
 	{
@@ -241,8 +248,7 @@ namespace dunes
 	{
 		m_time = 0.f;
 		m_timeStep = 0;
-		std::fill(m_watchTimings.begin(), m_watchTimings.end(), 0.f);
-		std::fill(m_meanWatchTimings.begin(), m_meanWatchTimings.end(), 0.f);
+		resetPerformanceAverages();
 		//STHE_ASSERT(t_gridSize.x > 0 && (t_gridSize.x & (t_gridSize.x - 1)) == 0, "Grid size x must be a power of 2");
 		//STHE_ASSERT(t_gridSize.y > 0 && (t_gridSize.y & (t_gridSize.y - 1)) == 0, "Grid size y must be a power of 2");
 		STHE_ASSERT(t_gridScale != 0.0f, "Grid scale cannot be 0");
@@ -402,6 +408,7 @@ namespace dunes
 
 			m_time += m_simulationParameters.deltaTime;
 			m_timeStep++;
+			m_perfStep++;
 
 			unmap();
 
@@ -421,10 +428,10 @@ namespace dunes
 			for (int i = 0; i < m_watches.size(); ++i) {
 				float t = m_watches[i].getTime();
 				m_watchTimings[i] = t;
-				m_meanWatchTimings[i] = ((m_meanWatchTimings[i] * (m_timeStep - 1)) + t) / m_timeStep;
+				m_meanWatchTimings[i] = ((m_meanWatchTimings[i] * (m_perfStep - 1)) + t) / m_perfStep;
 			}
 
-			if (m_stopIterations != 0 && m_timeStep % m_stopIterations == 0) {
+			if (m_stopIterations != 0 && m_perfStep % m_stopIterations == 0) {
 				m_isPaused = true;
 			}
 		}
@@ -496,6 +503,10 @@ namespace dunes
 		m_shadowArray.reinitialize(*m_shadowMap);
 	}
 
+	void Simulator::setMaxVegCount(float c) {
+		m_launchParameters.maxVegCount = c;
+	}
+
 	void Simulator::setupBuffers()
 	{
 		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
@@ -504,10 +515,10 @@ namespace dunes
 		m_tmpBuffer.reinitialize(5 * m_simulationParameters.cellCount, sizeof(float));
 		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
-		const int maxCount = 1000000;
+		const int maxCount = max(1000000, m_launchParameters.maxVegCount);
 		const int counts[1 + c_maxVegTypeCount]{0.f};
 		m_launchParameters.vegCount = counts[0];
-		m_launchParameters.maxVegCount = maxCount;
+		//m_launchParameters.maxVegCount = maxCount;
 		m_launchParameters.vegetationGridSize1D = counts[0] == 0 ? 1 : static_cast<unsigned int>(glm::ceil(static_cast<float>(counts[0]) / static_cast<float>(m_launchParameters.blockSize1D)));
 
 		m_vegPrefabs.buffer = std::make_shared<sthe::gl::Buffer>(maxCount, sizeof(Vegetation));
@@ -1157,6 +1168,10 @@ namespace dunes
 	// Getters
 	int Simulator::getTimeStep() const {
 		return m_timeStep;
+	}
+
+	int Simulator::getPerfStep() const {
+		return m_perfStep;
 	}
 
 	int Simulator::getVegTypeCount() const

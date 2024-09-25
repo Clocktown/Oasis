@@ -89,6 +89,8 @@ namespace dunes
 		void setWaterBorderLevel(float v);
 		void setWaterLevel(float v);
 
+		void resetPerformanceAverages();
+
 		void setMoistureEvaporationScale(float v);
 		void setSandMoistureRate(float v);
 		void setSoilMoistureRate(float v);
@@ -128,6 +130,7 @@ namespace dunes
 		void setBidirectionalStrengthBased(const bool t_sBased);
 		void setBidirectionalBaseTime(const float t_time);
 		void setBidirectionalR(const float t_R);
+		void setMaxVegCount(float c);
 
 		int addVegType();
 		void setStopIterations(const int t_stopIterations);
@@ -142,6 +145,7 @@ namespace dunes
 		// Getters
 		std::vector<int> getVegCount() const;
 		int getTimeStep() const;
+		int getPerfStep() const;
 		int getVegTypeCount() const;
 		bool isPaused() const;
 		std::shared_ptr<sthe::gl::Texture2D> getTerrainMap() const;
@@ -182,6 +186,7 @@ namespace dunes
 		bool m_coverageSpawnUniform{ false };
 		int m_spawnSteps{ 10 };
 		int m_timeStep = 0;
+		int m_perfStep = 0;
 		int m_stopIterations = 0;
 
 		float m_time{ 0.f };

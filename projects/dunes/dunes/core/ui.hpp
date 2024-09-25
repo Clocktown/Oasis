@@ -100,6 +100,7 @@ namespace dunes
 		bool m_coverageSpawnUniform{ false };
 		int m_spawnSteps{ 10 };
 		int m_stopIterations{ 0 };
+		int maxVegCount{ 1000000 };
 
 		// Simulation
 		bool m_useBilinear{ true };

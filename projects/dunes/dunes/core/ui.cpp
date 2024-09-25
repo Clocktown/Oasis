@@ -119,9 +119,9 @@ namespace dunes
 		m_simulator->setTimeScale(m_timeScale);
 		m_simulator->setFixedDeltaTime(m_fixedDeltaTime);
 
+		m_simulator->setMaxVegCount(maxVegCount);
+
 		m_vegMatrix.resize(c_maxVegTypeCount * c_maxVegTypeCount, 1.0f);
-		m_vegMatrix[1 + 0 * c_maxVegTypeCount] = 0.5f;
-		m_vegMatrix[0 + 1 * c_maxVegTypeCount] = 2.0f;
 
 		for (int i = 0; i < m_vegTypeCount; ++i)
 		{
@@ -150,7 +150,7 @@ namespace dunes
 	void UI::onGUI()
 	{
 		m_frametime = sthe::getApplication().getUnscaledDeltaTime();
-		const int N = m_simulator->getTimeStep();
+		const int N = m_simulator->getPerfStep();
 		if (m_recordNextFrametime) {
 			m_mean_frametime = ((m_mean_frametime * (N - 1)) + m_frametime) / N;
 			m_recordNextFrametime = false;
@@ -214,6 +214,10 @@ namespace dunes
 			ImGui::TreePop();
 		}
 		if (ImGui::TreeNode("Performance")) {
+			if (ImGui::Button("Reset averages")) {
+				m_simulator->resetPerformanceAverages();
+				m_mean_frametime = 0.f;
+			}
 			ImGui::LabelText("Frametime [ms]", "%f", 1000.f * sthe::getApplication().getUnscaledDeltaTime());
 			const auto& times = m_simulator->getWatchTimings();
 			const auto& meanTimes = m_simulator->getMeanWatchTimings();
@@ -512,6 +516,11 @@ namespace dunes
 					m_vegMatrix[i * c_maxVegTypeCount + j] = js["dominance"][j];
 				}
 			}
+			m_simulator->setVegMatrix(m_vegMatrix);
+		}
+
+		if (json.contains("maxVegCount")) {
+			maxVegCount = json["maxVegCount"];
 		}
 
 		m_timeMode = getIndexFromNamedArray(timeModes, IM_ARRAYSIZE(timeModes), json["timeMode"], 1); //
@@ -761,6 +770,7 @@ namespace dunes
 			SaveEXR(data.data(), width, height, resistanceMapPath.c_str(), TINYEXR_PIXELTYPE_HALF);
 		}
 
+		json["maxVegCount"] = maxVegCount;
 		json["vegTypeCount"] = m_vegTypeCount;
 		json["vegTypes"] = nlohmann::json::array();
 		VegetationType vegType{};
@@ -1061,6 +1071,9 @@ namespace dunes
 
 			if (ImGui::TreeNode("Vegetation"))
 			{
+				if (ImGui::DragInt("Max. Plants", &maxVegCount)) {
+					m_simulator->setMaxVegCount(maxVegCount);
+				}
 				bool matrixUpdate = false;
 
 				for (int i = 0; i < m_vegTypeCount; ++i)
