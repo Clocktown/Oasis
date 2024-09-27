@@ -1,10 +1,6 @@
 License: https://creativecommons.org/licenses/by/4.0/
 Associated .mtl files and textures linked therein are from the author of the respective .obj file.
 
-Cactus - Aksedeus
-	Cactus2.obj
-https://sketchfab.com/3d-models/lowpoly-cactus-bcb5e7e2e4ab4795a9d43ea06b8d1301#download
-
 Trees - EFX
 	MapleFall.obj
 	PineBillboard.obj
