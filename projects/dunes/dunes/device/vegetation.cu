@@ -127,7 +127,7 @@ namespace dunes {
 			probabilitySum += probability;
 		}
 
-		// TODO: Super simplistic algorithm.
+		
 		if (*c_parameters.vegCountBuffer < c_parameters.maxVegCount) {
 			int idx = getCellIndex(cell);
 			uint4 seed{ c_parameters.seedBuffer[idx] };
