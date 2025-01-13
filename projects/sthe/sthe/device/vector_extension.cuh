@@ -70,16 +70,14 @@ CU_INLINE CU_HOST_DEVICE float bilerp(const float a00, const float a10, const fl
 
 CU_INLINE CU_HOST_DEVICE unsigned int nextPowerOfTwo(const unsigned int value)
 {
-	unsigned int nextPowerOfTwo = value;
-	nextPowerOfTwo--;
+	unsigned int nextPowerOfTwo = value - 1;
 	nextPowerOfTwo |= nextPowerOfTwo >> 1;
 	nextPowerOfTwo |= nextPowerOfTwo >> 2;
 	nextPowerOfTwo |= nextPowerOfTwo >> 4;
 	nextPowerOfTwo |= nextPowerOfTwo >> 8;
 	nextPowerOfTwo |= nextPowerOfTwo >> 16;
-	nextPowerOfTwo++;
 
-	return nextPowerOfTwo;
+	return ++nextPowerOfTwo;
 }
 
 CU_INLINE CU_HOST_DEVICE float2 abs(const float2& v) {
@@ -1723,7 +1721,7 @@ CU_INLINE CU_HOST_DEVICE float3 fract(const float3 a)
 CU_INLINE CU_HOST_DEVICE float smoothstep(const float e0, const float e1, const float x)
 {
 	float t = clamp((x - e0) / (e1 - e0), 0.0, 1.0);
-	return t * t * (3.0 - 2.0 * t);
+	return t * t * (3.0f - 2.0f * t);
 }
 
 CU_INLINE CU_HOST_DEVICE float mod(const float a, const float b)

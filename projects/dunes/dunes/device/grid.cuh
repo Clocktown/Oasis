@@ -73,12 +73,19 @@ namespace dunes
 
 	__forceinline__ __device__ int2 getWrappedCell(const int2& t_cell, const int2& t_gridSize = c_parameters.gridSize)
 	{
-		return int2{ (t_cell.x + t_gridSize.x) % t_gridSize.x,
-					 (t_cell.y + t_gridSize.y) % t_gridSize.y };
+		int2 sign;
+		sign.x = (int)(t_cell.x < 0) - (int)(t_cell.x >= t_gridSize.x);
+		sign.y = (int)(t_cell.y < 0) - (int)(t_cell.y >= t_gridSize.y);
+
+		return t_cell + sign * t_gridSize;
+
+		//return int2{ (t_cell.x + t_gridSize.x) % t_gridSize.x,
+		//			   (t_cell.y + t_gridSize.y) % t_gridSize.y };
 	}
 
 	__forceinline__ __device__ int2 getNearestCell(const float2& t_position)
 	{
+		//return make_int2(t_position + 0.5f); ?
 		return make_int2(roundf(t_position));
 	}
 
@@ -94,12 +101,12 @@ namespace dunes
 
 	__forceinline__ __device__ bool isOutside(const int2& t_cell, const int2& t_gridSize = c_parameters.gridSize)
 	{
-		return t_cell.x >= t_gridSize.x || t_cell.y >= t_gridSize.y;
+		return (bool)(t_cell.x >= t_gridSize.x | t_cell.y >= t_gridSize.y);
 	}
 
 	__forceinline__ __device__ bool isBorder(const int2& t_cell, const int2& t_gridSize = c_parameters.gridSize)
 	{
-		return t_cell.x == 0 || t_cell.y == 0 || t_cell.x == (t_gridSize.x - 1) || t_cell.y == (t_gridSize.y - 1);
+		return (bool)(t_cell.x == 0 | t_cell.y == 0 | t_cell.x == (t_gridSize.x - 1) | t_cell.y == (t_gridSize.y - 1));
 	}
 
 	template<bool TUseBilinear>
