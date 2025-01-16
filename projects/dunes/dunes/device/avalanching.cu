@@ -8,7 +8,7 @@
 namespace dunes
 {
 
-__global__ void setupAtomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer)
+__global__ void setupAtomicInPlaceAvalanchingKernel(Buffer<float> t_heightBuffer, Buffer<float> t_sandBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -18,11 +18,13 @@ __global__ void setupAtomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuff
 	}
 
 	const int cellIndex{ getCellIndex(cell) };
+	const float4 terrain{ c_parameters.terrainArray.read(cell) };
 
-	t_terrainBuffer[cellIndex] = c_parameters.terrainArray.read(cell);
+	t_heightBuffer[cellIndex] = terrain.x + terrain.z;
+	t_sandBuffer[cellIndex] = terrain.y;
 }
 
-__global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, const Buffer<float> t_reptationBuffer)
+__global__ void atomicInPlaceAvalanchingKernel(Buffer<float> t_heightBuffer, Buffer<float> t_sandBuffer, const Buffer<float> t_reptationBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -35,8 +37,8 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, c
 
 	const float avalancheAngle{ t_reptationBuffer[cellIndex] };
 
-	const float4 terrain{ t_terrainBuffer[cellIndex] };
-	const float height{ terrain.x + terrain.y + terrain.z };
+	float sand{ t_sandBuffer[cellIndex] };
+	float height{ t_heightBuffer[cellIndex] + sand };
 	int nextCellIndices[8];
 	float avalanches[8];
 	float avalancheSum{ 0.0f };
@@ -45,8 +47,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, c
 	for (int i{ 0 }; i < 8; ++i)
 	{
 		nextCellIndices[i] = getCellIndex(getWrappedCell(cell + c_offsets[i]));
-		const float4 nextTerrain{ t_terrainBuffer[nextCellIndices[i]] };
-		const float nextHeight{ nextTerrain.x + nextTerrain.y + nextTerrain.z };
+		const float nextHeight{ t_heightBuffer[nextCellIndices[i]] + t_sandBuffer[nextCellIndices[i]] };
 
 		const float heightDifference{ height - nextHeight };
 		avalanches[i] = fmaxf(heightDifference - avalancheAngle * c_distances[i] * c_parameters.gridScale, 0.0f);
@@ -57,7 +58,7 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, c
 	if (avalancheSum > 0.0f)
 	{
 		const float rAvalancheSum{ 1.0f / avalancheSum };
-		const float avalancheSize{ fminf(maxAvalanche / (1.0f + maxAvalanche * rAvalancheSum), terrain.y) };
+		const float avalancheSize{ fminf(maxAvalanche / (1.0f + maxAvalanche * rAvalancheSum), sand) };
 
 
 		const float scale{ avalancheSize * rAvalancheSum };
@@ -66,15 +67,15 @@ __global__ void atomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer, c
 		{
 			if (avalanches[i] > 0.0f)
 			{
-				atomicAdd(&t_terrainBuffer[nextCellIndices[i]].y, scale * avalanches[i]);
+				atomicAdd(&t_sandBuffer[nextCellIndices[i]], scale * avalanches[i]);
 			}
 		}
 
-		atomicAdd(&t_terrainBuffer[cellIndex].y, -avalancheSize);
+		atomicAdd(&t_sandBuffer[cellIndex], -avalancheSize);
 	}
 }
 
-__global__ void finishAtomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuffer)
+__global__ void finishAtomicInPlaceAvalanchingKernel(Buffer<float> t_sandBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -84,23 +85,26 @@ __global__ void finishAtomicInPlaceAvalanchingKernel(Buffer<float4> t_terrainBuf
 	}
 
 	const int cellIndex{ getCellIndex(cell) };
+	float4 terrain = c_parameters.terrainArray.read(cell);
+	terrain.y = t_sandBuffer[cellIndex];
 
-	c_parameters.terrainArray.write(cell, t_terrainBuffer[cellIndex]);
+	c_parameters.terrainArray.write(cell, terrain);
 }
 
 void avalanching(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters)
 {
-	Buffer<float4> terrainBuffer{ reinterpret_cast<Buffer<float4>>(t_launchParameters.tmpBuffer) };
+	Buffer<float> heightBuffer{ t_launchParameters.tmpBuffer };
+	Buffer<float> sandBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
 	Buffer<float> reptationBuffer{ t_launchParameters.tmpBuffer + 4 * t_simulationParameters.cellCount };
 
-	setupAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(terrainBuffer);
+	setupAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(heightBuffer, sandBuffer);
 
 	for (int i = 0; i < t_launchParameters.avalancheIterations; ++i)
 	{
-		atomicInPlaceAvalanchingKernel<< <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (terrainBuffer, reptationBuffer);
+		atomicInPlaceAvalanchingKernel<< <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (heightBuffer, sandBuffer, reptationBuffer);
 	}
 
-	finishAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(terrainBuffer);
+	finishAtomicInPlaceAvalanchingKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(sandBuffer);
 }
 
 }
