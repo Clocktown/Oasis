@@ -40,6 +40,7 @@ namespace dunes
 		m_isAwake{ false },
 		m_isPaused{ false },
 		m_reinitializeWindWarping{ false },
+		m_uploadVegTypes{ false },
 		m_renderParameterBuffer{ std::make_shared<sthe::gl::Buffer>(static_cast<int>(sizeof(RenderParameters)), 1) },
 		m_coverageMap{ nullptr },
 		m_coverage{ std::numeric_limits<float>::quiet_NaN() },
@@ -147,7 +148,8 @@ namespace dunes
 			                   dunes::getResourcePath() + "models\\BushFlowerSmall.obj",
 			                   dunes::getResourcePath() + "models\\seaweed.obj" };
 
-		m_vegTypes = {
+		std::array<VegetationType, 3> vegTypes
+		{
 			VegetationType
 			{
 				20.0f,
@@ -172,7 +174,7 @@ namespace dunes
 				100.f,
 				0.01f,
 				{0.3f, 1.7f}
-            },
+			},
 			VegetationType
 			{
 				2.f,
@@ -197,10 +199,10 @@ namespace dunes
 				10.f,
 				0.01f,
 				{0.0f, 0.75f}
-        },
-	    VegetationType
-	    {
-				1.f,
+		},
+		VegetationType
+		{
+				3.f,
 				0.3f,
 				0.01f,
 				0.1f,
@@ -222,7 +224,12 @@ namespace dunes
 				0.1f,
 				0.001f,
 				{0.1f, 0.4f}
-		    } };
+			}
+		};
+
+		for (int i = 0; i < 3; ++i) {
+			setVegetationType(i, vegTypes[i]);
+		}
 
 		m_vegMatrix.resize(c_maxVegTypeCount * c_maxVegTypeCount, 1.0f);
 		m_vegMatrix[1 + 0 * c_maxVegTypeCount] = 0.5f;
@@ -347,6 +354,11 @@ namespace dunes
 			{
 				initializeWindWarping(m_launchParameters, m_simulationParameters);
 				m_reinitializeWindWarping = false;
+			}
+
+			if (m_uploadVegTypes) {
+				m_vegTypeBuffer.upload(&m_vegTypes, 1);
+				m_uploadVegTypes = false;
 			}
 
 			if (m_constantCoverage && ((m_timeStep % m_spawnSteps) == 0) && (m_coverage < m_targetCoverage)) {
@@ -531,9 +543,9 @@ namespace dunes
 		m_vegCountBuffer.upload(counts, 1 + c_maxVegTypeCount);
 		m_simulationParameters.vegCountBuffer = m_vegCountBuffer.getData<int>();
 
-		m_vegTypeBuffer.reinitialize(c_maxVegTypeCount, sizeof(VegetationType));
-		m_vegTypeBuffer.upload(m_vegTypes.data(), c_maxVegTypeCount);
-		m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationType>();
+		m_vegTypeBuffer.reinitialize(1, sizeof(VegetationTypeSoA));
+		m_vegTypeBuffer.upload(&m_vegTypes, 1);
+		m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationTypeSoA>();
 
 		m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(float));
 		m_vegMatrixBuffer.upload(m_vegMatrix);
@@ -1088,7 +1100,7 @@ namespace dunes
 		int i{ m_simulationParameters.vegTypeCount++ };
 
 		m_vegPrefabs.files[i] = std::filesystem::path{};
-		m_vegTypes[i] = VegetationType{};
+		//m_vegTypes[i] = VegetationType{};
 		
 		std::fill(m_vegMatrix.begin() + i * c_maxVegTypeCount, m_vegMatrix.begin() + (i + 1) * c_maxVegTypeCount, 1.0f);
 
@@ -1109,12 +1121,32 @@ namespace dunes
 		while (t_index >= m_simulationParameters.vegTypeCount) {
 			addVegType();
 		}
-		m_vegTypes[t_index] = t_type;
 
-		if (m_isAwake)
-		{
-			m_vegTypeBuffer.upload(&t_type, t_index, 1);
-		}
+		m_vegTypes.maxRadius[t_index] = t_type.maxRadius;
+		m_vegTypes.growthRate[t_index] = t_type.growthRate;
+		m_vegTypes.positionAdjustRate[t_index] = t_type.positionAdjustRate;
+		m_vegTypes.damageRate[t_index] = t_type.damageRate;
+		m_vegTypes.shrinkRate[t_index] = t_type.shrinkRate;
+		m_vegTypes.maxMaturityTime[t_index] = t_type.maxMaturityTime;
+		m_vegTypes.maturityPercentage[t_index] = t_type.maturityPercentage;
+		m_vegTypes.height[t_index] = t_type.height;
+		m_vegTypes.waterUsageRate[t_index] = t_type.waterUsageRate;
+		m_vegTypes.waterStorageCapacity[t_index] = t_type.waterStorageCapacity;
+		m_vegTypes.waterResistance[t_index] = t_type.waterResistance;
+		m_vegTypes.minMoisture[t_index] = t_type.minMoisture;
+		m_vegTypes.maxMoisture[t_index] = t_type.maxMoisture;
+		m_vegTypes.soilCompatibility[t_index] = t_type.soilCompatibility;
+		m_vegTypes.sandCompatibility[t_index] = t_type.sandCompatibility;
+		m_vegTypes.terrainCoverageResistance[t_index] = t_type.terrainCoverageResistance;
+		m_vegTypes.maxSlope[t_index] = t_type.maxSlope;
+		m_vegTypes.baseSpawnRate[t_index] = t_type.baseSpawnRate;
+		m_vegTypes.densitySpawnMultiplier[t_index] = t_type.densitySpawnMultiplier;
+		m_vegTypes.windSpawnMultiplier[t_index] = t_type.windSpawnMultiplier;
+		m_vegTypes.humusRate[t_index] = t_type.humusRate;
+		m_vegTypes.lightConditions[t_index] = t_type.lightConditions;
+		m_vegTypes.separation[t_index] = t_type.separation;
+
+		m_uploadVegTypes = m_isAwake;
 	}
 
 	void Simulator::setVegetationTypeMesh(const int t_index, const std::filesystem::path& file)

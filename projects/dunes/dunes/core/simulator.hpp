@@ -248,6 +248,7 @@ namespace dunes
 		bool m_isAwake;
 		bool m_isPaused;
 		bool m_reinitializeWindWarping;
+		bool m_uploadVegTypes;
 
 		std::vector<float> m_watchTimings;
 		std::vector<float> m_meanWatchTimings;
@@ -263,7 +264,7 @@ namespace dunes
 			std::array<std::filesystem::path, c_maxVegTypeCount> files{};
 		} m_vegPrefabs;
 
-		std::array<VegetationType, c_maxVegTypeCount> m_vegTypes{};
+		VegetationTypeSoA m_vegTypes{};
 		std::vector<float> m_vegMatrix;
 
 		struct AdaptiveGrid
