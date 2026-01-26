@@ -1720,7 +1720,7 @@ CU_INLINE CU_HOST_DEVICE float3 fract(const float3 a)
 
 CU_INLINE CU_HOST_DEVICE float smoothstep(const float e0, const float e1, const float x)
 {
-	float t = clamp((x - e0) / (e1 - e0), 0.0, 1.0);
+	float t = clamp((x - e0) / (e1 - e0), 0.0f, 1.0f);
 	return t * t * (3.0f - 2.0f * t);
 }
 
