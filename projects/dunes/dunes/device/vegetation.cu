@@ -200,10 +200,10 @@ namespace dunes {
 
 			for (int l = 0; l < c_parameters.adaptiveGrid.layerCount; ++l)
 			{
-				const int xStart = int(floorf((veg.pos.x - veg.radius - c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-				const int xEnd = int(ceilf((veg.pos.x + veg.radius + c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-				const int yStart = int(floorf((veg.pos.y - veg.radius - c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-				const int yEnd = int(ceilf((veg.pos.y + veg.radius + c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+				const int xStart = int(floorf((veg.pos.x - veg.radius - 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+				const int xEnd = int(ceilf((veg.pos.x + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+				const int yStart = int(floorf((veg.pos.y - veg.radius - 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+				const int yEnd = int(ceilf((veg.pos.y + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
 
 				for (int i = xStart; i <= xEnd; ++i) {
 					for (int j = yStart; j <= yEnd; ++j) {
