@@ -19,9 +19,9 @@ __global__ void coverageKernel(unsigned int* coverageMap, float threshold)
 		return;
 	}
 
-	const float4 terrain{ c_parameters.terrainArray.read(cell) };
+	const half4 terrain{ c_parameters.terrainArray.read(cell) };
 
-	coverageMap[getCellIndex(cell)] = terrain.y > threshold ? 1 : 0;
+	coverageMap[getCellIndex(cell)] = terrain.a.y > __float2half(threshold) ? 1 : 0;
 }
 
 float coverage(const LaunchParameters& t_launchParameters, unsigned int* coverageMap, int num_cells, float threshold)

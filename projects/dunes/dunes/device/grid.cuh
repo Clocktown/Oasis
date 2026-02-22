@@ -129,4 +129,44 @@ namespace dunes
 		}
 	}
 
+	template <bool TUseBilinear>
+    __forceinline__ __device__ float sampleLinearOrNearest(const Array2D<half>& arr,
+                                                            const float2&         pos)
+    {
+        if constexpr(TUseBilinear)
+        {
+            return tex2D<float>(arr.texture, pos.x, pos.y);
+        }
+        else
+        {
+            return __half2float(arr.read(getWrappedCell(getNearestCell(pos - 0.5f))));
+        }
+    }
+
+	template <bool TUseBilinear>
+    __forceinline__ __device__ float2 sampleLinearOrNearest(const Array2D<half2>& arr, const float2& pos)
+    {
+        if constexpr(TUseBilinear)
+        {
+            return tex2D<float2>(arr.texture, pos.x, pos.y);
+        }
+        else
+        {
+            return __half22float2(arr.read(getWrappedCell(getNearestCell(pos - 0.5f))));
+        }
+    }
+
+	template <bool TUseBilinear>
+    __forceinline__ __device__ float4 sampleLinearOrNearest(const Array2D<half4>& arr, const float2& pos)
+    {
+        if constexpr(TUseBilinear)
+        {
+            return tex2D<float4>(arr.texture, pos.x, pos.y);
+        }
+        else
+        {
+            return half4toFloat4(arr.read(getWrappedCell(getNearestCell(pos - 0.5f))));
+        }
+    }
+
 }

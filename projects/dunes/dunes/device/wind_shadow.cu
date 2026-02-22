@@ -18,21 +18,22 @@ namespace dunes
 			return;
 		}
 
-		const float4 terrain{ c_parameters.terrainArray.read(cell) };
-		float4 resistance{ c_parameters.resistanceArray.read(cell) };
+		const float4 terrain{ half4toFloat4(c_parameters.terrainArray.read(cell)) };
+		float4 resistance{ half4toFloat4(c_parameters.resistanceArray.read(cell)) };
 		float2 windVelocity;
 		float windSpeed;
 		float2 windDirection;
+        float2 nextPosition {make_float2(cell) + 0.5f};
 
 		if constexpr (Mode == WindShadowMode::Linear)
 		{
-			windVelocity = c_parameters.windArray.read(cell);
+            windVelocity  = sampleLinearOrNearest<true>(c_parameters.windArray, 0.5f * nextPosition);
 			windSpeed = length(windVelocity);
 			windDirection = windVelocity / (windSpeed + 1e-06f);
 		}
 
 		const float height{ terrain.x + terrain.y + terrain.z + terrain.w };
-		float2 nextPosition{ make_float2(cell) + 0.5f };
+		
 		//nextPosition -= windDirection;
 		float maxAngle{ 0.0f };
 
@@ -40,7 +41,8 @@ namespace dunes
 		{
 			if constexpr (Mode == WindShadowMode::Curved)
 			{
-				windVelocity = sampleLinearOrNearest<TUseBilinear>(c_parameters.windArray, nextPosition);
+                windVelocity =
+                        sampleLinearOrNearest<true>(c_parameters.windArray, 0.5f * nextPosition);
 				windSpeed = length(windVelocity);
 				windDirection = windVelocity / (windSpeed + 1e-06f);
 			}
@@ -63,7 +65,7 @@ namespace dunes
 		resistance.x = clamp((maxAngle - c_parameters.minWindShadowAngle) /
 			(c_parameters.maxWindShadowAngle - c_parameters.minWindShadowAngle), 0.0f, 1.0f);
 
-		c_parameters.resistanceArray.write(cell, resistance);
+		c_parameters.resistanceArray.write(cell, toHalf4(resistance));
 	}
 
 	void windShadow(const LaunchParameters& t_launchParameters)

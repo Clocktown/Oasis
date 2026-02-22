@@ -15,12 +15,13 @@ __global__ void venturiKernel()
 
 	int2 cell;
 
-	for (cell.x = index.x; cell.x < c_parameters.gridSize.x; cell.x += stride.x)
+	for (cell.x = index.x; cell.x < c_parameters.windGridSize.x; cell.x += stride.x)
 	{
-		for (cell.y = index.y; cell.y < c_parameters.gridSize.y; cell.y += stride.y)
+		for (cell.y = index.y; cell.y < c_parameters.windGridSize.y; cell.y += stride.y)
 		{
 
-			const float4 terrain{ c_parameters.terrainArray.read(cell) };
+			const float4 terrain {sampleLinearOrNearest<true>(
+                            c_parameters.terrainArray, make_float2(2 * cell + 1) + 0.5f)};
 			const float height{ terrain.x + terrain.y + terrain.z + terrain.w };
 
 			const float venturiScale{ fmaxf(1.0f + c_parameters.venturiStrength * height, 0.5f) };
@@ -31,7 +32,7 @@ __global__ void venturiKernel()
 			//	0.5f * c_parameters.rGridScale * (c_parameters.moistureArray.read(getWrappedCell(cell + c_offsets[2])) - c_parameters.moistureArray.read(getWrappedCell(cell + c_offsets[6])))
 			//};
 
-			c_parameters.windArray.write(cell, windVelocity);// -100.f * moistureGradient);
+			c_parameters.windArray.write(cell, __float22half2_rn(windVelocity));// -100.f * moistureGradient);
 		}
 	}
 }
