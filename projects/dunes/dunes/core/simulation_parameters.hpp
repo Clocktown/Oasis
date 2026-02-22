@@ -26,13 +26,14 @@ using Buffer = sthe::device::Buffer<T>;
 
 struct WindWarping
 {
-	int count{ 2 };
-	float i_divisor{ 1.f / 20.0f };
-	float radii[4]{ 200.0f, 50.0f, 0.0f, 0.0f };
-	float strengths[4]{ 0.8f, 0.2f, 0.0f, 0.0f };
-	float gradientStrengths[4]{ 30.f, 5.f, 0.0f, 0.0f };
-	Buffer<cuComplex> gaussKernels[4];
-	Buffer<cuComplex> smoothedHeights[4];
+    int               count {2};
+    float             i_divisor {1.f / 20.0f};
+    float             radii[2] {200.0f, 50.0f};
+    float             strengths[2] {0.8f, 0.2f};
+    float             gradientStrengths[2] {30.f, 5.f};
+    int               x_width;
+    Buffer<cuComplex> gaussKernels[2];
+    Buffer<cuComplex> smoothedHeights[2];
 };
 
 struct VegetationType
@@ -122,6 +123,11 @@ struct SimulationParameters
 	float rGridScale{ 1.0f / gridScale };
 	int cellCount{ gridSize.x * gridSize.y };
 
+	int2  windGridSize {1024, 1024};
+    float windGridScale {2.f};
+    float rWindGridScale {1.f / windGridScale};
+    int   windCellCount {windGridSize.x * windGridSize.y};
+
 	float2 windDirection{ 1.0f, 0.0f };
 	float windSpeed{ 10.0f };
 
@@ -178,22 +184,21 @@ struct SimulationParameters
 	float deltaTime{ 1.0f };
 	int timestep = 0;
 
-	Array2D<float4> terrainArray;
-	Array2D<float2> windArray;
-	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = humus
-	Array2D<float4> fluxArray;
-	Array2D<float2> velocityArray;
-	Array2D<float>	sedimentArray;
-	Array2D<float> moistureArray;
-	Array2D<float2> shadowArray;
-	Array2D<float2> vegHeightArray;
+	Array2D<half4> terrainArray;
+	Array2D<half2> windArray;
+	Array2D<half4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = humus
+	Array2D<half4> fluxArray;
+	Array2D<half>	sedimentArray;
+	Array2D<half> moistureArray;
+	Array2D<half2> shadowArray;
+	Array2D<half2> vegHeightArray;
 	Buffer<Vegetation> vegBuffer;
 	Buffer<int> vegMapBuffer;
 	Buffer<uint4> seedBuffer;
 	Buffer<int> vegCountBuffer;
 	Buffer<VegetationTypeSoA> vegTypeBuffer;
 	Buffer<float> vegMatrixBuffer;
-	Buffer<float> slabBuffer;
+	Buffer<half> slabBuffer;
 	AdaptiveGrid adaptiveGrid;
 };
 

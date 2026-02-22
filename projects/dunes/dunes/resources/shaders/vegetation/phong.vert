@@ -1,4 +1,5 @@
 #version 460 core
+#extension GL_NV_gpu_shader5 : require
 
 // Input
 layout(location = 0) in vec4 t_position;

@@ -89,9 +89,9 @@ namespace dunes
 
 		const float2 uv = (make_float2(cell) + 0.5f) / make_float2(c_parameters.gridSize);
 
-		const float4 curr_terrain = c_parameters.terrainArray.read(cell);
-		const float4 curr_resistance = c_parameters.resistanceArray.read(cell);
-		const float curr_moisture = c_parameters.moistureArray.read(cell);
+		const float4 curr_terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
+		const float4 curr_resistance = half4toFloat4(c_parameters.resistanceArray.read(cell));
+		const float curr_moisture = __half2float(c_parameters.moistureArray.read(cell));
 
 		const int indices[7]{
 			(int)NoiseGenerationTarget::Bedrock,
@@ -124,17 +124,18 @@ namespace dunes
 
 		// Regular initialization
 		const float4 terrain{ values[0], values[1], values[4], values[5]};
-		c_parameters.terrainArray.write(cell, terrain);
+		c_parameters.terrainArray.write(cell, toHalf4(terrain));
 
 		const float4 resistance{ 0.0f, values[2], values[3], 0.0f};
-		c_parameters.resistanceArray.write(cell, resistance);
+		c_parameters.resistanceArray.write(cell, toHalf4(resistance));
 
 		const int idx = getCellIndex(cell);
-		c_parameters.slabBuffer[idx] = 0.0f;
-		c_parameters.moistureArray.write(cell, values[6]);
-		c_parameters.fluxArray.write(cell, { 0.f,0.f,0.f,0.f });
-		c_parameters.velocityArray.write(cell, { 0.f, 0.f });
-		c_parameters.sedimentArray.write(cell, 0.f);
+		c_parameters.slabBuffer[idx] = CUDART_ZERO_FP16;
+		c_parameters.moistureArray.write(cell, __float2half(values[6]));
+        c_parameters.fluxArray.write(cell,
+                                        half4 {half2 {CUDART_ZERO_FP16, CUDART_ZERO_FP16},
+                                            half2 {CUDART_ZERO_FP16, CUDART_ZERO_FP16}});
+        c_parameters.sedimentArray.write(cell, CUDART_ZERO_FP16);
 	}
 
 	__global__ void addSandForCoverageKernel(float amount)
@@ -146,12 +147,12 @@ namespace dunes
 			return;
 		}
 
-		float4 curr_terrain = c_parameters.terrainArray.read(cell);
+		float4 curr_terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
 
 		curr_terrain.y += frand(make_float2(cell)) * 2.f * amount;
 		curr_terrain.y = fmaxf(curr_terrain.y, 0.f);
 
-		c_parameters.terrainArray.write(cell, curr_terrain);
+		c_parameters.terrainArray.write(cell, toHalf4(curr_terrain));
 	}
 
 	__global__ void addSandCircleForCoverageKernel(int2 pos, int radius, float amount)
@@ -163,7 +164,7 @@ namespace dunes
 			return;
 		}
 
-		float4 curr_terrain = c_parameters.terrainArray.read(cell);
+		float4 curr_terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
 
 		const float2 cellf{ make_float2(cell) };
 		const float2 posf{ make_float2(pos) };
@@ -176,7 +177,7 @@ namespace dunes
 		}
 
 
-		c_parameters.terrainArray.write(cell, curr_terrain);
+		c_parameters.terrainArray.write(cell, toHalf4(curr_terrain));
 	}
 
 	void initializeTerrain(const LaunchParameters& t_launchParameters, const InitializationParameters& t_initializationParameters)
