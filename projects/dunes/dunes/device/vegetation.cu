@@ -36,7 +36,7 @@ namespace dunes {
 
 	}
 
-	__global__ void rasterizeVegetation(const Buffer<float> slopeBuffer, int count)
+	__global__ void rasterizeVegetation(const Buffer<half> slopeBuffer, int count)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -45,7 +45,7 @@ namespace dunes {
 			return;
 		}
 
-		float4 resistance = c_parameters.resistanceArray.read(cell);
+		float4 resistance = half4toFloat4(c_parameters.resistanceArray.read(cell));
 
 		if (resistance.y < 0.f) 
 		{
@@ -55,17 +55,17 @@ namespace dunes {
 		resistance.y = 0.f;
 
 		const float2 position{ (make_float2(cell) + 0.5f) * c_parameters.gridScale };
-		const float4 terrain = c_parameters.terrainArray.read(cell);
+		const float4 terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
 		const float3 pos{ position.x, position.y, terrain.x + terrain.y + terrain.z };
 		
 		const float terrainThickness = terrain.y + terrain.z;
 		const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 		const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-		const float moisture{ clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+		const float moisture{ clamp(__half2float(c_parameters.moistureArray.read(cell)) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 
-		const float slope = 2.f * slopeBuffer[getCellIndex(cell)] - 1.f;
+		const float slope = 2.f * __half2float(slopeBuffer[getCellIndex(cell)]) - 1.f;
 
-		float2 wind = c_parameters.windArray.read(cell);
+		float2 wind = sampleLinearOrNearest<true>(c_parameters.windArray, 0.5f * (make_float2(cell) + 0.5f));
 		wind = wind / (length(wind) + 1e-6f);
 
 		float typeProbabilities[c_maxVegTypeCount];
@@ -163,11 +163,11 @@ namespace dunes {
 		}
 
 		resistance.y = fminf(resistance.y, 1.f);
-		c_parameters.resistanceArray.write(cell, resistance);
-		c_parameters.vegHeightArray.write(cell, float2{terrainHeight, vegetationHeight});
+		c_parameters.resistanceArray.write(cell, toHalf4(resistance));
+		c_parameters.vegHeightArray.write(cell, __float22half2_rn(float2{terrainHeight, vegetationHeight}));
 	}
 
-	__global__ void growVegetation(int vegCount, const Buffer<float> slopeBuffer)
+	__global__ void growVegetation(int vegCount, const Buffer<half> slopeBuffer)
 	{
 		const int idx = getGlobalIndex1D();
 		if (idx >= vegCount) {
@@ -182,9 +182,9 @@ namespace dunes {
 
 			const float2 gridPos = { veg.pos.x * c_parameters.rGridScale, veg.pos.y * c_parameters.rGridScale };
 			const int2 cell = make_int2(gridPos); // for read from terrainArray if necessary
-			const float4 terrain = c_parameters.terrainArray.read(cell);
-			const float moisture = c_parameters.moistureArray.read(cell);
-			const float slope = 2.f * slopeBuffer[getCellIndex(cell)] - 1.f;
+			const float4 terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
+			const float moisture = __half2float(c_parameters.moistureArray.read(cell));
+			const float slope = 2.f * __half2float(slopeBuffer[getCellIndex(cell)]) - 1.f;
 			const float bedrockHeight = terrain.x;
 			const float soilHeight = bedrockHeight + terrain.z;
 			const float sandHeight = soilHeight + terrain.y;
@@ -193,8 +193,8 @@ namespace dunes {
 			const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 			const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
 			const float relativeMoisture{ clamp(moisture / (moistureCapacity + 1e-6f), 0.f, 1.f) };
-			const float2 shadowHeights = c_parameters.vegHeightArray.read(cell);
-			const float2 shadow = c_parameters.shadowArray.read(cell);
+			const float2 shadowHeights = __half22float2(c_parameters.vegHeightArray.read(cell));
+			const float2 shadow = __half22float2(c_parameters.shadowArray.read(cell));
 
 			float overlap = 0.f;
 
@@ -329,7 +329,7 @@ namespace dunes {
 		veg.health = 1.f;
 		veg.water = 0.f;
 		const int2 vegCell{ seed.x % c_parameters.gridSize.x, seed.y % c_parameters.gridSize.y };
-		const float4 terrain = c_parameters.terrainArray.read(vegCell);
+        const float4 terrain = half4toFloat4(c_parameters.terrainArray.read(vegCell));
 		veg.pos = { (vegCell.x + 0.5f) * c_parameters.gridScale, (vegCell.y + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };
 		const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / (*c_parameters.vegTypeBuffer).height[veg.type].y, (*c_parameters.vegTypeBuffer).maxRadius[veg.type]);
 
@@ -449,7 +449,7 @@ namespace dunes {
 			return;
 		}
 
-		const float2 heights{ c_parameters.vegHeightArray.read(cell) }; // .x is height without Veg, .y is height with Veg
+		const float2 heights{ __half22float2(c_parameters.vegHeightArray.read(cell)) }; // .x is height without Veg, .y is height with Veg
 		float2 shadow{ 0.f, 0.f }; // .x is shadow at ground level, .y is shadow at top of vegetation
 		const float2 lightDirection = { -sqrtf(2.f), -sqrtf(2.f) };
 
@@ -461,7 +461,7 @@ namespace dunes {
 				const float distance = length(offset) * c_parameters.gridScale;
 				float2 nextPosition = position - offset;
 
-				const float nextHeight{ c_parameters.vegHeightArray.sample(nextPosition).y }; // .y is the height including Vegetation
+				const float nextHeight{ sampleLinearOrNearest<true>(c_parameters.vegHeightArray, nextPosition).y }; // .y is the height including Vegetation
 				const float2 heightsDifference{ nextHeight - heights.x, nextHeight - heights.y };
 				const float2 angle{ heightsDifference.x / distance, heightsDifference.y / distance };
 
@@ -476,7 +476,7 @@ namespace dunes {
 
 		shadow *= (1.f / 49.f);
 
-		c_parameters.shadowArray.write(cell, clamp(2.f * (shadow - 0.5f), 0.f, 1.f)); // Rescaling shadow, because the dot product means that shadow can't be smaller 0.5 than 0.5 (roughly)
+		c_parameters.shadowArray.write(cell, __float22half2_rn(clamp(2.f * (shadow - 0.5f), 0.f, 1.f))); // Rescaling shadow, because the dot product means that shadow can't be smaller 0.5 than 0.5 (roughly)
 	}
 
 	void getVegetationCount(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
@@ -523,7 +523,7 @@ namespace dunes {
 
 		initAdaptiveGrid(t_simulationParameters);
 		
-		Buffer<float> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
+		Buffer<half> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
 		Buffer<int> relMapBuffer{ reinterpret_cast<Buffer<int>>(slopeBuffer + t_simulationParameters.cellCount) };
 
 		if (count > 0) {

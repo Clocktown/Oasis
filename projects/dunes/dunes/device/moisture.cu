@@ -17,8 +17,8 @@ namespace dunes
 			return;
 		}
 
-		float4 terrain{ c_parameters.terrainArray.read(cell) };
-		float moisture{ c_parameters.moistureArray.read(cell) };
+		float4 terrain{ half4toFloat4(c_parameters.terrainArray.read(cell)) };
+		float moisture{ __half2float(c_parameters.moistureArray.read(cell)) };
 
 		const float sandMoistureRate = c_parameters.sandMoistureRate;
 		const float soilMoistureRate = c_parameters.soilMoistureRate;
@@ -26,7 +26,7 @@ namespace dunes
 		const float sandFactor = 1.f - clamp(terrain.y * iTerrainThicknessThreshold, 0.f, 1.f);
 		const float moistureRate = lerp(sandMoistureRate, soilMoistureRate, sandFactor);
 
-		const float vegetation = c_parameters.resistanceArray.read(cell).y;
+		const float vegetation = __half2float(c_parameters.resistanceArray.read(cell).a.y);
 		const float moistureEvaporationFactor = (1.f - clamp(terrain.w * 10.f, 0.f, 1.f)) * (1.f - 0.75f * clamp(vegetation, 0.f, 1.f));
 		terrain.w = terrain.w * exp(- c_parameters.evaporationRate * c_parameters.deltaTime);
 		moisture = moisture * exp(-c_parameters.moistureEvaporationScale * moistureRate * moistureEvaporationFactor * c_parameters.deltaTime);
@@ -34,8 +34,8 @@ namespace dunes
 		setBorderWaterLevelMin(cell, terrain, c_parameters.waterBorderLevel);
 		setWaterLevelMin(cell, terrain, c_parameters.waterLevel);
 
-		c_parameters.terrainArray.write(cell, terrain);
-		c_parameters.moistureArray.write(cell, moisture);
+		c_parameters.terrainArray.write(cell, toHalf4(terrain));
+		c_parameters.moistureArray.write(cell, __float2half(moisture));
 	}
 
 	__global__ void moistureKernel() {
@@ -46,8 +46,8 @@ namespace dunes
 			return;
 		}
 
-		float4 terrain{ c_parameters.terrainArray.read(cell) };
-		float moisture{ c_parameters.moistureArray.read(cell) };
+		float4 terrain{ half4toFloat4(c_parameters.terrainArray.read(cell)) };
+		float moisture{ __half2float(c_parameters.moistureArray.read(cell)) };
 		const float sandMoistureRate = c_parameters.sandMoistureRate;
 		const float soilMoistureRate = c_parameters.soilMoistureRate;
 		const float iTerrainThicknessThreshold = c_parameters.iTerrainThicknessMoistureThreshold;
@@ -70,11 +70,11 @@ namespace dunes
 		setBorderWaterLevelMin(cell, terrain, c_parameters.waterBorderLevel);
 		setWaterLevelMin(cell, terrain, c_parameters.waterLevel);
 
-		c_parameters.terrainArray.write(cell, terrain);
-		c_parameters.moistureArray.write(cell, moisture);
+		c_parameters.terrainArray.write(cell, toHalf4(terrain));
+		c_parameters.moistureArray.write(cell, __float2half(moisture));
 	}
 
-	__global__ void initMoistureDiffusionKernel(Buffer<float> moistureBuffer) {
+	__global__ void initMoistureDiffusionKernel(Buffer<half> moistureBuffer) {
 		const int2 cell{ getGlobalIndex2D() };
 
 		if (isOutside(cell))
@@ -82,10 +82,10 @@ namespace dunes
 			return;
 		}
 
-		moistureBuffer[getCellIndex(cell)] = 0.f;
+		moistureBuffer[getCellIndex(cell)] = CUDART_ZERO_FP16;
 	}
 
-	__global__ void moistureDiffusionKernel(Buffer<float> moistureBuffer) {
+	__global__ void moistureDiffusionKernel(Buffer<half> moistureBuffer) {
 		const int2 cell{ getGlobalIndex2D() };
 
 		if (isOutside(cell))
@@ -93,21 +93,21 @@ namespace dunes
 			return;
 		}
 
-		const float prev = c_parameters.moistureArray.read(cell);
+		const float prev = __half2float(c_parameters.moistureArray.read(cell));
 		const float diffusion_coefficient = fminf(0.5f * c_parameters.rGridScale * c_parameters.rGridScale * c_parameters.deltaTime, 0.25f);
 
 		float next = 0.f;
 		for(int i = 0; i < 4; ++i) {
 			const int2 nextCell = getWrappedCell(cell + c_offsets[2 * i]);
 
-			next += c_parameters.moistureArray.read(nextCell);
+			next += __half2float(c_parameters.moistureArray.read(nextCell));
 		}
 		next = prev + diffusion_coefficient * (next - 4 * prev); 
 
-		moistureBuffer[getCellIndex(cell)] = next;
+		moistureBuffer[getCellIndex(cell)] = __float2half(next);
 	}
 
-	__global__ void finishMoistureDiffusionKernel(const Buffer<float> moistureBuffer) {
+	__global__ void finishMoistureDiffusionKernel(const Buffer<half> moistureBuffer) {
 		const int2 cell{ getGlobalIndex2D() };
 
 		if (isOutside(cell))
@@ -197,7 +197,7 @@ namespace dunes
 		const float rainProbabilityMin = c_parameters.rainProbabilityMin;
 		const float rainProbabilityMax = c_parameters.rainProbabilityMax;
 		const float iRainProbabilityHeightRange = c_parameters.iRainProbabilityHeightRange;
-		float4 terrain{ c_parameters.terrainArray.read(cell) };
+		float4 terrain{ half4toFloat4(c_parameters.terrainArray.read(cell)) };
 		const float height = terrain.x + terrain.y + terrain.z;
 		const float rainProbability = rainProbabilityMin + (rainProbabilityMax - rainProbabilityMin) * clamp(height * iRainProbabilityHeightRange, 0.f, 1.f);
 		const float2 uv = (make_float2(cell) + 0.5f) / make_float2(c_parameters.gridSize);
@@ -211,7 +211,7 @@ namespace dunes
 		);
 		terrain.w += rainStrength * (h < rainProbability ? 1.f : 0.f);//clamp(h - (1.f - rainProbability), 0.f, 1.f);
 
-		c_parameters.terrainArray.write(cell, terrain);
+		c_parameters.terrainArray.write(cell, toHalf4(terrain));
 	}
 
 	void rain(const LaunchParameters& t_launchParameters) {
@@ -219,7 +219,7 @@ namespace dunes
 	}
 
 	void moisture(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
-		Buffer<float> diffusedMoistureBuffer{ t_launchParameters.tmpBuffer };
+		Buffer<half> diffusedMoistureBuffer{ t_launchParameters.tmpBuffer };
 
 		evaporationKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
 		moistureKernel << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
