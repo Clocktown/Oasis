@@ -42,11 +42,11 @@ enum class ProjectionMode : unsigned char
 
 struct Projection
 {
-    ProjectionMode mode {ProjectionMode::Jacobi};
-    int            jacobiIterations {50};
-    cufftHandle    planR2C {0};
-    cufftHandle    planC2R {0};
-    int            x_width;
+	ProjectionMode mode{ ProjectionMode::Jacobi };
+	int jacobiIterations{ 50 };
+	cufftHandle planR2C;
+	cufftHandle planC2R;
+	Buffer<float> velocities[2];
 };
 
 struct LaunchParameters
@@ -79,10 +79,9 @@ struct LaunchParameters
 
 	WindWarping windWarping;
 	Projection projection;
-	Buffer<half> tmpBuffer; // 5 * gridSize.x * gridSize.y
+	Buffer<float> tmpBuffer; // 5 * gridSize.x * gridSize.y
 
-	cufftHandle fftPlanR2C {0};
-    cufftHandle fftPlanC2R {0};
+	cufftHandle fftPlan{ 0 };
 };
 
 struct NoiseGenerationParameters 

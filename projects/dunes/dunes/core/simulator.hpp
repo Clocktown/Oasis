@@ -216,6 +216,7 @@ namespace dunes
 		std::shared_ptr<sthe::gl::Texture2D> m_windMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_resistanceMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_fluxMap; // TODO: Needed as texture?
+		std::shared_ptr<sthe::gl::Texture2D> m_waterVelocityMap; // TODO: Needed as texture?
 		std::shared_ptr<sthe::gl::Texture2D> m_sedimentMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_terrainMoistureMap;
 		std::shared_ptr<sthe::gl::Texture2D> m_vegetationHeightMap;
@@ -226,6 +227,7 @@ namespace dunes
 		sthe::cu::Array2D m_windArray;
 		sthe::cu::Array2D m_resistanceArray;
 		sthe::cu::Array2D m_fluxArray;
+		sthe::cu::Array2D m_waterVelocityArray;
 		sthe::cu::Array2D m_terrainMoistureArray;
 		sthe::cu::Array2D m_sedimentArray;
 		sthe::cu::Array2D m_vegetationHeightArray;
@@ -238,7 +240,7 @@ namespace dunes
 		sthe::cu::Buffer m_vegTypeBuffer;
 		sthe::cu::Buffer m_vegMatrixBuffer;
 		sthe::cu::Buffer m_seedBuffer;
-		std::array<sthe::cu::Buffer, 2> m_windWarpingBuffers;
+		std::array<sthe::cu::Buffer, 4> m_windWarpingBuffers;
 		std::unique_ptr<sthe::cu::Buffer> m_coverageMap;
 		sthe::cu::Buffer m_velocityBuffer;
 		cudaTextureDesc m_textureDescriptor;
@@ -263,7 +265,7 @@ namespace dunes
 		} m_vegPrefabs;
 
 		VegetationTypeSoA m_vegTypes{};
-		std::vector<half> m_vegMatrix;
+		std::vector<float> m_vegMatrix;
 
 		struct AdaptiveGrid
 		{

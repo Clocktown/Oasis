@@ -1,5 +1,4 @@
 #version 460 core
-#extension GL_NV_gpu_shader5 : require
 
 // Input
 layout(location = 0) in vec4 t_position;
@@ -66,11 +65,12 @@ layout(std140, binding = 0) uniform PipelineBuffer
 
 struct Vegetation
 {
-    f16vec4 pos_r;
-	float16_t health;
-	float16_t water;
-	float16_t age;
-    int16_t type;
+    vec3 pos; 
+	int type;
+	float health;
+	float water;
+	float age;
+	float radius;
 };
 
 layout(std430, binding = 3) buffer VegBuffer
@@ -139,14 +139,14 @@ void main()
 {
     const Vegetation veg = t_vegs[t_vegMap[t_userID.x + gl_InstanceID]];
 	const mat3 normalMatrix = mat3(t_modelMatrix);
-	const float alpha = PI * pNoise(veg.pos_r.xy, 1);
+	const float alpha = PI * pNoise(veg.pos.xy, 1);
 	const float ca = cos(alpha);
 	const float sa = sin(alpha);
 	const mat3 rot = mat3(ca, 0, sa,
 						  0,  1, 0,
 						  -sa,0, ca);
 
-	fragment.position = (t_modelMatrix * vec4(veg.pos_r.xzy + veg.pos_r.w * rot * t_position.xyz, 1.0f)).xyz;
+	fragment.position = (t_modelMatrix * vec4(veg.pos.xzy + veg.radius * rot * t_position.xyz, 1.0f)).xyz;
 	fragment.normal = normalize(normalMatrix * t_normal.xyz);
 	fragment.uv = t_uv;
 

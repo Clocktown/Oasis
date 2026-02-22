@@ -19,8 +19,7 @@ void sediment(const LaunchParameters& t_launchParameters, const SimulationParame
 void getVegetationCount(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters, std::vector<sthe::cu::Stopwatch>& watches);
 void venturi(const LaunchParameters& t_launchParameters);
-void windWarping(LaunchParameters&     t_launchParameters,
-                 const SimulationParameters& t_simulationParameters);
+void windWarping(const LaunchParameters& t_launchParameters);
 void windShadow(const LaunchParameters& t_launchParameters);
 void pressureProjection(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);
 void continuousSaltation(const LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters);

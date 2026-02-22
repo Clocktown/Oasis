@@ -8,7 +8,7 @@
 namespace dunes
 {
 
-__global__ void setupBedrockAvalancheKernel(Buffer<half4> t_terrainBuffer)
+__global__ void setupBedrockAvalancheKernel(Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -22,7 +22,7 @@ __global__ void setupBedrockAvalancheKernel(Buffer<half4> t_terrainBuffer)
 }
 
 template<BedrockAvalancheMode mode>
-__global__ void bedrockAvalancheKernel(Buffer<half4> t_terrainBuffer)
+__global__ void bedrockAvalancheKernel(Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -33,7 +33,7 @@ __global__ void bedrockAvalancheKernel(Buffer<half4> t_terrainBuffer)
 
 	const int cellIndex{ getCellIndex(cell) };
 
-	const float4 terrain{ half4toFloat4(t_terrainBuffer[cellIndex]) };
+	const float4 terrain{ t_terrainBuffer[cellIndex] };
 	const float height{ terrain.x };
 	
 	int nextCellIndices[8];
@@ -44,7 +44,7 @@ __global__ void bedrockAvalancheKernel(Buffer<half4> t_terrainBuffer)
 	for (int i{ 0 }; i < 8; ++i)
 	{
 		nextCellIndices[i] = getCellIndex(getWrappedCell(cell + c_offsets[i]));
-        const float4 nextTerrain{ half4toFloat4(t_terrainBuffer[nextCellIndices[i]]) };
+		const float4 nextTerrain{ t_terrainBuffer[nextCellIndices[i]] };
 		const float nextHeight{ nextTerrain.x };
 
 		const float heightDifference{ height - nextHeight };
@@ -67,20 +67,20 @@ __global__ void bedrockAvalancheKernel(Buffer<half4> t_terrainBuffer)
 			{
 				if constexpr (mode == BedrockAvalancheMode::ToSand)
 				{
-					atomicAdd(&t_terrainBuffer[nextCellIndices[i]].a.y, __float2half(scale * avalanches[i]));
+					atomicAdd(&t_terrainBuffer[nextCellIndices[i]].y, scale * avalanches[i]);
 				}
 				else
 				{
-					atomicAdd(&t_terrainBuffer[nextCellIndices[i]].a.x, __float2half(scale * avalanches[i]));
+					atomicAdd(&t_terrainBuffer[nextCellIndices[i]].x, scale * avalanches[i]);
 				}
 			}
 		}
 
-		atomicAdd(&t_terrainBuffer[cellIndex].a.x, __float2half(- avalancheSize));
+		atomicAdd(&t_terrainBuffer[cellIndex].x, -avalancheSize);
 	}
 }
 
-__global__ void soilAvalancheKernel(Buffer<half4> t_terrainBuffer)
+__global__ void soilAvalancheKernel(Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -91,15 +91,15 @@ __global__ void soilAvalancheKernel(Buffer<half4> t_terrainBuffer)
 
 	const int cellIndex{ getCellIndex(cell) };
 
-	const float4 terrain{ half4toFloat4(t_terrainBuffer[cellIndex]) };
+	const float4 terrain{ t_terrainBuffer[cellIndex] };
 	const float height{ terrain.x + terrain.z };
 
-	const float vegetation{ __half2float(c_parameters.resistanceArray.read(cell).a.y) };
+	const float vegetation{ c_parameters.resistanceArray.read(cell).y };
 
 	const float terrainThickness = terrain.y + terrain.z;
 	const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 	const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-    const float moisture{ 2.f * clamp(__half2float(c_parameters.moistureArray.read(cell)) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1.f  };
+	const float moisture{ 2.f * clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) - 1.f  };
 
 	const float moistureFactor = moisture > 0.f ?
 		1.5f - 1.4f * moisture :
@@ -120,7 +120,7 @@ __global__ void soilAvalancheKernel(Buffer<half4> t_terrainBuffer)
 	for (int i{ 0 }; i < 8; ++i)
 	{
 		nextCellIndices[i] = getCellIndex(getWrappedCell(cell + c_offsets[i]));
-        const float4 nextTerrain{ half4toFloat4(t_terrainBuffer[nextCellIndices[i]]) };
+		const float4 nextTerrain{ t_terrainBuffer[nextCellIndices[i]] };
 		const float nextHeight{ nextTerrain.x + nextTerrain.z };
 
 		const float heightDifference{ height - nextHeight };
@@ -141,15 +141,15 @@ __global__ void soilAvalancheKernel(Buffer<half4> t_terrainBuffer)
 		{
 			if (avalanches[i] > 0.0f)
 			{
-				atomicAdd(&t_terrainBuffer[nextCellIndices[i]].b.x, __float2half(scale * avalanches[i]));
+				atomicAdd(&t_terrainBuffer[nextCellIndices[i]].z, scale * avalanches[i]);
 			}
 		}
 
-		atomicAdd(&t_terrainBuffer[cellIndex].b.x, __float2half(- avalancheSize));
+		atomicAdd(&t_terrainBuffer[cellIndex].z, -avalancheSize);
 	}
 }
 
-__global__ void finishBedrockAvalancheKernel(Buffer<half4> t_terrainBuffer)
+__global__ void finishBedrockAvalancheKernel(Buffer<float4> t_terrainBuffer)
 {
 	const int2 cell{ getGlobalIndex2D() };
 
@@ -170,7 +170,7 @@ void bedrockAvalanching(const LaunchParameters& t_launchParameters)
 		return;
 	}
 
-	Buffer<half4> terrainBuffer{ reinterpret_cast<Buffer<half4>>(t_launchParameters.tmpBuffer) };
+	Buffer<float4> terrainBuffer{ reinterpret_cast<Buffer<float4>>(t_launchParameters.tmpBuffer) };
 	setupBedrockAvalancheKernel<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D>>>(terrainBuffer);
 
 	if (t_launchParameters.bedrockAvalancheMode == BedrockAvalancheMode::ToSand)

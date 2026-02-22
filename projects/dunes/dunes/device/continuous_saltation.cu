@@ -12,7 +12,7 @@
 namespace dunes
 {
 
-	__global__ void setupContinuousSaltationKernel(Buffer<half> t_advectedSlabBuffer)
+	__global__ void setupContinuousSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 index{ getGlobalIndex2D() };
 		const int2 stride{ getGridStride2D() };
@@ -23,19 +23,18 @@ namespace dunes
 		{
 			for (cell.y = index.y; cell.y < c_parameters.gridSize.y; cell.y += stride.y)
 			{
-				float4 terrain{ half4toFloat4(c_parameters.terrainArray.read(cell)) };
+				float4 terrain{ c_parameters.terrainArray.read(cell) };
 
-				const float2 windVelocity {sampleLinearOrNearest<true>(
-                                        c_parameters.windArray, 0.5f * (make_float2(cell) + 0.5f))};
+				const float2 windVelocity{ c_parameters.windArray.read(cell) };
 				const float windSpeed{ length(windVelocity) };
 
 				const float terrainThickness = terrain.y + terrain.z;
 				const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 				const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-				const float moisture{ clamp(__half2float(c_parameters.moistureArray.read(cell)) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+				const float moisture{ clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 				const float moistureFactor{ clamp(1.f - 10.f * moisture, 0.f, 1.f) };
 
-				const float4 resistance{ half4toFloat4(c_parameters.resistanceArray.read(cell)) };
+				const float4 resistance{ c_parameters.resistanceArray.read(cell) };
 				const float saltationScale{ (terrain.w > 1e-5f ? 0.f : 1.f) * (1.0f - resistance.x) * (1.0f - fmaxf(resistance.y, 0.f)) * moistureFactor };
 
 				// TODO: lower saltation when cell is wet
@@ -44,19 +43,19 @@ namespace dunes
 				const float saltation{ fminf(c_parameters.saltationStrength * saltationScale, terrain.y) };
 
 				terrain.y -= saltation;
-				c_parameters.terrainArray.write(cell, toHalf4(terrain));
+				c_parameters.terrainArray.write(cell, terrain);
 
 				const int cellIndex{ getCellIndex(cell) };
 				const float slab{ saltation };
 
-				c_parameters.slabBuffer[cellIndex] += __float2half(slab);
-				t_advectedSlabBuffer[cellIndex] = CUDART_ZERO_FP16;
+				c_parameters.slabBuffer[cellIndex] += slab;
+				t_advectedSlabBuffer[cellIndex] = 0.0f;
 			}
 		}
 	}
 
 	template <bool TUseBilinear>
-	__global__ void continuousSaltationKernel(Buffer<half> t_advectedSlabBuffer)
+	__global__ void continuousSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -68,8 +67,7 @@ namespace dunes
 		const int cellIndex{ getCellIndex(cell) };
 		const float slab{ c_parameters.slabBuffer[cellIndex] };
 
-		const float2 windVelocity {sampleLinearOrNearest<true>(
-                        c_parameters.windArray, 0.5f * (make_float2(cell) + 0.5f))};
+		const float2 windVelocity{ c_parameters.windArray.read(cell) };
 
 		const float2 position{ make_float2(cell) };
 
@@ -91,20 +89,20 @@ namespace dunes
 
 						if (weight > 0.0f)
 						{
-							atomicAdd(t_advectedSlabBuffer + getCellIndex(getWrappedCell(int2{ x,y })), __float2half(weight * slab));
+							atomicAdd(t_advectedSlabBuffer + getCellIndex(getWrappedCell(int2{ x,y })), weight * slab);
 						}
 					}
 				}
 			}
 			else {
 				const int2 nextCell{ getNearestCell(nextPosition) };
-				atomicAdd(t_advectedSlabBuffer + getCellIndex(getWrappedCell(nextCell)), __float2half(slab));
+				atomicAdd(t_advectedSlabBuffer + getCellIndex(getWrappedCell(nextCell)), slab);
 			}
 		}
 	}
 
 	template <bool TUseBilinear>
-	__global__ void continuousBackwardSaltationKernel(Buffer<half> t_advectedSlabBuffer)
+	__global__ void continuousBackwardSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -116,8 +114,7 @@ namespace dunes
 		const int cellIndex{ getCellIndex(cell) };
 		float slab{ 0.f };
 
-		const float2 windVelocity {sampleLinearOrNearest<true>(
-                        c_parameters.windArray, 0.5f * (make_float2(cell) + 0.5f))};
+		const float2 windVelocity{ c_parameters.windArray.read(cell) };
 
 		const float2 position{ make_float2(cell) };
 
@@ -137,21 +134,21 @@ namespace dunes
 
 					if (weight > 0.0f)
 					{
-						slab += __half2float(c_parameters.slabBuffer[getCellIndex(getWrappedCell(int2{ x,y }))]) * weight;
+						slab += c_parameters.slabBuffer[getCellIndex(getWrappedCell(int2{ x,y }))] * weight;
 					}
 				}
 			}
 		}
 		else {
 			const int2 nextCell{ getNearestCell(nextPosition) };
-			slab += __half2float(c_parameters.slabBuffer[getCellIndex(getWrappedCell(nextCell))]);
+			slab += c_parameters.slabBuffer[getCellIndex(getWrappedCell(nextCell))];
 		}
 
 
-		t_advectedSlabBuffer[cellIndex] = __float2half(slab);
+		t_advectedSlabBuffer[cellIndex] = slab;
 	}
 
-	__global__ void finishContinuousSaltationKernel(Buffer<half> t_advectedSlabBuffer)
+	__global__ void finishContinuousSaltationKernel(Buffer<float> t_advectedSlabBuffer)
 	{
 		const int2 index{ getGlobalIndex2D() };
 		const int2 stride{ getGridStride2D() };
@@ -164,22 +161,20 @@ namespace dunes
 			{
 				const int cellIndex{ getCellIndex(cell) };
 
-				float4 terrain{ half4toFloat4(c_parameters.terrainArray.read(cell)) };
+				float4 terrain{ c_parameters.terrainArray.read(cell) };
 
 				const float terrainThickness = terrain.y + terrain.z;
 				const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
 				const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-				const float moisture{ clamp(__half2float(c_parameters.moistureArray.read(cell)) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+				const float moisture{ clamp(c_parameters.moistureArray.read(cell) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
 				const float abrasionMoistureFactor{ clamp(1.f - 2.f * moisture, 0.f, 1.f) };
 				const float saltationMoistureFactor{ clamp(1.f - 10.f * moisture, 0.01f, 1.f) };
 
 				const float slab{ t_advectedSlabBuffer[cellIndex] };
 
-				const float windSpeed {length(sampleLinearOrNearest<true>(
-                                        c_parameters.windArray,
-                                        0.5f * (make_float2(cell) + 0.5f)))};
+				const float windSpeed{ length(c_parameters.windArray.read(cell)) };
 
-				const float4 resistance{ half4toFloat4(c_parameters.resistanceArray.read(cell)) };
+				const float4 resistance{ c_parameters.resistanceArray.read(cell) };
 				const float vegetation = fmaxf(resistance.y, 0.f);
 				const float abrasionScale{ c_parameters.deltaTime * windSpeed * (1.0f - vegetation) };
 
@@ -199,9 +194,9 @@ namespace dunes
 
 				terrain.y += slab * depositionProbability;
 
-				c_parameters.terrainArray.write(cell, toHalf4(terrain));
-				c_parameters.slabBuffer[cellIndex] = __float2half(slab * (1.f - depositionProbability)); // write updated advectedSlabBuffer back to slabBuffer (ping-pong)
-				t_advectedSlabBuffer[cellIndex] = __float2half(waterFactor * slab * (1.f - vegetation) * abrasionMoistureFactor); // Used in Reptation as slabBuffer
+				c_parameters.terrainArray.write(cell, terrain);
+				c_parameters.slabBuffer[cellIndex] = slab * (1.f - depositionProbability); // write updated advectedSlabBuffer back to slabBuffer (ping-pong)
+				t_advectedSlabBuffer[cellIndex] = waterFactor * slab * (1.f - vegetation) * abrasionMoistureFactor; // Used in Reptation as slabBuffer
 			}
 		}
 	}

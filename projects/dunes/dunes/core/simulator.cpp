@@ -30,6 +30,7 @@ namespace dunes
 		m_terrainMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_windMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_resistanceMap{ std::make_shared<sthe::gl::Texture2D>() },
+		m_waterVelocityMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_sedimentMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_fluxMap{ std::make_shared<sthe::gl::Texture2D>() },
 		m_terrainMoistureMap{ std::make_shared<sthe::gl::Texture2D>() },
@@ -54,7 +55,7 @@ namespace dunes
 		const float threadCount{ static_cast<float>(smCount * smThreadCount) };
 		
 		m_launchParameters.blockSize1D = 512;
-		m_launchParameters.blockSize2D = dim3{ 16, 16 };
+		m_launchParameters.blockSize2D = dim3{ 8, 8 };
 		
 		// https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
 		m_launchParameters.optimalBlockSize1D = 256;
@@ -244,10 +245,9 @@ namespace dunes
 	// Destructor
 	Simulator::~Simulator()
 	{
-        CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.fftPlanR2C));
-        CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.fftPlanC2R));
-        CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.projection.planR2C));
-        CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.projection.planC2R));
+		CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.fftPlan));
+		CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.projection.planR2C));
+		CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.projection.planC2R));
 	}
 
 	// Functionality
@@ -271,14 +271,10 @@ namespace dunes
 		const glm::ivec2 uniformGridSize = glm::ivec2(glm::ceil(gridDim / uniformGridScale)); // 20.f max radius
 		m_simulationParameters.maxVegCount = m_launchParameters.maxVegCount;
 
-		// Assume that gridSize is divisible by 2
-
-        m_simulationParameters.windGridSize.x = t_gridSize.x / 2;
-        m_simulationParameters.windGridSize.y = t_gridSize.y / 2;
-        m_simulationParameters.windCellCount  = m_simulationParameters.windGridSize.x *
-                                                m_simulationParameters.windGridSize.y;
-        m_simulationParameters.windGridScale  = 2 * t_gridScale;
-        m_simulationParameters.rWindGridScale = 0.5f / t_gridScale;
+		if (m_launchParameters.fftPlan != 0)
+		{
+			CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.fftPlan));
+		}
 
 		//CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.fftPlan, m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, cufftType::CUFFT_C2C));
 
@@ -314,7 +310,7 @@ namespace dunes
 		getVegetationCount(m_launchParameters, m_simulationParameters);
 		vegetation(m_launchParameters, m_simulationParameters, m_watches);
 		venturi(m_launchParameters);
-        windWarping(m_launchParameters, m_simulationParameters);
+		windWarping(m_launchParameters);
 		pressureProjection(m_launchParameters, m_simulationParameters);
 		windShadow(m_launchParameters);
 
@@ -381,7 +377,7 @@ namespace dunes
 			venturi(m_launchParameters);
 			m_watches[7].stop();
 			m_watches[8].start();
-            windWarping(m_launchParameters, m_simulationParameters);
+			windWarping(m_launchParameters);
 			m_watches[8].stop();
 			m_watches[9].start();
 			pressureProjection(m_launchParameters, m_simulationParameters);
@@ -495,14 +491,15 @@ namespace dunes
 		m_water->setGridSize(glm::ivec2{ m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y });
 		m_water->setGridScale(m_simulationParameters.gridScale);
 
-		m_terrainMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA16F, false);
-		m_windMap->reinitialize(m_simulationParameters.windGridSize.x, m_simulationParameters.windGridSize.y, GL_RG16F, false);
-		m_resistanceMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA16F, false);
-		m_fluxMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA16F, false);
-		m_sedimentMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R16F, false);
-		m_terrainMoistureMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R16F, false);
-		m_shadowMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG16F, false);
-		m_vegetationHeightMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG16F, false);
+		m_terrainMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
+		m_windMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
+		m_resistanceMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
+		m_waterVelocityMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
+		m_fluxMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RGBA32F, false);
+		m_sedimentMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R32F, false);
+		m_terrainMoistureMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_R32F, false);
+		m_shadowMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
+		m_vegetationHeightMap->reinitialize(m_simulationParameters.gridSize.x, m_simulationParameters.gridSize.y, GL_RG32F, false);
 	}
 
 	void Simulator::setupArrays()
@@ -510,6 +507,7 @@ namespace dunes
 		m_terrainArray.reinitialize(*m_terrainMap);
 		m_windArray.reinitialize(*m_windMap);
 		m_resistanceArray.reinitialize(*m_resistanceMap);
+		m_waterVelocityArray.reinitialize(*m_waterVelocityMap);
 		m_fluxArray.reinitialize(*m_fluxMap);
 		m_sedimentArray.reinitialize(*m_sedimentMap);
 		m_terrainMoistureArray.reinitialize(*m_terrainMoistureMap);
@@ -523,11 +521,11 @@ namespace dunes
 
 	void Simulator::setupBuffers()
 	{
-		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(half));
-		m_simulationParameters.slabBuffer = m_slabBuffer.getData<half>();
+		m_slabBuffer.reinitialize(m_simulationParameters.cellCount, sizeof(float));
+		m_simulationParameters.slabBuffer = m_slabBuffer.getData<float>();
 
-		m_tmpBuffer.reinitialize(int(glm::ceil(m_simulationParameters.cellCount)), sizeof(cuComplex));
-		m_launchParameters.tmpBuffer = (half*)m_tmpBuffer.getData<cuComplex>();
+		m_tmpBuffer.reinitialize(5 * m_simulationParameters.cellCount, sizeof(float));
+		m_launchParameters.tmpBuffer = m_tmpBuffer.getData<float>();
 
 		const int maxCount = max(1000000, m_launchParameters.maxVegCount);
 		const int counts[1 + c_maxVegTypeCount]{0.f};
@@ -549,9 +547,9 @@ namespace dunes
 		m_vegTypeBuffer.upload(&m_vegTypes, 1);
 		m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationTypeSoA>();
 
-		m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(half));
+		m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(float));
 		m_vegMatrixBuffer.upload(m_vegMatrix);
-		m_simulationParameters.vegMatrixBuffer = m_vegMatrixBuffer.getData<half>();
+		m_simulationParameters.vegMatrixBuffer = m_vegMatrixBuffer.getData<float>();
 
 		std::random_device rd;
 		std::mt19937 gen(rd());
@@ -574,64 +572,32 @@ namespace dunes
 
 	void Simulator::setupWindWarping()
 	{
-        const int2 windGridSize {m_simulationParameters.windGridSize};
-        if(m_launchParameters.fftPlanR2C != 0)
-        {
-            CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.fftPlanR2C));
-        }
-        if(m_launchParameters.fftPlanC2R != 0)
-        {
-            CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.fftPlanC2R));
-        }
+		const int2 gridSize{ m_simulationParameters.gridSize };
+		CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.fftPlan, gridSize.y, gridSize.x, cufftType::CUFFT_C2C));
 
-        // R2C: temporary heightBuffer (in tmpBuffer), windGridSize; to Gausskernels &
-        // Smoothedheights at "halved" size
-        CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.fftPlanR2C,
-                                        windGridSize.y,
-                                        windGridSize.x,
-                                        cufftType::CUFFT_R2C));
-        CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.fftPlanC2R,
-                                        windGridSize.y,
-                                        windGridSize.x,
-                                        cufftType::CUFFT_C2R));
+		for (int i{ 0 }; i < 4; ++i)
+		{
+			sthe::cu::Buffer& buffer{ m_windWarpingBuffers[i] };
+			buffer.reinitialize(2 * m_simulationParameters.cellCount, sizeof(cuComplex));
 
-        long long int complexSizes[2]          = {windGridSize.y, (windGridSize.x / 2 + 1)};
-        m_launchParameters.windWarping.x_width = int(complexSizes[1]);
-        auto size {complexSizes[0] * complexSizes[1]};
-        for(int i {0}; i < 2; ++i)
-        {
-            sthe::cu::Buffer& buffer {m_windWarpingBuffers[i]};
-            buffer.reinitialize(int(size), sizeof(cuComplex));
-
-            m_launchParameters.windWarping.gaussKernels[i] = buffer.getData<cuComplex>();
-        }
+			m_launchParameters.windWarping.gaussKernels[i] = buffer.getData<cuComplex>();
+			m_launchParameters.windWarping.smoothedHeights[i] = m_launchParameters.windWarping.gaussKernels[i] + m_simulationParameters.cellCount;
+		}
 	}
 
 	void Simulator::setupProjection()
 	{
-        const int2 windGridSize {m_simulationParameters.windGridSize};
-        const int  windCellCount {m_simulationParameters.windCellCount};
-        if(m_launchParameters.projection.planR2C != 0)
-        {
-            CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.projection.planR2C));
-        }
-        if(m_launchParameters.projection.planC2R != 0)
-        {
-            CUFFT_CHECK_ERROR(cufftDestroy(m_launchParameters.projection.planC2R));
-        }
+		const int2 gridSize{ m_simulationParameters.gridSize };
+		const int cellCount{ m_simulationParameters.cellCount };
 
-        // Buffer for the complex half-precision forward FFT output
-        // Stored in interleaved format (half2_X_velocity[0], half2_Y_velocity[0], ...)
-        m_launchParameters.projection.x_width = (windGridSize.x / 2 + 1);
+		CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.projection.planR2C, gridSize.y, gridSize.x, cufftType::CUFFT_R2C));
+		CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.projection.planC2R, gridSize.y, gridSize.x, cufftType::CUFFT_C2R));
 
-        CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.projection.planR2C,
-                                        windGridSize.y,
-                                        windGridSize.x,
-                                        cufftType::CUFFT_R2C));
-        CUFFT_CHECK_ERROR(cufftPlan2d(&m_launchParameters.projection.planC2R,
-                                        windGridSize.y,
-                                        windGridSize.x,
-                                        cufftType::CUFFT_C2R));
+		const int size{ (gridSize.x / 2 + 1) * gridSize.y };
+
+		m_velocityBuffer.reinitialize(4 * size, sizeof(float));
+		m_launchParameters.projection.velocities[0] = m_velocityBuffer.getData<float>();
+		m_launchParameters.projection.velocities[1] = m_launchParameters.projection.velocities[0] + 2 * size;
 	}
 
 	void Simulator::setupVegPrefabs()
@@ -775,6 +741,10 @@ namespace dunes
 		m_simulationParameters.fluxArray.surface = m_fluxArray.recreateSurface();
 		m_simulationParameters.fluxArray.texture = m_fluxArray.recreateTexture(m_textureDescriptor);
 
+		m_waterVelocityArray.map();
+		m_simulationParameters.velocityArray.surface = m_waterVelocityArray.recreateSurface();
+		m_simulationParameters.velocityArray.texture = m_waterVelocityArray.recreateTexture(m_textureDescriptor);
+
 		m_sedimentArray.map();
 		m_simulationParameters.sedimentArray.surface = m_sedimentArray.recreateSurface();
 		m_simulationParameters.sedimentArray.texture = m_sedimentArray.recreateTexture(m_textureDescriptor);
@@ -806,6 +776,7 @@ namespace dunes
 		m_windArray.unmap();
 		m_resistanceArray.unmap();
 		m_fluxArray.unmap();
+		m_waterVelocityArray.unmap();
 		m_sedimentArray.unmap();
 		m_terrainMoistureArray.unmap();
 		m_shadowArray.unmap();
@@ -872,7 +843,7 @@ namespace dunes
 	void Simulator::setWindWarpingCount(const int t_windWarpingCount)
 	{
 		STHE_ASSERT(t_windWarpingCount >= 0, "Wind warping count must be greater than or equal to 0");
-		STHE_ASSERT(t_windWarpingCount <= 2, "Wind warping count must be smaller than or equal to 2");
+		STHE_ASSERT(t_windWarpingCount <= 4, "Wind warping count must be smaller than or equal to 4");
 
 		m_launchParameters.windWarping.count = t_windWarpingCount;
 	}
@@ -885,7 +856,7 @@ namespace dunes
 	void Simulator::setWindWarpingRadius(const int t_index, const float t_windWarpingRadius)
 	{
 		STHE_ASSERT(t_index >= 0, "Index must be greater than or equal to 0");
-		STHE_ASSERT(t_index < 2, "Index must be smaller than 2");
+		STHE_ASSERT(t_index < 4, "Index must be smaller than 4");
 
 		m_launchParameters.windWarping.radii[t_index] = t_windWarpingRadius;
 
@@ -898,7 +869,7 @@ namespace dunes
 	void Simulator::setWindWarpingStrength(const int t_index, const float t_windWarpingStrength)
 	{
 		STHE_ASSERT(t_index >= 0, "Index must be greater than or equal to 0");
-		STHE_ASSERT(t_index < 2, "Index must be smaller than 2");
+		STHE_ASSERT(t_index < 4, "Index must be smaller than 4");
 
 		m_launchParameters.windWarping.strengths[t_index] = t_windWarpingStrength;
 	}
@@ -906,7 +877,7 @@ namespace dunes
 	void Simulator::setWindWarpingGradientStrength(const int t_index, const float t_windWarpingGradientStrength)
 	{
 		STHE_ASSERT(t_index >= 0, "Index must be greater than or equal to 0");
-		STHE_ASSERT(t_index < 2, "Index must be smaller than 2");
+		STHE_ASSERT(t_index < 4, "Index must be smaller than 4");
 
 		m_launchParameters.windWarping.gradientStrengths[t_index] = t_windWarpingGradientStrength;
 	}
@@ -1158,8 +1129,7 @@ namespace dunes
 		m_vegTypes.shrinkRate[t_index] = t_type.shrinkRate;
 		m_vegTypes.maxMaturityTime[t_index] = t_type.maxMaturityTime;
 		m_vegTypes.maturityPercentage[t_index] = t_type.maturityPercentage;
-		m_vegTypes.height[t_index].x = t_type.height.x;
-        m_vegTypes.height[t_index].y           = t_type.height.y;
+		m_vegTypes.height[t_index] = t_type.height;
 		m_vegTypes.waterUsageRate[t_index] = t_type.waterUsageRate;
 		m_vegTypes.waterStorageCapacity[t_index] = t_type.waterStorageCapacity;
 		m_vegTypes.waterResistance[t_index] = t_type.waterResistance;
@@ -1167,15 +1137,13 @@ namespace dunes
 		m_vegTypes.maxMoisture[t_index] = t_type.maxMoisture;
 		m_vegTypes.soilCompatibility[t_index] = t_type.soilCompatibility;
 		m_vegTypes.sandCompatibility[t_index] = t_type.sandCompatibility;
-		m_vegTypes.terrainCoverageResistance[t_index].x = t_type.terrainCoverageResistance.x;
-        m_vegTypes.terrainCoverageResistance[t_index].y = t_type.terrainCoverageResistance.y;
+		m_vegTypes.terrainCoverageResistance[t_index] = t_type.terrainCoverageResistance;
 		m_vegTypes.maxSlope[t_index] = t_type.maxSlope;
 		m_vegTypes.baseSpawnRate[t_index] = t_type.baseSpawnRate;
 		m_vegTypes.densitySpawnMultiplier[t_index] = t_type.densitySpawnMultiplier;
 		m_vegTypes.windSpawnMultiplier[t_index] = t_type.windSpawnMultiplier;
 		m_vegTypes.humusRate[t_index] = t_type.humusRate;
-		m_vegTypes.lightConditions[t_index].x = t_type.lightConditions.x;
-        m_vegTypes.lightConditions[t_index].y             = t_type.lightConditions.y;
+		m_vegTypes.lightConditions[t_index] = t_type.lightConditions;
 		m_vegTypes.separation[t_index] = t_type.separation;
 
 		m_uploadVegTypes = m_isAwake;
@@ -1225,11 +1193,7 @@ namespace dunes
 
 	void Simulator::setVegMatrix(const std::vector<float>& vegMatrix)
 	{
-        m_vegMatrix.resize(vegMatrix.size());
-        for(int i = 0; i < vegMatrix.size(); ++i)
-        {
-            m_vegMatrix[i] = vegMatrix[i];
-		}
+		m_vegMatrix = vegMatrix;
 
 		if (m_isAwake)
 		{

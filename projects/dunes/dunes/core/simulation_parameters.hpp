@@ -26,14 +26,13 @@ using Buffer = sthe::device::Buffer<T>;
 
 struct WindWarping
 {
-    int               count {2};
-    float             i_divisor {1.f / 20.0f};
-    float             radii[2] {200.0f, 50.0f};
-    float             strengths[2] {0.8f, 0.2f};
-    float             gradientStrengths[2] {30.f, 5.f};
-    int               x_width;
-    Buffer<cuComplex> gaussKernels[2];
-    Buffer<cuComplex> smoothedHeights[2];
+	int count{ 2 };
+	float i_divisor{ 1.f / 20.0f };
+	float radii[4]{ 200.0f, 50.0f, 0.0f, 0.0f };
+	float strengths[4]{ 0.8f, 0.2f, 0.0f, 0.0f };
+	float gradientStrengths[4]{ 30.f, 5.f, 0.0f, 0.0f };
+	Buffer<cuComplex> gaussKernels[4];
+	Buffer<cuComplex> smoothedHeights[4];
 };
 
 struct VegetationType
@@ -65,38 +64,39 @@ struct VegetationType
 
 struct VegetationTypeSoA
 {
-	half maxRadius[c_maxVegTypeCount]; // Plant is mature at maturityPercentage of maxRadius
-	half growthRate[c_maxVegTypeCount];
-	half positionAdjustRate[c_maxVegTypeCount]; // how fast the plant can change its position (height) to match the terrain
-	half damageRate[c_maxVegTypeCount]; // How resistant the plant is to being damaged, lower values cause it to be able to survive for longer in bad environments
-	half shrinkRate[c_maxVegTypeCount]; // if > 0.f, plant is able to "shrink" to a smaller size if environment doesn't support its current size anymore
-	half maxMaturityTime[c_maxVegTypeCount]; // If Plant hasn't reached maturity after this time, it dies
-	half maturityPercentage[c_maxVegTypeCount]; // %radius needed to be mature
-	half2 height[c_maxVegTypeCount]; // .x * maxRadius = height above ground; .y * maxRadius = root depth; relevant for vegetation density and growth
-	half waterUsageRate[c_maxVegTypeCount];
-	half waterStorageCapacity[c_maxVegTypeCount];
-	half waterResistance[c_maxVegTypeCount]; // How well the plant can handle standing water. >= 1 is a water plant, which follows different rules
-	half minMoisture[c_maxVegTypeCount]; // Only used to check if a plant can spawn
-	half maxMoisture[c_maxVegTypeCount]; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
-	half soilCompatibility[c_maxVegTypeCount]; // controls growth in soil
-	half sandCompatibility[c_maxVegTypeCount]; // controls growth in sand
-	half2 terrainCoverageResistance[c_maxVegTypeCount]; // .x threshold for how much roots need to be covered; .y threshold for how much of stem is allowed to be covered
-	half maxSlope[c_maxVegTypeCount];
-	half baseSpawnRate[c_maxVegTypeCount];
-	half densitySpawnMultiplier[c_maxVegTypeCount];
-	half windSpawnMultiplier[c_maxVegTypeCount];
-	half humusRate[c_maxVegTypeCount];
-	half2 lightConditions[c_maxVegTypeCount]; // .x minimum, .y maximum light. Use minimum > maximum  if 0 light should be optimal, use maximum < minimum if full light should be optimal. Otherwise the mean is optimal. Uses the shadow map for regular plants and water height for water plants.
-	half separation[c_maxVegTypeCount]; // New Vegetation can only spawn if the density of its type is lower than this value
+	float maxRadius[c_maxVegTypeCount]; // Plant is mature at maturityPercentage of maxRadius
+	float growthRate[c_maxVegTypeCount];
+	float positionAdjustRate[c_maxVegTypeCount]; // how fast the plant can change its position (height) to match the terrain
+	float damageRate[c_maxVegTypeCount]; // How resistant the plant is to being damaged, lower values cause it to be able to survive for longer in bad environments
+	float shrinkRate[c_maxVegTypeCount]; // if > 0.f, plant is able to "shrink" to a smaller size if environment doesn't support its current size anymore
+	float maxMaturityTime[c_maxVegTypeCount]; // If Plant hasn't reached maturity after this time, it dies
+	float maturityPercentage[c_maxVegTypeCount]; // %radius needed to be mature
+	float2 height[c_maxVegTypeCount]; // .x * maxRadius = height above ground; .y * maxRadius = root depth; relevant for vegetation density and growth
+	float waterUsageRate[c_maxVegTypeCount];
+	float waterStorageCapacity[c_maxVegTypeCount];
+	float waterResistance[c_maxVegTypeCount]; // How well the plant can handle standing water. >= 1 is a water plant, which follows different rules
+	float minMoisture[c_maxVegTypeCount]; // Only used to check if a plant can spawn
+	float maxMoisture[c_maxVegTypeCount]; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
+	float soilCompatibility[c_maxVegTypeCount]; // controls growth in soil
+	float sandCompatibility[c_maxVegTypeCount]; // controls growth in sand
+	float2 terrainCoverageResistance[c_maxVegTypeCount]; // .x threshold for how much roots need to be covered; .y threshold for how much of stem is allowed to be covered
+	float maxSlope[c_maxVegTypeCount];
+	float baseSpawnRate[c_maxVegTypeCount];
+	float densitySpawnMultiplier[c_maxVegTypeCount];
+	float windSpawnMultiplier[c_maxVegTypeCount];
+	float humusRate[c_maxVegTypeCount];
+	float2 lightConditions[c_maxVegTypeCount]; // .x minimum, .y maximum light. Use minimum > maximum  if 0 light should be optimal, use maximum < minimum if full light should be optimal. Otherwise the mean is optimal. Uses the shadow map for regular plants and water height for water plants.
+	float separation[c_maxVegTypeCount]; // New Vegetation can only spawn if the density of its type is lower than this value
 };
 
-struct alignas(8) Vegetation // needs to be aligned for gl
+struct alignas(32) Vegetation // needs to be aligned for gl
 {
-	half4 pos_r{}; // pos where root and stem start + radius
-	half health{ 1.f };
-	half water{ 0.f };
-	half age{ 0.f };
-    int16_t type {0};
+	float3 pos{}; // pos where root and stem start
+	int type{ 0 };
+	float health{ 1.f };
+	float water{ 0.f };
+	float age{ 0.f };
+	float radius{ 0.f };
 };
 
 struct AdaptiveGrid
@@ -121,11 +121,6 @@ struct SimulationParameters
 	float gridScale{ 1.0f };
 	float rGridScale{ 1.0f / gridScale };
 	int cellCount{ gridSize.x * gridSize.y };
-
-	int2  windGridSize {1024, 1024};
-    float windGridScale {2.f};
-    float rWindGridScale {1.f / windGridScale};
-    int   windCellCount {windGridSize.x * windGridSize.y};
 
 	float2 windDirection{ 1.0f, 0.0f };
 	float windSpeed{ 10.0f };
@@ -183,21 +178,22 @@ struct SimulationParameters
 	float deltaTime{ 1.0f };
 	int timestep = 0;
 
-	Array2D<half4> terrainArray;
-	Array2D<half2> windArray;
-	Array2D<half4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = humus
-	Array2D<half4> fluxArray;
-	Array2D<half>	sedimentArray;
-	Array2D<half> moistureArray;
-	Array2D<half2> shadowArray;
-	Array2D<half2> vegHeightArray;
+	Array2D<float4> terrainArray;
+	Array2D<float2> windArray;
+	Array2D<float4> resistanceArray; // .x = wind shadow, .y = vegetation, .z = erosion, .w = humus
+	Array2D<float4> fluxArray;
+	Array2D<float2> velocityArray;
+	Array2D<float>	sedimentArray;
+	Array2D<float> moistureArray;
+	Array2D<float2> shadowArray;
+	Array2D<float2> vegHeightArray;
 	Buffer<Vegetation> vegBuffer;
 	Buffer<int> vegMapBuffer;
 	Buffer<uint4> seedBuffer;
 	Buffer<int> vegCountBuffer;
 	Buffer<VegetationTypeSoA> vegTypeBuffer;
-	Buffer<half> vegMatrixBuffer;
-	Buffer<half> slabBuffer;
+	Buffer<float> vegMatrixBuffer;
+	Buffer<float> slabBuffer;
 	AdaptiveGrid adaptiveGrid;
 };
 
