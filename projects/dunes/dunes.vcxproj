@@ -153,6 +153,7 @@
       <ObjectFileName>$(IntDir)%(RelativeDir)/</ObjectFileName>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <PreprocessorDefinitions>_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -165,7 +166,7 @@
       <CodeGeneration>compute_120a,sm_120a</CodeGeneration>
       <SplitCompile>MaxThreads</SplitCompile>
       <FastMath>true</FastMath>
-      <AdditionalOptions>-std=c++20 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++20  --ptxas-options=-v %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugSM75|x64'">
@@ -209,7 +210,7 @@
       <CodeGeneration>compute_120a,sm_120a</CodeGeneration>
       <FastMath>true</FastMath>
       <SplitCompile>MaxThreads</SplitCompile>
-      <AdditionalOptions>-std=c++20 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++20  --ptxas-options=-v %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseSM75|x64'">

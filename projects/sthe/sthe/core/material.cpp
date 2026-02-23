@@ -55,6 +55,11 @@ void Material::setOpacity(const float t_opacity)
     m_opacity = t_opacity;
 }
 
+void Material::setCustom(const float t_custom)
+{
+    m_custom = t_custom;
+}
+
 void Material::setDiffuseMap(const std::shared_ptr<gl::Texture2D>& t_diffuseMap)
 {
     setTexture(STHE_TEXTURE_UNIT_MATERIAL_DIFFUSE, t_diffuseMap);
@@ -89,6 +94,11 @@ float Material::getShininess() const
 float Material::getOpacity() const
 {
     return m_opacity;
+}
+
+float Material::getCustom() const
+{
+    return m_custom;
 }
 
 std::shared_ptr<gl::Texture2D> Material::getDiffuseMap() const

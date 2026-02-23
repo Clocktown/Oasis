@@ -53,7 +53,7 @@ namespace dunes
 		CU_CHECK_ERROR(cudaDeviceGetAttribute(&smThreadCount, cudaDevAttrMaxThreadsPerMultiProcessor, device));
 		const float threadCount{ static_cast<float>(smCount * smThreadCount) };
 		
-		m_launchParameters.blockSize1D = 512;
+		m_launchParameters.blockSize1D = 256;
 		m_launchParameters.blockSize2D = dim3{ 16, 16 };
 		
 		// https://developer.nvidia.com/blog/cuda-pro-tip-write-flexible-kernels-grid-stride-loops/
@@ -659,6 +659,7 @@ namespace dunes
 
 			for (auto& material : importer.getMaterials())
 			{
+				material->setCustom(m_simulationParameters.gridScale);
 				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0, m_vegPrefabs.buffer);
 				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0 + 1, m_vegPrefabs.mapBuffer);
 			}
@@ -682,8 +683,8 @@ namespace dunes
 
 		for (int i{ 0 }; i < m_simulationParameters.adaptiveGrid.layerCount; ++i)
 		{
-			m_simulationParameters.adaptiveGrid.gridBuffer[i] = m_adaptiveGrid.gridBuffer.getData<unsigned int>() + cellCount + i;
-			cellCount += m_simulationParameters.adaptiveGrid.cellCounts[i];
+			m_simulationParameters.adaptiveGrid.gridBuffer[i] = m_adaptiveGrid.gridBuffer.getData<unsigned int>() + cellCount;
+			cellCount += 1 + m_simulationParameters.adaptiveGrid.cellCounts[i];
 		}
 
 		m_adaptiveGrid.keyBuffer.reinitialize(m_simulationParameters.maxVegCount, sizeof(unsigned int));
@@ -1208,6 +1209,7 @@ namespace dunes
 
 			for (auto& material : importer.getMaterials())
 			{
+				material->setCustom(m_simulationParameters.gridScale);
 				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0, m_vegPrefabs.buffer);
 				material->setBuffer(GL_SHADER_STORAGE_BUFFER, STHE_STORAGE_BUFFER_CUSTOM0 + 1, m_vegPrefabs.mapBuffer);
 			}

@@ -22,7 +22,7 @@ struct Material
 	float shininess;
 	int hasDiffuseMap;
 	int hasNormalMap;
-	int pad;
+	float custom;
 };
 
 }
@@ -51,6 +51,7 @@ public:
 	void setOpacity(const float t_opacity);
 	void setDiffuseMap(const std::shared_ptr<gl::Texture2D>& t_diffuseMap);
 	void setNormalMap(const std::shared_ptr<gl::Texture2D>& t_normalMap);
+	void setCustom(const float t_custom);
 	
 	// Getters
 	const glm::vec3& getDiffuseColor() const;
@@ -58,6 +59,7 @@ public:
 	float getSpecularIntensity() const;
 	float getShininess() const;
 	float getOpacity() const;
+	float getCustom() const;
 	std::shared_ptr<gl::Texture2D> getDiffuseMap() const;
 	std::shared_ptr<gl::Texture2D> getNormalMap() const;
 	bool hasDiffuseMap() const;
@@ -69,6 +71,7 @@ private:
 	float m_specularIntensity;
 	float m_shininess;
 	float m_opacity;
+	float m_custom;
 };
 
 }

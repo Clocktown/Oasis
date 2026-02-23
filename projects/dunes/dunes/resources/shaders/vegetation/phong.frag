@@ -45,7 +45,7 @@ struct Material
 	float shininess;
 	bool hasDiffuseMap;
 	bool hasNormalMap;
-	int pad;
+	float gridScale;
 };
 
 struct Fragment

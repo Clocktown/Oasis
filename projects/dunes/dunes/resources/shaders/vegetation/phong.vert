@@ -43,7 +43,7 @@ struct Material
 	float shininess;
 	bool hasDiffuseMap;
 	bool hasNormalMap;
-	int pad;
+	float gridScale;
 };
 
 layout(std140, binding = 0) uniform PipelineBuffer
@@ -64,14 +64,26 @@ layout(std140, binding = 0) uniform PipelineBuffer
 	Material t_material;
 };
 
+//struct Vegetation
+//{
+//  vec3 pos; 
+//	float health;
+//	float water;
+//	float age;
+//	float radius;
+//	int type;
+//};
+
 struct Vegetation
 {
-    vec3 pos; 
-	int type;
-	float health;
-	float water;
-	float age;
-	float radius;
+    uint16_t pos_x;
+	uint16_t pos_y;
+	float16_t pos_z;
+	float16_t radius;
+	float16_t health;
+	float16_t water;
+	float16_t age;
+	int16_t type;
 };
 
 layout(std430, binding = 3) buffer VegBuffer
@@ -140,14 +152,15 @@ void main()
 {
     const Vegetation veg = t_vegs[t_vegMap[t_userID.x + gl_InstanceID]];
 	const mat3 normalMatrix = mat3(t_modelMatrix);
-	const float alpha = PI * pNoise(veg.pos.xy, 1);
+	vec3 pos = vec3(t_material.gridScale * (float(int(veg.pos_x)) + 0.5f), t_material.gridScale * (float(int(veg.pos_y)) + 0.5f), veg.pos_z);
+	const float alpha = PI * pNoise(pos.xy, 1);
 	const float ca = cos(alpha);
 	const float sa = sin(alpha);
 	const mat3 rot = mat3(ca, 0, sa,
 						  0,  1, 0,
 						  -sa,0, ca);
 
-	fragment.position = (t_modelMatrix * vec4(veg.pos.xzy + veg.radius * rot * t_position.xyz, 1.0f)).xyz;
+	fragment.position = (t_modelMatrix * vec4(pos.xzy + veg.radius * rot * t_position.xyz, 1.0f)).xyz;
 	fragment.normal = normalize(normalMatrix * t_normal.xyz);
 	fragment.uv = t_uv;
 

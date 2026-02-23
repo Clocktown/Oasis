@@ -267,6 +267,7 @@ void DunesPipeline::meshRendererPass(const Scene& t_scene)
 					materialData.shininess = activeMaterial->getShininess();
 					materialData.hasDiffuseMap = activeMaterial->hasDiffuseMap();
 					materialData.hasNormalMap = activeMaterial->hasNormalMap();
+					materialData.custom = activeMaterial->getCustom();
 
 					m_pipelineBuffer->upload(reinterpret_cast<char*>(&materialData), static_cast<int>(offsetof(uniform::DunesPipeline, material)), sizeof(sthe::uniform::Material));
 				}

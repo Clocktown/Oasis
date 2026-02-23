@@ -15,7 +15,40 @@
 
 namespace dunes {
 
-	__forceinline__ __device__ float getVegetationDensity(const Vegetation& veg, const float3& pos) {
+	__forceinline__ __device__ float3 convertVegPos(const Vegetation& veg) {
+		return float3{
+			c_parameters.gridScale * (float(veg.pos_x) + 0.5f),
+			c_parameters.gridScale * (float(veg.pos_y) + 0.5f),
+			__half2float(veg.pos_z)
+		};
+	}
+
+	__forceinline__ __device__ Vegetation32 convertVeg(const Vegetation& veg) {
+		Vegetation32 nveg{};
+		nveg.pos.x = c_parameters.gridScale * (float(veg.pos_x) + 0.5f);
+		nveg.pos.y = c_parameters.gridScale * (float(veg.pos_y) + 0.5f);
+		nveg.pos.z = __half2float(veg.pos_z);
+		nveg.radius = __half2float(veg.radius);
+		nveg.health = __half2float(veg.health);
+		nveg.water = __half2float(veg.water);
+		nveg.age = __half2float(veg.age);
+		nveg.type = int(veg.type);
+		return nveg;
+	}
+	__forceinline__ __device__ Vegetation convertVeg(const Vegetation32& veg) {
+		Vegetation nveg{};
+		nveg.pos_x = uint16_t(c_parameters.rGridScale * veg.pos.x);
+		nveg.pos_y = uint16_t(c_parameters.rGridScale * veg.pos.y);
+		nveg.pos_z = __float2half(veg.pos.z);
+		nveg.radius = __float2half(veg.radius);
+		nveg.health = __float2half(veg.health);
+		nveg.water = __float2half(veg.water);
+		nveg.age = __float2half(veg.age);
+		nveg.type = int16_t(veg.type);
+		return nveg;
+	}
+
+	__forceinline__ __device__ float getVegetationDensity(const Vegetation32& veg, const float3& pos) {
 		const float r2 = 0.25f * veg.radius * veg.radius;
 		const float2 height = (*c_parameters.vegTypeBuffer).height[veg.type];
 		const float stem2 = height.x * height.x * r2;
@@ -97,7 +130,7 @@ namespace dunes {
 					const unsigned int idxEnd = c_parameters.adaptiveGrid.gridBuffer[l][gridCellIndex + 1];
 					if (idxEnd == 0xFFFFFFFF) continue;
 					for (unsigned int k = idxStart; k < idxEnd; ++k) {
-						const Vegetation veg = c_parameters.vegBuffer[k];
+						const Vegetation32 veg = convertVeg(c_parameters.vegBuffer[k]);
 						const float density = getVegetationDensity(veg, pos);
 						const bool isAlive = veg.health > 0.f;
 						const bool canReproduce = isAlive && (veg.age > (*c_parameters.vegTypeBuffer).maxMaturityTime[veg.type]);
@@ -136,8 +169,9 @@ namespace dunes {
 			const float xi = random::uniform_float(seed.x);
 			const float baseProbability = 1.f - pow(1.f - fminf(probabilitySum / c_parameters.cellCount, 1.f), c_parameters.deltaTime);
 			if (xi < baseProbability) {
+				
 				const float yi = random::uniform_float(seed.y) * fmaxf(probabilitySum, 1.f);
-				Vegetation veg;
+				Vegetation32 veg;
 				veg.type = -1;
 				for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
 					if (yi < typeProbabilities[i]) {
@@ -155,8 +189,9 @@ namespace dunes {
 
 					veg.radius = 0.05f * maxRadius;
 					int oldIndex = atomicAdd(c_parameters.vegCountBuffer, 1);
-					if (oldIndex < c_parameters.maxVegCount) {
-						c_parameters.vegBuffer[oldIndex] = veg;
+
+					if (oldIndex < c_parameters.maxVegCount) {						
+						c_parameters.vegBuffer[oldIndex] = convertVeg(veg);
 					}
 				}
 			}
@@ -174,11 +209,11 @@ namespace dunes {
 			return;
 		}
 
-		if (c_parameters.vegBuffer[idx].health <= 0.f || c_parameters.vegBuffer[idx].radius <= 1e-6f) {
-			c_parameters.vegBuffer[idx].health = -1.f;
+		if (c_parameters.vegBuffer[idx].health <= CUDART_ZERO_FP16 || c_parameters.vegBuffer[idx].radius <= __float2half(1e-6f)) {
+			c_parameters.vegBuffer[idx].health = -CUDART_ONE_FP16;
 		}
 		else {
-			Vegetation veg = c_parameters.vegBuffer[idx];
+			Vegetation32 veg = convertVeg(c_parameters.vegBuffer[idx]);
 
 			const float2 gridPos = { veg.pos.x * c_parameters.rGridScale, veg.pos.y * c_parameters.rGridScale };
 			const int2 cell = make_int2(gridPos); // for read from terrainArray if necessary
@@ -204,7 +239,6 @@ namespace dunes {
 				const int xEnd = int(ceilf((veg.pos.x + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
 				const int yStart = int(floorf((veg.pos.y - veg.radius - 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
 				const int yEnd = int(ceilf((veg.pos.y + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-
 				for (int i = xStart; i <= xEnd; ++i) {
 					for (int j = yStart; j <= yEnd; ++j) {
 						const int gridCellIndex = getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.adaptiveGrid.gridSizes[l]), c_parameters.adaptiveGrid.gridSizes[l]);
@@ -214,7 +248,7 @@ namespace dunes {
 						for (unsigned int k = idxStart; k < idxEnd; ++k) {
 							if (k == idx) continue;
 							const float incompatibility = c_parameters.vegMatrixBuffer[getCellIndex(int2{ c_parameters.vegBuffer[k].type, veg.type }, int2{ c_maxVegTypeCount })];
-							float d = -0.5f * fminf(length(c_parameters.vegBuffer[k].pos - veg.pos) - (veg.radius + c_parameters.vegBuffer[k].radius), 0.f);
+							float d = -0.5f * fminf(length(convertVegPos(c_parameters.vegBuffer[k]) - veg.pos) - (veg.radius + __half2float(c_parameters.vegBuffer[k].radius)), 0.f);
 							d /= veg.radius;
 							overlap += incompatibility * d * d;
 						}
@@ -307,7 +341,7 @@ namespace dunes {
 				veg.health = 0.f;
 			}
 			veg.health = clamp(veg.health, 0.f, 1.f);
-			c_parameters.vegBuffer[idx] = veg;
+			c_parameters.vegBuffer[idx] = convertVeg(veg);
 		}
 	}
 
@@ -323,7 +357,7 @@ namespace dunes {
 		random::pcg(seed);
 		c_parameters.seedBuffer[idx] = seed;
 
-		Vegetation veg;
+		Vegetation32 veg;
 		veg.type = seed.w % 2;
 		veg.age = 0.f;
 		veg.health = 1.f;
@@ -334,7 +368,7 @@ namespace dunes {
 		const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / (*c_parameters.vegTypeBuffer).height[veg.type].y, (*c_parameters.vegTypeBuffer).maxRadius[veg.type]);
 
 		veg.radius = 0.05f * maxRadius + 0.95f * maxRadius * random::uniform_float(seed.z);
-		c_parameters.vegBuffer[idx] = veg;
+		c_parameters.vegBuffer[idx] = convertVeg(veg);
 	}
 
 	__global__ void finishSort(int count)
@@ -359,12 +393,11 @@ namespace dunes {
 		c_parameters.adaptiveGrid.vegBuffer[idx] = veg;
 		c_parameters.adaptiveGrid.indexBuffer[idx] = idx;
 
-		const float3 pos = veg.pos;
-		const float radius{ veg.radius };
+		const float3 pos = convertVegPos(veg);
 
 		constexpr unsigned int maxIndex = (unsigned int)-1;
 
-		if (veg.health < 0.0f) 
+		if (veg.health < CUDART_ZERO_FP16) 
 		{
 			c_parameters.adaptiveGrid.keyBuffer[idx] = maxIndex;
 			atomicAdd(c_parameters.vegCountBuffer, -1);
@@ -374,7 +407,7 @@ namespace dunes {
 
 		for (unsigned int i = 0; i < c_parameters.adaptiveGrid.layerCount; ++i)
 		{
-			if ((radius <= 0.5f * c_parameters.adaptiveGrid.gridScales[i]) || (i == c_parameters.adaptiveGrid.layerCount - 1))
+			if ((__half2float(veg.radius) <= 0.5f * c_parameters.adaptiveGrid.gridScales[i]) || (i == c_parameters.adaptiveGrid.layerCount - 1))
 			{
 				const int2 adaptiveCell = getWrappedCell(make_int2(make_float2(pos) / c_parameters.adaptiveGrid.gridScales[i]), c_parameters.adaptiveGrid.gridSizes[i]); // Wrapped Cell?
 				c_parameters.adaptiveGrid.keyBuffer[idx] = (i << (32u - c_parameters.adaptiveGrid.layerBits)) | (unsigned int)getCellIndex(adaptiveCell, c_parameters.adaptiveGrid.gridSizes[i]);
@@ -418,7 +451,7 @@ namespace dunes {
 
 		for (int index{ getGlobalIndex1D() }; index < count; index += stride)
 		{
-			relMapBuffer[index] = atomicAdd(c_parameters.vegCountBuffer + 1 + c_parameters.vegBuffer[index].type, 1);
+			relMapBuffer[index] = atomicAdd(c_parameters.vegCountBuffer + 1 + int(c_parameters.vegBuffer[index].type), 1);
 		}
 	}
 
@@ -482,7 +515,6 @@ namespace dunes {
 	void getVegetationCount(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters) {
 		int counts[1 + c_maxVegTypeCount];
 		cudaMemcpy(counts, t_simulationParameters.vegCountBuffer, (1 + c_maxVegTypeCount) * sizeof(int), cudaMemcpyDeviceToHost);
-		
 		if (counts[0] > t_launchParameters.maxVegCount)
 		{
 			counts[0] = t_launchParameters.maxVegCount;
@@ -506,7 +538,7 @@ namespace dunes {
 
 	void initAdaptiveGrid(const SimulationParameters& t_simulationParameters)
 	{
-		size_t cellCount = 0;
+		size_t cellCount = c_parameters.adaptiveGrid.layerCount;
 
 		for (int i = 0; i < t_simulationParameters.adaptiveGrid.layerCount; ++i)
 		{
@@ -520,7 +552,6 @@ namespace dunes {
 		watches[2].start();
 		getVegetationCount(t_launchParameters, t_simulationParameters);
 		int count = t_launchParameters.vegCount;
-
 		initAdaptiveGrid(t_simulationParameters);
 		
 		Buffer<half> slopeBuffer{ t_launchParameters.tmpBuffer + t_simulationParameters.cellCount };
@@ -528,24 +559,18 @@ namespace dunes {
 
 		if (count > 0) {
 			fillAdaptiveKeys<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count);
-
 			thrust::sort_by_key(thrust::device, t_simulationParameters.adaptiveGrid.keyBuffer, t_simulationParameters.adaptiveGrid.keyBuffer + count, t_simulationParameters.adaptiveGrid.indexBuffer);
 
 			finishSort<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D>>>(count);
-
 			// memset type counter 0
 			CU_CHECK_ERROR(cudaMemset(t_simulationParameters.vegCountBuffer + 1, 0, c_maxVegTypeCount * sizeof(int)));
-
 			// atomic adds for type counter
 			// return of atomic in tmp buffer for veg id
 			prepareVegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(relMapBuffer);
-			
 			// second pass use relative offset in tmp buffer + global counter offset to write global id in map 
 			vegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(relMapBuffer);
-
 			getVegetationCount(t_launchParameters, t_simulationParameters);
 			count = t_launchParameters.vegCount;
-
 			findGridStart<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D>>>(count);
 		}
 		watches[2].stop();
