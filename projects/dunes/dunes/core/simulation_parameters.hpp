@@ -208,8 +208,8 @@ struct SimulationParameters
 	Buffer<int> vegMapBuffer;
 	Buffer<uint4> seedBuffer;
 	Buffer<int> vegCountBuffer;
-	Buffer<VegetationTypeSoA> vegTypeBuffer;
-	Buffer<float> vegMatrixBuffer;
+	VegetationTypeSoA vegTypes;
+	half vegMatrix[c_maxVegTypeCount * c_maxVegTypeCount];
 	Buffer<half> slabBuffer;
 	AdaptiveGrid adaptiveGrid;
 };

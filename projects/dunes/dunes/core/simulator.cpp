@@ -361,7 +361,9 @@ namespace dunes
 			}
 
 			if (m_uploadVegTypes) {
-				m_vegTypeBuffer.upload(&m_vegTypes, 1);
+				m_simulationParameters.vegTypes = m_vegTypes;
+				upload(m_simulationParameters);
+				//m_vegTypeBuffer.upload(&m_vegTypes, 1);
 				m_uploadVegTypes = false;
 			}
 
@@ -545,13 +547,17 @@ namespace dunes
 		m_vegCountBuffer.upload(counts, 1 + c_maxVegTypeCount);
 		m_simulationParameters.vegCountBuffer = m_vegCountBuffer.getData<int>();
 
-		m_vegTypeBuffer.reinitialize(1, sizeof(VegetationTypeSoA));
-		m_vegTypeBuffer.upload(&m_vegTypes, 1);
-		m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationTypeSoA>();
+		//m_vegTypeBuffer.reinitialize(1, sizeof(VegetationTypeSoA));
+		//m_vegTypeBuffer.upload(&m_vegTypes, 1);
+		//m_simulationParameters.vegTypeBuffer = m_vegTypeBuffer.getData<VegetationTypeSoA>();
+		m_simulationParameters.vegTypes = m_vegTypes;
 
-		m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(float));
-		m_vegMatrixBuffer.upload(m_vegMatrix);
-		m_simulationParameters.vegMatrixBuffer = m_vegMatrixBuffer.getData<float>();
+		//m_vegMatrixBuffer.reinitialize(c_maxVegTypeCount * c_maxVegTypeCount, sizeof(float));
+		//m_vegMatrixBuffer.upload(m_vegMatrix);
+		for(int i = 0; i < m_vegMatrix.size(); ++i) {
+			m_simulationParameters.vegMatrix[i] = m_vegMatrix[i];
+		}
+		//m_simulationParameters.vegMatrixBuffer = m_vegMatrixBuffer.getData<float>();
 
 		std::random_device rd;
 		std::mt19937 gen(rd());
@@ -1136,7 +1142,11 @@ namespace dunes
 
 		if (m_isAwake)
 		{
-			m_vegMatrixBuffer.upload(m_vegMatrix);
+			for(int i = 0; i < m_vegMatrix.size(); ++i) {
+				m_simulationParameters.vegMatrix[i] = m_vegMatrix[i];
+			}
+			upload(m_simulationParameters);
+			//m_vegMatrixBuffer.upload(m_vegMatrix);
 		}
 
 		return i;
@@ -1231,11 +1241,13 @@ namespace dunes
         for(int i = 0; i < vegMatrix.size(); ++i)
         {
             m_vegMatrix[i] = vegMatrix[i];
+			m_simulationParameters.vegMatrix[i] = vegMatrix[i];
 		}
 
 		if (m_isAwake)
 		{
-			m_vegMatrixBuffer.upload(vegMatrix);
+			upload(m_simulationParameters);
+			//m_vegMatrixBuffer.upload(vegMatrix);
 		}
 	}
 
