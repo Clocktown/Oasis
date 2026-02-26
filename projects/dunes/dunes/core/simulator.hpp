@@ -235,12 +235,8 @@ namespace dunes
 		sthe::cu::Buffer m_vegBuffer;
 		sthe::cu::Buffer m_vegMapBuffer;
 		sthe::cu::Buffer m_vegCountBuffer;
-		sthe::cu::Buffer m_vegTypeBuffer;
-		sthe::cu::Buffer m_vegMatrixBuffer;
-		sthe::cu::Buffer m_seedBuffer;
 		std::array<sthe::cu::Buffer, 2> m_windWarpingBuffers;
 		std::unique_ptr<sthe::cu::Buffer> m_coverageMap;
-		sthe::cu::Buffer m_velocityBuffer;
 		cudaTextureDesc m_textureDescriptor;
 
 		bool m_isAwake;

@@ -71,7 +71,7 @@ namespace dunes {
 
 	}
 
-	__global__ void rasterizeVegetation(const Buffer<half> slopeBuffer, int count)
+	__global__ void rasterizeVegetation(const Buffer<half> slopeBuffer)
 	{
 		const int2 cell{ getGlobalIndex2D() };
 
@@ -89,32 +89,20 @@ namespace dunes {
 
 		resistance.y = 0.f;
 
-		const float4 terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
-		const float3 pos{ (float(cell.x) + 0.5f) * c_parameters.gridScale, (float(cell.y) + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };
-		
-		const float terrainThickness = terrain.y + terrain.z;
-		const float moistureCapacityConstant = c_parameters.moistureCapacityConstant;
-		const float moistureCapacity = moistureCapacityConstant * clamp(terrainThickness * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-		const float moisture{ clamp(__half2float(c_parameters.moistureArray.read(cell)) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
-
-		const float slope = 2.f * __half2float(slopeBuffer[getCellIndex(cell)]) - 1.f;
-
-		float2 wind = sampleLinearOrNearest<true>(c_parameters.windArray, 0.5f * (make_float2(cell) + 0.5f));
-		wind = wind / (length(wind) + 1e-6f);
-
-		float typeProbabilities[c_maxVegTypeCount];
 		float typeDensities[c_maxVegTypeCount];
-		float windFactor[c_maxVegTypeCount];
+		half windFactor[c_maxVegTypeCount];
 		
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i)
 		{
 			typeDensities[i] = 0.f;
-			windFactor[i] = 0.f;
+			windFactor[i] = CUDART_ZERO_FP16;
 		}
 		
-		const float terrainHeight = pos.z;
-		float vegetationHeight = terrainHeight;
-
+		const float4 terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
+		const float3 pos{ (float(cell.x) + 0.5f) * c_parameters.gridScale, (float(cell.y) + 0.5f) * c_parameters.gridScale, terrain.x + terrain.y + terrain.z };
+		float2 wind = sampleLinearOrNearest<true>(c_parameters.windArray, 0.5f * (make_float2(cell) + 0.5f));
+		wind = wind / (length(wind) + 1e-6f);
+		float vegetationHeight = pos.z;
 		// Adaptive Grid
 		for (int l = 0; l < c_parameters.adaptiveGrid.layerCount; ++l)
 		{
@@ -138,61 +126,71 @@ namespace dunes {
 						typeDensities[veg.type] += canReproduce ? density : 0.f;
 						const float2 off = make_float2(pos) - make_float2(veg.pos);
 						const float dist = length(off) + 1e-6f;
-						windFactor[veg.type] += canReproduce ? lerp(fmaxf(dot(wind, off/dist), 0.f), 0.f, fminf(dist / __half2float(c_parameters.vegTypes.maxRadius[veg.type]), 1.f))/*fmaxf(1.f - expf(-dot(wind, position - float2{veg.pos.x, veg.pos.y})), 0.f)*/ : 0.f;
+						windFactor[veg.type] += __float2half(canReproduce ? lerp(fmaxf(dot(wind, off/dist), 0.f), 0.f, fminf(dist / __half2float(c_parameters.vegTypes.maxRadius[veg.type]), 1.f)) : 0.f);
 						resistance.y += isAlive ? density : 0.f;
 						resistance.w += isAlive ? __half2float(c_parameters.vegTypes.humusRate[veg.type]) * c_parameters.deltaTime * density : density;
-						vegetationHeight = fmaxf(vegetationHeight, terrainHeight + (isAlive ? density * veg.radius * __half2float(c_parameters.vegTypes.height[veg.type].x) : 0.f));
+						vegetationHeight = fmaxf(vegetationHeight, pos.z + (isAlive ? density * veg.radius * __half2float(c_parameters.vegTypes.height[veg.type].x) : 0.f));
 					}
 				}
 			}
 		}
 
+		const float moistureCapacity = c_parameters.moistureCapacityConstant * clamp((terrain.y + terrain.z) * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
+		const float moisture{ clamp(__half2float(c_parameters.moistureArray.read(cell)) / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+		const float slope = 2.f * __half2float(slopeBuffer[getCellIndex(cell)]) - 1.f;
 		float probabilitySum = 0.f;
 		for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
-			typeProbabilities[i] = __half2float(c_parameters.vegTypes.baseSpawnRate[i]) * (1 + c_parameters.vegTypes.densitySpawnMultiplier[i] * fminf(typeDensities[i], 1.f) + c_parameters.vegTypes.windSpawnMultiplier[i] * fminf(windFactor[i], 1.f));
+			const float dens = typeDensities[i];
+			typeDensities[i] = __half2float(c_parameters.vegTypes.baseSpawnRate[i]) * (1 + c_parameters.vegTypes.densitySpawnMultiplier[i] * fminf(dens, 1.f) + c_parameters.vegTypes.windSpawnMultiplier[i] * __half2float(__hmin(windFactor[i], CUDART_ONE_FP16)));
 			const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / __half2float(c_parameters.vegTypes.height[i].y), __half2float(c_parameters.vegTypes.maxRadius[i]));
 			const bool waterCompatible = __half2float(c_parameters.vegTypes.waterResistance[i]) >= 1.f ? (terrain.w >= 0.05f * maxRadius * __half2float(c_parameters.vegTypes.height[i].x)) : (terrain.w <= __half2float(c_parameters.vegTypes.waterResistance[i]) * 0.05f * maxRadius * __half2float(c_parameters.vegTypes.height[i].x));
 			const bool moistureCompatible = (moisture <= __half2float(c_parameters.vegTypes.maxMoisture[i])) && (moisture >= __half2float(c_parameters.vegTypes.minMoisture[i]));
 			const bool slopeCompatible = slope <= __half2float(c_parameters.vegTypes.maxSlope[i]);
 			const float soilCompatibility = terrain.y > 0.1f ? __half2float(c_parameters.vegTypes.sandCompatibility[i]) * terrain.y : __half2float(c_parameters.vegTypes.soilCompatibility[i]) * terrain.z;
 			const bool soilCompatible = soilCompatibility > 0.1f;
-			const float probability = (typeDensities[i] < __half2float(c_parameters.vegTypes.separation[i])) && waterCompatible && moistureCompatible && slopeCompatible && soilCompatible ? typeProbabilities[i] : 0.f;
-			typeProbabilities[i] = probabilitySum + probability;
+			const float probability = (dens < __half2float(c_parameters.vegTypes.separation[i])) && waterCompatible && moistureCompatible && slopeCompatible && soilCompatible ? typeDensities[i] : 0.0f;
 			probabilitySum += probability;
+			typeDensities[i] = probabilitySum;
+			
 		}
 
+
+		//if(probabilitySum > 65000.f) {
+		//	printf("Dear god no");
+		//}
 		
 		if (*c_parameters.vegCountBuffer < c_parameters.maxVegCount) {
 			int idx = getCellIndex(cell);
-			uint4 seed{ c_parameters.seedBuffer[idx] };
+			uint4 seed{ cell.x, cell.y, c_parameters.timestep, c_parameters.seed };
 			random::pcg(seed);
-			c_parameters.seedBuffer[idx] = seed;
 			const float xi = random::uniform_float(seed.x);
 			const float baseProbability = 1.f - pow(1.f - fminf(probabilitySum / c_parameters.cellCount, 1.f), c_parameters.deltaTime);
 			if (xi < baseProbability) {
 				
 				const float yi = random::uniform_float(seed.y) * fmaxf(probabilitySum, 1.f);
-				Vegetation32 veg;
+				Vegetation veg;
 				veg.type = -1;
 				for (int i = 0; i < c_parameters.vegTypeCount; ++i) {
-					if (yi < typeProbabilities[i]) {
+					if (yi < typeDensities[i]) {
 						veg.type = i;
 						break;
 					}
 				}
 
 				if (veg.type >= 0) {
-					veg.pos = pos;
-					veg.age = 0.f;
-					veg.health = 1.f;
-					veg.water = 0.f;
-					const float maxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / __half2float(c_parameters.vegTypes.height[veg.type].y), __half2float(c_parameters.vegTypes.maxRadius[veg.type]));
+					veg.pos_x = cell.x;
+					veg.pos_y = cell.y;
+					veg.pos_z = __float2half(pos.z);
+					veg.age = CUDART_ZERO_FP16;
+					veg.health = CUDART_ONE_FP16;
+					veg.water = CUDART_ZERO_FP16;
+					const float maxRadius = fminf(fmaxf(pos.z - terrain.x, 0.f) / __half2float(c_parameters.vegTypes.height[veg.type].y), __half2float(c_parameters.vegTypes.maxRadius[veg.type]));
 
-					veg.radius = 0.05f * maxRadius;
+					veg.radius = __float2half(0.05f * maxRadius);
 					int oldIndex = atomicAdd(c_parameters.vegCountBuffer, 1);
 
 					if (oldIndex < c_parameters.maxVegCount) {						
-						c_parameters.vegBuffer[oldIndex] = convertVeg(veg);
+						c_parameters.vegBuffer[oldIndex] = veg;
 					}
 				}
 			}
@@ -200,143 +198,144 @@ namespace dunes {
 
 		resistance.y = fminf(resistance.y, 1.f);
 		c_parameters.resistanceArray.write(cell, toHalf4(resistance));
-		c_parameters.vegHeightArray.write(cell, __float22half2_rn(float2{terrainHeight, vegetationHeight}));
+		c_parameters.vegHeightArray.write(cell, __float22half2_rn(float2{pos.z, vegetationHeight}));
 	}
 
-	__global__ void growVegetation(int vegCount, const Buffer<half> slopeBuffer)
+	__global__ void growVegetation(const Buffer<half> slopeBuffer)
 	{
-		const int idx = getGlobalIndex1D();
-		if (idx >= vegCount) {
-			return;
-		}
+		const int count{ *c_parameters.vegCountBuffer };
+		const int stride{ getGridStride1D() };
 
-		if (c_parameters.vegBuffer[idx].health <= CUDART_ZERO_FP16 || c_parameters.vegBuffer[idx].radius <= __float2half(1e-3f)) {
-			c_parameters.vegBuffer[idx].health = -CUDART_ONE_FP16;
-		}
-		else {
-			Vegetation32 veg = convertVeg(c_parameters.vegBuffer[idx]);
-			float overlap = 0.f;
+		for (int idx{ getGlobalIndex1D() }; idx < count; idx += stride)
+		{
+			if (c_parameters.vegBuffer[idx].health <= CUDART_ZERO_FP16 || c_parameters.vegBuffer[idx].radius <= __float2half(1e-3f)) {
+				c_parameters.vegBuffer[idx].health = -CUDART_ONE_FP16;
+			}
+			else {
+				Vegetation32 veg = convertVeg(c_parameters.vegBuffer[idx]);
+				float overlap = 0.f;
 
-			for (int l = 0; l < c_parameters.adaptiveGrid.layerCount; ++l)
-			{
-				const int xStart = int(floorf((veg.pos.x - veg.radius - 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-				const int xEnd = int(ceilf((veg.pos.x + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-				const int yStart = int(floorf((veg.pos.y - veg.radius - 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-				const int yEnd = int(ceilf((veg.pos.y + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
-				for (int i = xStart; i <= xEnd; ++i) {
-					for (int j = yStart; j <= yEnd; ++j) {
-						const int gridCellIndex = getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.adaptiveGrid.gridSizes[l]), c_parameters.adaptiveGrid.gridSizes[l]);
-						const unsigned int idxStart = c_parameters.adaptiveGrid.gridBuffer[l][gridCellIndex];
-						const unsigned int idxEnd = c_parameters.adaptiveGrid.gridBuffer[l][gridCellIndex + 1];
-						if (idxEnd == 0xFFFFFFFF) continue;
-						for (unsigned int k = idxStart; k < idxEnd; ++k) {
-							if (k == idx) continue;
-							const float incompatibility = __half2float(c_parameters.vegMatrix[getCellIndex(int2{ c_parameters.vegBuffer[k].type, veg.type }, int2{ c_maxVegTypeCount })]);
-							float d = -0.5f * fminf(length(convertVegPos(c_parameters.vegBuffer[k]) - veg.pos) - (veg.radius + __half2float(c_parameters.vegBuffer[k].radius)), 0.f);
-							d /= veg.radius;
-							overlap += incompatibility * d * d;
+				for (int l = 0; l < c_parameters.adaptiveGrid.layerCount; ++l)
+				{
+					const int xStart = int(floorf((veg.pos.x - veg.radius - 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+					const int xEnd = int(ceilf((veg.pos.x + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+					const int yStart = int(floorf((veg.pos.y - veg.radius - 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+					const int yEnd = int(ceilf((veg.pos.y + veg.radius + 0.5f * c_parameters.adaptiveGrid.gridScales[l]) / c_parameters.adaptiveGrid.gridScales[l]));
+					for (int i = xStart; i <= xEnd; ++i) {
+						for (int j = yStart; j <= yEnd; ++j) {
+							const int gridCellIndex = getCellIndex(getWrappedCell(int2{ i,j }, c_parameters.adaptiveGrid.gridSizes[l]), c_parameters.adaptiveGrid.gridSizes[l]);
+							const unsigned int idxStart = c_parameters.adaptiveGrid.gridBuffer[l][gridCellIndex];
+							const unsigned int idxEnd = c_parameters.adaptiveGrid.gridBuffer[l][gridCellIndex + 1];
+							if (idxEnd == 0xFFFFFFFF) continue;
+							for (unsigned int k = idxStart; k < idxEnd; ++k) {
+								if (k == idx) continue;
+								const float incompatibility = __half2float(c_parameters.vegMatrix[getCellIndex(int2{ c_parameters.vegBuffer[k].type, veg.type }, int2{ c_maxVegTypeCount })]);
+								float d = -0.5f * fminf(length(convertVegPos(c_parameters.vegBuffer[k]) - veg.pos) - (veg.radius + __half2float(c_parameters.vegBuffer[k].radius)), 0.f);
+								d /= veg.radius;
+								overlap += incompatibility * d * d;
+							}
 						}
 					}
 				}
-			}
-			const int2 cell = {c_parameters.vegBuffer[idx].pos_x, c_parameters.vegBuffer[idx].pos_y}; // for read from terrainArray if necessary
-			float4 terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
-			terrain.z += terrain.x;
-			terrain.y += terrain.z;
-			terrain.w += terrain.y;
-			// Age plant
-			veg.age += c_parameters.deltaTime;
+				const int2 cell = {c_parameters.vegBuffer[idx].pos_x, c_parameters.vegBuffer[idx].pos_y}; // for read from terrainArray if necessary
+				float4 terrain = half4toFloat4(c_parameters.terrainArray.read(cell));
+				terrain.z += terrain.x;
+				terrain.y += terrain.z;
+				terrain.w += terrain.y;
+				// Age plant
+				veg.age += c_parameters.deltaTime;
 
-			veg.pos.z += __half2float(c_parameters.vegTypes.positionAdjustRate[veg.type]) * (terrain.y - veg.pos.z);
+				veg.pos.z += __half2float(c_parameters.vegTypes.positionAdjustRate[veg.type]) * (terrain.y - veg.pos.z);
 
-			// Plant parameters
-			const float plantHeight = (veg.radius * __half2float(c_parameters.vegTypes.height[veg.type].x));
-			const float plantDepth = (veg.radius * __half2float(c_parameters.vegTypes.height[veg.type].y));
-			const bool isWaterPlant = __half2float(c_parameters.vegTypes.waterResistance[veg.type]) >= 1.f;
+				// Plant parameters
+				const float plantHeight = (veg.radius * __half2float(c_parameters.vegTypes.height[veg.type].x));
+				const float plantDepth = (veg.radius * __half2float(c_parameters.vegTypes.height[veg.type].y));
+				const bool isWaterPlant = __half2float(c_parameters.vegTypes.waterResistance[veg.type]) >= 1.f;
 
-			// Soil/Sand root conditions
-			const float plantBottom = veg.pos.z - plantDepth;
-			const float plantTop = veg.pos.z + plantHeight;
-			const float soilCoverage = clamp((fminf(terrain.z, veg.pos.z) - fmaxf(plantBottom, terrain.x)) / plantDepth, 0.f, 1.f);
-			const float sandCoverage = clamp((fminf(terrain.y, veg.pos.z) - fmaxf(plantBottom, terrain.z)) / plantDepth, 0.f, 1.f);
-			const float soilRate = soilCoverage * __half2float(c_parameters.vegTypes.soilCompatibility[veg.type]) + sandCoverage * __half2float(c_parameters.vegTypes.sandCompatibility[veg.type]);
-			const float rootCoverage = clamp((fminf(terrain.y, veg.pos.z) - fmaxf(plantBottom, terrain.x)) / plantDepth, 0.f, 1.f);
-			const float stemCoverage = clamp((fminf(terrain.y, plantTop) - fmaxf(veg.pos.z, terrain.x)) / plantHeight, 0.f, 1.f);
-			const float rootDamage = -(rootCoverage - __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].x)) / __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].x);
-			const float stemDamage = (stemCoverage - __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].y)) / (1.f - __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].y));
+				// Soil/Sand root conditions
+				const float plantBottom = veg.pos.z - plantDepth;
+				const float plantTop = veg.pos.z + plantHeight;
+				const float soilCoverage = clamp((fminf(terrain.z, veg.pos.z) - fmaxf(plantBottom, terrain.x)) / plantDepth, 0.f, 1.f);
+				const float sandCoverage = clamp((fminf(terrain.y, veg.pos.z) - fmaxf(plantBottom, terrain.z)) / plantDepth, 0.f, 1.f);
+				const float soilRate = soilCoverage * __half2float(c_parameters.vegTypes.soilCompatibility[veg.type]) + sandCoverage * __half2float(c_parameters.vegTypes.sandCompatibility[veg.type]);
+				const float rootCoverage = clamp((fminf(terrain.y, veg.pos.z) - fmaxf(plantBottom, terrain.x)) / plantDepth, 0.f, 1.f);
+				const float stemCoverage = clamp((fminf(terrain.y, plantTop) - fmaxf(veg.pos.z, terrain.x)) / plantHeight, 0.f, 1.f);
+				const float rootDamage = -(rootCoverage - __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].x)) / __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].x);
+				const float stemDamage = (stemCoverage - __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].y)) / (1.f - __half2float(c_parameters.vegTypes.terrainCoverageResistance[veg.type].y));
 
-			// Water usage
-			const float moisture = __half2float(c_parameters.moistureArray.read(cell));
-			const float moistureCapacity = c_parameters.moistureCapacityConstant * clamp((terrain.y - terrain.x) * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
-			const float relativeMoisture{ clamp(moisture / (moistureCapacity + 1e-6f), 0.f, 1.f) };
-			const float waterCapacity = 2.094f * (plantDepth + plantHeight) * veg.radius * veg.radius * __half2float(c_parameters.vegTypes.waterStorageCapacity[veg.type]);
-			const float availableGroundWater = c_parameters.deltaTime * 2.094f * plantDepth * veg.radius * veg.radius * moisture;
-			const float requiredWater = __half2float(c_parameters.vegTypes.waterUsageRate[veg.type]) * c_parameters.deltaTime * 2.094f * plantHeight * veg.radius * veg.radius;
-			const float waterDifference = availableGroundWater - requiredWater;
-			const float missingWater = clamp(((availableGroundWater + veg.water) - requiredWater) / requiredWater, -1.f, 1.f);
-			if (waterDifference > 0.f) {
-				veg.water = fminf(veg.water + c_parameters.deltaTime * fmaxf(waterCapacity - veg.water, 0.f) * waterDifference, waterCapacity);
-			}
-			else if (waterDifference < 0.f) {
-				veg.water = fmaxf(veg.water + waterDifference, 0.f);
-			}
-			const float thirstDamage = fmaxf(-missingWater, 0.f);
-			const float thirstGrowth = 1.f + missingWater;
+				// Water usage
+				const float moisture = __half2float(c_parameters.moistureArray.read(cell));
+				const float moistureCapacity = c_parameters.moistureCapacityConstant * clamp((terrain.y - terrain.x) * c_parameters.iTerrainThicknessMoistureThreshold, 0.f, 1.f);
+				const float relativeMoisture{ clamp(moisture / (moistureCapacity + 1e-6f), 0.f, 1.f) };
+				const float waterCapacity = 2.094f * (plantDepth + plantHeight) * veg.radius * veg.radius * __half2float(c_parameters.vegTypes.waterStorageCapacity[veg.type]);
+				const float availableGroundWater = c_parameters.deltaTime * 2.094f * plantDepth * veg.radius * veg.radius * moisture;
+				const float requiredWater = __half2float(c_parameters.vegTypes.waterUsageRate[veg.type]) * c_parameters.deltaTime * 2.094f * plantHeight * veg.radius * veg.radius;
+				const float waterDifference = availableGroundWater - requiredWater;
+				const float missingWater = clamp(((availableGroundWater + veg.water) - requiredWater) / requiredWater, -1.f, 1.f);
+				if (waterDifference > 0.f) {
+					veg.water = fminf(veg.water + c_parameters.deltaTime * fmaxf(waterCapacity - veg.water, 0.f) * waterDifference, waterCapacity);
+				}
+				else if (waterDifference < 0.f) {
+					veg.water = fmaxf(veg.water + waterDifference, 0.f);
+				}
+				const float thirstDamage = fmaxf(-missingWater, 0.f);
+				const float thirstGrowth = 1.f + missingWater;
 
-			// Moisture compatibility
-			const float moistureDamage = fmaxf((relativeMoisture - __half2float(c_parameters.vegTypes.maxMoisture[veg.type])) / (1.f - __half2float(c_parameters.vegTypes.maxMoisture[veg.type])), 0.f);
-			const float moistureGrowth = moistureDamage > 0.f ? 0.f : 1.f;
+				// Moisture compatibility
+				const float moistureDamage = fmaxf((relativeMoisture - __half2float(c_parameters.vegTypes.maxMoisture[veg.type])) / (1.f - __half2float(c_parameters.vegTypes.maxMoisture[veg.type])), 0.f);
+				const float moistureGrowth = moistureDamage > 0.f ? 0.f : 1.f;
 
-			// Slope compatibility
-			const float slope = 2.f * __half2float(slopeBuffer[getCellIndex(cell)]) - 1.f;
-			const float slopeDamage = fmaxf((slope - __half2float(c_parameters.vegTypes.maxSlope[veg.type])) / (1.f - __half2float(c_parameters.vegTypes.maxSlope[veg.type])), 0.f);
-			const float slopeGrowth = fmaxf((__half2float(c_parameters.vegTypes.maxSlope[veg.type]) - slope) / __half2float(c_parameters.vegTypes.maxSlope[veg.type]), 0.f);
+				// Slope compatibility
+				const float slope = 2.f * __half2float(slopeBuffer[getCellIndex(cell)]) - 1.f;
+				const float slopeDamage = fmaxf((slope - __half2float(c_parameters.vegTypes.maxSlope[veg.type])) / (1.f - __half2float(c_parameters.vegTypes.maxSlope[veg.type])), 0.f);
+				const float slopeGrowth = fmaxf((__half2float(c_parameters.vegTypes.maxSlope[veg.type]) - slope) / __half2float(c_parameters.vegTypes.maxSlope[veg.type]), 0.f);
 			 
-			// Surface water conditions
-			const float waterOverlap = clamp((terrain.w - fmaxf(veg.pos.z, terrain.y)) / plantHeight, 0.f, 1.f);
-			const float waterRate = (waterOverlap - __half2float(c_parameters.vegTypes.waterResistance[veg.type]));
-			const float waterDamage = isWaterPlant ? 0.f : waterRate / (1.f - __half2float(c_parameters.vegTypes.waterResistance[veg.type]));
-			const float waterGrowth = isWaterPlant ? 1.f : fmaxf(-waterRate / __half2float(c_parameters.vegTypes.waterResistance[veg.type]), 0.f);
+				// Surface water conditions
+				const float waterOverlap = clamp((terrain.w - fmaxf(veg.pos.z, terrain.y)) / plantHeight, 0.f, 1.f);
+				const float waterRate = (waterOverlap - __half2float(c_parameters.vegTypes.waterResistance[veg.type]));
+				const float waterDamage = isWaterPlant ? 0.f : waterRate / (1.f - __half2float(c_parameters.vegTypes.waterResistance[veg.type]));
+				const float waterGrowth = isWaterPlant ? 1.f : fmaxf(-waterRate / __half2float(c_parameters.vegTypes.waterResistance[veg.type]), 0.f);
 
-			// Light conditions
-			const float2 shadowHeights = __half22float2(c_parameters.vegHeightArray.read(cell));
-			const float2 shadow = __half22float2(c_parameters.shadowArray.read(cell));
-			const float plantShadowHeight = shadowHeights.x + plantHeight;
-			const float heightDiff = (shadowHeights.y - plantShadowHeight);
-			const float shadow_t = (shadowHeights.y - shadowHeights.x) > 1e-6f ? clamp(heightDiff / (shadowHeights.y - shadowHeights.x), 0.f, 1.f) : 1.f;
-			const float shadowVal = lerp(shadow.y, shadow.x, shadow_t) * (isWaterPlant ? expf(-0.1f*(terrain.w - terrain.y)) : 1.f);
-			const float lightIntervalMax = 0.5f * (__half2float(c_parameters.vegTypes.lightConditions[veg.type].x) + __half2float(c_parameters.vegTypes.lightConditions[veg.type].y));
-			const float shadowGrowth = 1.f - 2.f * abs(shadowVal - lightIntervalMax) / (__half2float(c_parameters.vegTypes.lightConditions[veg.type].y) - __half2float(c_parameters.vegTypes.lightConditions[veg.type].x));
+				// Light conditions
+				const float2 shadowHeights = __half22float2(c_parameters.vegHeightArray.read(cell));
+				const float2 shadow = __half22float2(c_parameters.shadowArray.read(cell));
+				const float plantShadowHeight = shadowHeights.x + plantHeight;
+				const float heightDiff = (shadowHeights.y - plantShadowHeight);
+				const float shadow_t = (shadowHeights.y - shadowHeights.x) > 1e-6f ? clamp(heightDiff / (shadowHeights.y - shadowHeights.x), 0.f, 1.f) : 1.f;
+				const float shadowVal = lerp(shadow.y, shadow.x, shadow_t) * (isWaterPlant ? expf(-0.1f*(terrain.w - terrain.y)) : 1.f);
+				const float lightIntervalMax = 0.5f * (__half2float(c_parameters.vegTypes.lightConditions[veg.type].x) + __half2float(c_parameters.vegTypes.lightConditions[veg.type].y));
+				const float shadowGrowth = 1.f - 2.f * abs(shadowVal - lightIntervalMax) / (__half2float(c_parameters.vegTypes.lightConditions[veg.type].y) - __half2float(c_parameters.vegTypes.lightConditions[veg.type].x));
 
-			// Max radius based on neighborhood and terrain
-			const float baseMaxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / __half2float(c_parameters.vegTypes.height[veg.type].y), fmaxf(1.f - overlap, 0.f) * fmaxf(shadowGrowth, 0.f) * __half2float(c_parameters.vegTypes.maxRadius[veg.type]));
-			const float waterMaxRadius = fminf(baseMaxRadius, fmaxf((terrain.w - veg.pos.z) / __half2float(c_parameters.vegTypes.height[veg.type].x), 0.f));
-			const float maxRadius = isWaterPlant ? waterMaxRadius : baseMaxRadius;
+				// Max radius based on neighborhood and terrain
+				const float baseMaxRadius = fminf(fmaxf(veg.pos.z - terrain.x, 0.f) / __half2float(c_parameters.vegTypes.height[veg.type].y), fmaxf(1.f - overlap, 0.f) * fmaxf(shadowGrowth, 0.f) * __half2float(c_parameters.vegTypes.maxRadius[veg.type]));
+				const float waterMaxRadius = fminf(baseMaxRadius, fmaxf((terrain.w - veg.pos.z) / __half2float(c_parameters.vegTypes.height[veg.type].x), 0.f));
+				const float maxRadius = isWaterPlant ? waterMaxRadius : baseMaxRadius;
 
-			// 1.1 * maxRadius serves as a Buffer and prevents oscillations
-			// Shrink, if possible
-			veg.radius -= clamp(__half2float(c_parameters.vegTypes.shrinkRate[veg.type]) * c_parameters.deltaTime * (veg.radius > 1.1f*maxRadius ? 1.f : 0.f), 0.f, veg.radius - maxRadius);
+				// 1.1 * maxRadius serves as a Buffer and prevents oscillations
+				// Shrink, if possible
+				veg.radius -= clamp(__half2float(c_parameters.vegTypes.shrinkRate[veg.type]) * c_parameters.deltaTime * (veg.radius > 1.1f*maxRadius ? 1.f : 0.f), 0.f, veg.radius - maxRadius);
 
-			// Damage plant if it is still too large given the current conditions
-			const float radiusDamage = fmaxf((veg.radius - 1.1f*maxRadius) / veg.radius, 0.f);
-			const float radiusRate = radiusDamage > 0.f ? 0.f : 1.f;
+				// Damage plant if it is still too large given the current conditions
+				const float radiusDamage = fmaxf((veg.radius - 1.1f*maxRadius) / veg.radius, 0.f);
+				const float radiusRate = radiusDamage > 0.f ? 0.f : 1.f;
 
-			// Calculate growth and health
-			const float growthRate = fmaxf(shadowGrowth, 0.f) * radiusRate * slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * __half2float(c_parameters.vegTypes.growthRate[veg.type]);
-			veg.health -= __half2float(c_parameters.vegTypes.damageRate[veg.type]) * c_parameters.deltaTime * (fmaxf(-shadowGrowth, 0.f) + fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage + radiusDamage);
-			// TODO: maybe also a constant rate?
-			veg.health += growthRate;
+				// Calculate growth and health
+				const float growthRate = fmaxf(shadowGrowth, 0.f) * radiusRate * slopeGrowth * moistureGrowth * thirstGrowth * soilRate * waterGrowth * fmaxf(1.f - overlap, 0.f) * c_parameters.deltaTime * __half2float(c_parameters.vegTypes.growthRate[veg.type]);
+				veg.health -= __half2float(c_parameters.vegTypes.damageRate[veg.type]) * c_parameters.deltaTime * (fmaxf(-shadowGrowth, 0.f) + fmaxf(waterDamage, 0.f) + fmaxf(rootDamage, 0.f) + fmaxf(stemDamage, 0.f) + thirstDamage + moistureDamage + slopeDamage + radiusDamage);
+				// TODO: maybe also a constant rate?
+				veg.health += growthRate;
 
-			// Calculate maximum radius based on root depth and bedrock and grow plant
-			const float newRadius = fminf(veg.radius + growthRate, maxRadius);
-			veg.radius = newRadius > veg.radius ? newRadius : veg.radius;
+				// Calculate maximum radius based on root depth and bedrock and grow plant
+				const float newRadius = fminf(veg.radius + growthRate, maxRadius);
+				veg.radius = newRadius > veg.radius ? newRadius : veg.radius;
 
-			// Check if maturity condition met
-			if (veg.age > __half2float(c_parameters.vegTypes.maxMaturityTime[veg.type]) && veg.radius < __half2float(c_parameters.vegTypes.maturityPercentage[veg.type]) * __half2float(c_parameters.vegTypes.maxRadius[veg.type])) {
-				veg.health = 0.f;
+				// Check if maturity condition met
+				if (veg.age > __half2float(c_parameters.vegTypes.maxMaturityTime[veg.type]) && veg.radius < __half2float(c_parameters.vegTypes.maturityPercentage[veg.type]) * __half2float(c_parameters.vegTypes.maxRadius[veg.type])) {
+					veg.health = 0.f;
+				}
+				veg.health = clamp(veg.health, 0.f, 1.f);
+				c_parameters.vegBuffer[idx] = convertVeg(veg);
 			}
-			veg.health = clamp(veg.health, 0.f, 1.f);
-			c_parameters.vegBuffer[idx] = convertVeg(veg);
 		}
 	}
 
@@ -348,9 +347,8 @@ namespace dunes {
 			return;
 		}
 
-		uint4 seed = c_parameters.seedBuffer[idx];
+		uint4 seed{ idx, 684651u, c_parameters.timestep, c_parameters.seed };
 		random::pcg(seed);
-		c_parameters.seedBuffer[idx] = seed;
 
 		Vegetation32 veg;
 		veg.type = seed.w % 2;
@@ -399,7 +397,7 @@ namespace dunes {
 
 			return;
 		}
-
+		// Hardcoded: 20, 10, 5, 2.5 => map this to ints (8, 4, 2, 1): divide by 2.5f ( * 0.4f)
 		for (unsigned int i = 0; i < c_parameters.adaptiveGrid.layerCount; ++i)
 		{
 			if ((__half2float(veg.radius) <= 0.5f * c_parameters.adaptiveGrid.gridScales[i]) || (i == c_parameters.adaptiveGrid.layerCount - 1))
@@ -412,30 +410,32 @@ namespace dunes {
 		}
 	}
 	
-	__global__ void findGridStart(int count) {
-		const int idx = getGlobalIndex1D();
-		if (idx >= count - 1) {
-			return;
-		}
-		// Adaptive Grid
-		const unsigned int adaptiveKeyA = c_parameters.adaptiveGrid.keyBuffer[idx];
-		const unsigned int adaptiveKeyB = c_parameters.adaptiveGrid.keyBuffer[idx + 1];
-		const unsigned int adaptiveLayerA = (c_parameters.adaptiveGrid.layerMask & adaptiveKeyA) >> (32u - c_parameters.adaptiveGrid.layerBits);
-		const unsigned int adaptiveIndexA = c_parameters.adaptiveGrid.indexMask & adaptiveKeyA;
-		const unsigned int adaptiveLayerB = (c_parameters.adaptiveGrid.layerMask & adaptiveKeyB) >> (32u - c_parameters.adaptiveGrid.layerBits);
-		const unsigned int adaptiveIndexB = c_parameters.adaptiveGrid.indexMask & adaptiveKeyB;
+	__global__ void findGridStart() {
+		const int count{ *c_parameters.vegCountBuffer };
+		const int stride{ getGridStride1D() };
 
-		if (adaptiveKeyA != adaptiveKeyB) {
+		for (int idx{ getGlobalIndex1D() }; idx < count - 1; idx += stride)
+		{
+			// Adaptive Grid
+			const unsigned int adaptiveKeyA = c_parameters.adaptiveGrid.keyBuffer[idx];
+			const unsigned int adaptiveKeyB = c_parameters.adaptiveGrid.keyBuffer[idx + 1];
+			const unsigned int adaptiveLayerA = (c_parameters.adaptiveGrid.layerMask & adaptiveKeyA) >> (32u - c_parameters.adaptiveGrid.layerBits);
+			const unsigned int adaptiveIndexA = c_parameters.adaptiveGrid.indexMask & adaptiveKeyA;
+			const unsigned int adaptiveLayerB = (c_parameters.adaptiveGrid.layerMask & adaptiveKeyB) >> (32u - c_parameters.adaptiveGrid.layerBits);
+			const unsigned int adaptiveIndexB = c_parameters.adaptiveGrid.indexMask & adaptiveKeyB;
 
-			c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerA][adaptiveIndexA + 1] = idx + 1;
-			c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerB][adaptiveIndexB] = idx + 1;
-		}
+			if (adaptiveKeyA != adaptiveKeyB) {
 
-		if (idx == 0) {
-			c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerA][adaptiveIndexA] = 0;
-		}
-		if (idx == (count - 2)) {
-			c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerB][adaptiveIndexB + 1] = count;
+				c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerA][adaptiveIndexA + 1] = idx + 1;
+				c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerB][adaptiveIndexB] = idx + 1;
+			}
+
+			if (idx == 0) {
+				c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerA][adaptiveIndexA] = 0;
+			}
+			if (idx == (count - 2)) {
+				c_parameters.adaptiveGrid.gridBuffer[adaptiveLayerB][adaptiveIndexB + 1] = count;
+			}
 		}
 	}
 
@@ -545,7 +545,6 @@ namespace dunes {
 
 	void vegetation(LaunchParameters& t_launchParameters, const SimulationParameters& t_simulationParameters, std::vector<sthe::cu::Stopwatch>& watches) {
 		watches[2].start();
-		getVegetationCount(t_launchParameters, t_simulationParameters);
 		int count = t_launchParameters.vegCount;
 		initAdaptiveGrid(t_simulationParameters);
 		
@@ -564,20 +563,20 @@ namespace dunes {
 			prepareVegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(relMapBuffer);
 			// second pass use relative offset in tmp buffer + global counter offset to write global id in map 
 			vegMapKernel<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>(relMapBuffer);
-			getVegetationCount(t_launchParameters, t_simulationParameters);
-			count = t_launchParameters.vegCount;
-			findGridStart<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D>>>(count);
+			//getVegetationCount(t_launchParameters, t_simulationParameters);
+			findGridStart<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D>>>();
 		}
 		watches[2].stop();
-
 		watches[3].start();
-		growVegetation<<<t_launchParameters.vegetationGridSize1D, t_launchParameters.blockSize1D >> > (count, slopeBuffer);
+		growVegetation<<<t_launchParameters.optimalGridSize1D, t_launchParameters.optimalBlockSize1D >> > (slopeBuffer);
 		watches[3].stop();
 		watches[4].start();
-		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (slopeBuffer, count);
+		rasterizeVegetation<<<t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > (slopeBuffer);
 		watches[4].stop();
 		watches[5].start();
 		calculateShadowMap << <t_launchParameters.gridSize2D, t_launchParameters.blockSize2D >> > ();
 		watches[5].stop();
+		getVegetationCount(t_launchParameters, t_simulationParameters);
+		count = t_launchParameters.vegCount;
 	}
 }

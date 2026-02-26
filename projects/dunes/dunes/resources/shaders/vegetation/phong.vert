@@ -80,10 +80,10 @@ struct Vegetation
 	uint16_t pos_y;
 	float16_t pos_z;
 	float16_t radius;
-	float16_t health;
-	float16_t water;
-	float16_t age;
 	int16_t type;
+	float16_t health;
+	float16_t age;
+	float16_t water;
 };
 
 layout(std430, binding = 3) buffer VegBuffer

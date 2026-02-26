@@ -94,10 +94,10 @@ struct alignas(32) Vegetation32 // needs to be aligned for gl
 {
 	float3 pos{}; // pos where root and stem start
 	float radius{ 0.f };
-	float health{ 1.f };
-	float water{ 0.f };
-	float age{ 0.f };
 	int type{ 0 };
+	float health{ 1.f };
+	float age{ 0.f };
+	float water{ 0.f };
 };
 
 struct alignas(16) Vegetation // needs to be aligned for gl
@@ -106,10 +106,10 @@ struct alignas(16) Vegetation // needs to be aligned for gl
 	uint16_t pos_y {0};
 	half pos_z { CUDART_ZERO_FP16 };
 	half radius { CUDART_ZERO_FP16 };
-	half health{ CUDART_ONE_FP16 };
-	half water{ CUDART_ZERO_FP16 };
-	half age{ CUDART_ZERO_FP16 };
 	int16_t type{ int16_t(0) };
+	half health{ CUDART_ONE_FP16 };
+	half age{ CUDART_ZERO_FP16 };
+	half water{ CUDART_ZERO_FP16 };
 };
 
 struct AdaptiveGrid
@@ -195,6 +195,7 @@ struct SimulationParameters
 
 	float deltaTime{ 1.0f };
 	int timestep = 0;
+	unsigned int seed = 0u;
 
 	Array2D<half4> terrainArray;
 	Array2D<half2> windArray;
@@ -206,7 +207,6 @@ struct SimulationParameters
 	Array2D<half2> vegHeightArray;
 	Buffer<Vegetation> vegBuffer;
 	Buffer<int> vegMapBuffer;
-	Buffer<uint4> seedBuffer;
 	Buffer<int> vegCountBuffer;
 	VegetationTypeSoA vegTypes;
 	half vegMatrix[c_maxVegTypeCount * c_maxVegTypeCount];

@@ -562,16 +562,7 @@ namespace dunes
 		std::random_device rd;
 		std::mt19937 gen(rd());
 
-		std::vector<uint4> seeds(max(maxCount, m_simulationParameters.cellCount));
-		for (uint4& s : seeds) {
-			s.x = gen();
-			s.y = gen();
-			s.z = gen();
-			s.w = gen();
-		}
-
-		m_seedBuffer.reinitialize(seeds);
-		m_simulationParameters.seedBuffer = m_seedBuffer.getData<uint4>();
+		m_simulationParameters.seed = gen();
 	}
 
 	void Simulator::setUseBilinear(const bool t_useBilinear) {
