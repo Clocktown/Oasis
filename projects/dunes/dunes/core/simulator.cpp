@@ -1161,7 +1161,6 @@ namespace dunes
 		while (t_index >= m_simulationParameters.vegTypeCount) {
 			addVegType();
 		}
-
 		m_vegTypes.maxRadius[t_index] = t_type.maxRadius;
 		m_vegTypes.growthRate[t_index] = t_type.growthRate;
 		m_vegTypes.positionAdjustRate[t_index] = t_type.positionAdjustRate;

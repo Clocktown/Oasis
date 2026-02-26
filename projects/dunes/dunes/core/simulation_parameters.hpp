@@ -65,29 +65,29 @@ struct VegetationType
 
 struct VegetationTypeSoA
 {
-	float maxRadius[c_maxVegTypeCount]; // Plant is mature at maturityPercentage of maxRadius
-	float growthRate[c_maxVegTypeCount];
-	float positionAdjustRate[c_maxVegTypeCount]; // how fast the plant can change its position (height) to match the terrain
-	float damageRate[c_maxVegTypeCount]; // How resistant the plant is to being damaged, lower values cause it to be able to survive for longer in bad environments
-	float shrinkRate[c_maxVegTypeCount]; // if > 0.f, plant is able to "shrink" to a smaller size if environment doesn't support its current size anymore
-	float maxMaturityTime[c_maxVegTypeCount]; // If Plant hasn't reached maturity after this time, it dies
-	float maturityPercentage[c_maxVegTypeCount]; // %radius needed to be mature
-	float2 height[c_maxVegTypeCount]; // .x * maxRadius = height above ground; .y * maxRadius = root depth; relevant for vegetation density and growth
-	float waterUsageRate[c_maxVegTypeCount];
-	float waterStorageCapacity[c_maxVegTypeCount];
-	float waterResistance[c_maxVegTypeCount]; // How well the plant can handle standing water. >= 1 is a water plant, which follows different rules
-	float minMoisture[c_maxVegTypeCount]; // Only used to check if a plant can spawn
-	float maxMoisture[c_maxVegTypeCount]; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
-	float soilCompatibility[c_maxVegTypeCount]; // controls growth in soil
-	float sandCompatibility[c_maxVegTypeCount]; // controls growth in sand
-	float2 terrainCoverageResistance[c_maxVegTypeCount]; // .x threshold for how much roots need to be covered; .y threshold for how much of stem is allowed to be covered
-	float maxSlope[c_maxVegTypeCount];
-	float baseSpawnRate[c_maxVegTypeCount];
+	half maxRadius[c_maxVegTypeCount]; // Plant is mature at maturityPercentage of maxRadius
+	half growthRate[c_maxVegTypeCount];
+	half positionAdjustRate[c_maxVegTypeCount]; // how fast the plant can change its position (height) to match the terrain
+	half damageRate[c_maxVegTypeCount]; // How resistant the plant is to being damaged, lower values cause it to be able to survive for longer in bad environments
+	half shrinkRate[c_maxVegTypeCount]; // if > 0.f, plant is able to "shrink" to a smaller size if environment doesn't support its current size anymore
+	half maxMaturityTime[c_maxVegTypeCount]; // If Plant hasn't reached maturity after this time, it dies
+	half maturityPercentage[c_maxVegTypeCount]; // %radius needed to be mature
+	half waterUsageRate[c_maxVegTypeCount];
+	half2 height[c_maxVegTypeCount]; // .x * maxRadius = height above ground; .y * maxRadius = root depth; relevant for vegetation density and growth
+	half waterStorageCapacity[c_maxVegTypeCount];
+	half waterResistance[c_maxVegTypeCount]; // How well the plant can handle standing water. >= 1 is a water plant, which follows different rules
+	half minMoisture[c_maxVegTypeCount]; // Only used to check if a plant can spawn
+	half maxMoisture[c_maxVegTypeCount]; // Plant takes damage when moisture is outside this interval, more damage the more it is outside, gains health inside interval, more health towards middle of interval
+	half soilCompatibility[c_maxVegTypeCount]; // controls growth in soil
+	half sandCompatibility[c_maxVegTypeCount]; // controls growth in sand
+	half2 terrainCoverageResistance[c_maxVegTypeCount]; // .x threshold for how much roots need to be covered; .y threshold for how much of stem is allowed to be covered
+	half maxSlope[c_maxVegTypeCount];
+	half baseSpawnRate[c_maxVegTypeCount];
 	float densitySpawnMultiplier[c_maxVegTypeCount];
 	float windSpawnMultiplier[c_maxVegTypeCount];
-	float humusRate[c_maxVegTypeCount];
-	float2 lightConditions[c_maxVegTypeCount]; // .x minimum, .y maximum light. Use minimum > maximum  if 0 light should be optimal, use maximum < minimum if full light should be optimal. Otherwise the mean is optimal. Uses the shadow map for regular plants and water height for water plants.
-	float separation[c_maxVegTypeCount]; // New Vegetation can only spawn if the density of its type is lower than this value
+	half2 lightConditions[c_maxVegTypeCount]; // .x minimum, .y maximum light. Use minimum > maximum  if 0 light should be optimal, use maximum < minimum if full light should be optimal. Otherwise the mean is optimal. Uses the shadow map for regular plants and water height for water plants.
+	half humusRate[c_maxVegTypeCount];
+	half separation[c_maxVegTypeCount]; // New Vegetation can only spawn if the density of its type is lower than this value
 };
 
 struct alignas(32) Vegetation32 // needs to be aligned for gl
